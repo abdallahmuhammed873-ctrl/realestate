@@ -1,0 +1,139 @@
+export type Role = "BUYER" | "SELLER" | "ADMIN";
+export type ListingStatus = "DRAFT" | "PENDING" | "APPROVED" | "REJECTED";
+export type TransactionType = "BUY" | "RENT" | "VACATION";
+export type PropertyType =
+  | "APARTMENT"
+  | "VILLA"
+  | "DUPLEX"
+  | "PENTHOUSE"
+  | "CHALET"
+  | "LAND"
+  | "COMMERCIAL";
+export type Furnishing = "FULLY" | "SEMI" | "UNFURNISHED";
+export type PaymentType = "CASH" | "INSTALLMENTS";
+export type CompletionStatus = "OFF_PLAN" | "READY";
+export type AppointmentStatus = "PENDING" | "CONFIRMED" | "CANCELLED";
+
+export type User = {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  role: Role;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type Property = {
+  id: string;
+  listingId: string;
+  title: string;
+  description: string;
+  transaction: TransactionType;
+  type: PropertyType;
+  price: number | null;
+  rentPrice: number | null;
+  currency: string;
+  bedrooms: number;
+  bathrooms: number;
+  areaSqm: number;
+  lat: number;
+  lng: number;
+  address: string;
+  city: string;
+  area: string;
+  district: string;
+  furnishing: Furnishing;
+  paymentType: PaymentType;
+  completionStatus: CompletionStatus;
+  amenities: string[];
+  images: string[];
+  installmentDownPayment?: number | null;
+  installmentYears?: number | null;
+  installmentMonthly?: number | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type Listing = {
+  id: string;
+  userId: string;
+  status: ListingStatus;
+  adminNotes?: string | null;
+  reviewedBy?: string | null;
+  reviewedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type Favorite = {
+  id: string;
+  userId: string;
+  propertyId: string;
+  createdAt: string;
+};
+
+export type Appointment = {
+  id: string;
+  userId: string;
+  propertyId: string;
+  datetime: string;
+  status: AppointmentStatus;
+  contactName: string;
+  contactPhone: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type SavedSearch = {
+  id: string;
+  userId: string;
+  queryJson: string;
+  createdAt: string;
+};
+
+export type PublicPropertyCard = Property & {
+  listingStatus: ListingStatus;
+  verified: boolean;
+  sellerId: string;
+  distanceKm?: number;
+  goodDeal?: boolean;
+};
+
+export type SearchFilters = {
+  q?: string;
+  transaction?: TransactionType;
+  type?: PropertyType[];
+  city?: string;
+  area?: string;
+  district?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  minArea?: number;
+  maxArea?: number;
+  minBeds?: number;
+  maxBeds?: number;
+  minBaths?: number;
+  maxBaths?: number;
+  paymentType?: PaymentType;
+  furnishing?: Furnishing;
+  completionStatus?: CompletionStatus;
+  amenities?: string[];
+  lat?: number;
+  lng?: number;
+  distanceKm?: number;
+  downPaymentMax?: number;
+  installmentYearsMax?: number;
+  installmentMonthlyMax?: number;
+  page?: number;
+  pageSize?: number;
+  sort?: "FEATURED" | "NEWEST" | "PRICE_ASC" | "PRICE_DESC" | "AREA_DESC" | "DISTANCE_ASC";
+};
+
+export type SearchResult = {
+  total: number;
+  page: number;
+  pageSize: number;
+  items: PublicPropertyCard[];
+};

@@ -1,0 +1,35 @@
+import { FiltersPanel } from "@/components/search/filters-panel";
+import { Pagination } from "@/components/search/pagination";
+import { ResultsToolbar } from "@/components/search/results-toolbar";
+import { PropertyCard } from "@/components/property/property-card";
+import { searchProperties } from "@/lib/repository";
+import { parseSearchParams } from "@/lib/utils";
+
+export default async function SearchPage({
+  searchParams
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const resolved = await searchParams;
+  const filters = parseSearchParams(resolved);
+  const result = searchProperties(filters);
+
+  return (
+    <div className="grid gap-4 md:grid-cols-[290px,1fr]">
+      <FiltersPanel />
+      <section>
+        <ResultsToolbar total={result.total} />
+        {result.items.length === 0 ? (
+          <div className="rounded-2xl border bg-white p-8 text-center text-slate-600">No results matched. Try broadening filters.</div>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {result.items.map((property) => (
+              <PropertyCard key={property.id} property={property} />
+            ))}
+          </div>
+        )}
+        <Pagination page={result.page} pageSize={result.pageSize} total={result.total} />
+      </section>
+    </div>
+  );
+}
