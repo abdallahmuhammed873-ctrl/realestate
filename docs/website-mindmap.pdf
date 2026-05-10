@@ -1,0 +1,399 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 842 595] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>
+endobj
+4 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+5 0 obj
+<< /Length 3315 >>
+stream
+0 0 0 RG
+0 0 0 rg
+1 w
+BT
+/F1 16 Tf
+301 547 Td
+(Cheque & Key Marketplace - Mind Map) Tj
+ET
+421 535 m
+40 475 l
+S
+BT
+/F1 11 Tf
+20 465 Td
+(Public Pages) Tj
+ET
+40 461 m
+40 450 l
+S
+BT
+/F1 8.5 Tf
+30 447 Td
+(• /) Tj
+ET
+40 461 m
+40 438 l
+S
+BT
+/F1 8.5 Tf
+30 435 Td
+(• /search) Tj
+ET
+40 461 m
+40 426 l
+S
+BT
+/F1 8.5 Tf
+30 423 Td
+(• /p/[id]) Tj
+ET
+40 461 m
+40 414 l
+S
+BT
+/F1 8.5 Tf
+30 411 Td
+(• /compare) Tj
+ET
+40 461 m
+40 402 l
+S
+BT
+/F1 8.5 Tf
+30 399 Td
+(• /favorites) Tj
+ET
+40 461 m
+40 390 l
+S
+BT
+/F1 8.5 Tf
+30 387 Td
+(• /community) Tj
+ET
+40 461 m
+40 378 l
+S
+BT
+/F1 8.5 Tf
+30 375 Td
+(• /profile) Tj
+ET
+40 461 m
+40 366 l
+S
+BT
+/F1 8.5 Tf
+30 363 Td
+(• /notifications) Tj
+ET
+40 461 m
+40 354 l
+S
+BT
+/F1 8.5 Tf
+30 351 Td
+(• /auth) Tj
+ET
+40 461 m
+40 342 l
+S
+BT
+/F1 8.5 Tf
+30 339 Td
+(• /about) Tj
+ET
+421 535 m
+192 475 l
+S
+BT
+/F1 11 Tf
+172 465 Td
+(Seller Pages) Tj
+ET
+192 461 m
+192 450 l
+S
+BT
+/F1 8.5 Tf
+182 447 Td
+(• /seller/dashboard) Tj
+ET
+192 461 m
+192 438 l
+S
+BT
+/F1 8.5 Tf
+182 435 Td
+(• /seller/new) Tj
+ET
+192 461 m
+192 426 l
+S
+BT
+/F1 8.5 Tf
+182 423 Td
+(• /seller/new/payment) Tj
+ET
+192 461 m
+192 414 l
+S
+BT
+/F1 8.5 Tf
+182 411 Td
+(• /seller/new/thank-you) Tj
+ET
+192 461 m
+192 402 l
+S
+BT
+/F1 8.5 Tf
+182 399 Td
+(• /seller/listings/[id]/edit) Tj
+ET
+192 461 m
+192 390 l
+S
+BT
+/F1 8.5 Tf
+182 387 Td
+(• /seller/users) Tj
+ET
+421 535 m
+345 475 l
+S
+BT
+/F1 11 Tf
+325 465 Td
+(Admin Pages) Tj
+ET
+345 461 m
+345 450 l
+S
+BT
+/F1 8.5 Tf
+335 447 Td
+(• /admin) Tj
+ET
+345 461 m
+345 438 l
+S
+BT
+/F1 8.5 Tf
+335 435 Td
+(• /admin/login) Tj
+ET
+345 461 m
+345 426 l
+S
+BT
+/F1 8.5 Tf
+335 423 Td
+(• /admin/pending) Tj
+ET
+345 461 m
+345 414 l
+S
+BT
+/F1 8.5 Tf
+335 411 Td
+(• /admin/buyers) Tj
+ET
+345 461 m
+345 402 l
+S
+BT
+/F1 8.5 Tf
+335 399 Td
+(• /admin/sellers) Tj
+ET
+345 461 m
+345 390 l
+S
+BT
+/F1 8.5 Tf
+335 387 Td
+(• /admin/developers) Tj
+ET
+345 461 m
+345 378 l
+S
+BT
+/F1 8.5 Tf
+335 375 Td
+(• /admin/listings/[id]) Tj
+ET
+421 535 m
+497 475 l
+S
+BT
+/F1 11 Tf
+477 465 Td
+(Internal APIs) Tj
+ET
+497 461 m
+497 450 l
+S
+BT
+/F1 8.5 Tf
+487 447 Td
+(• 35 route handlers) Tj
+ET
+497 461 m
+497 438 l
+S
+BT
+/F1 8.5 Tf
+487 435 Td
+(• Auth) Tj
+ET
+497 461 m
+497 426 l
+S
+BT
+/F1 8.5 Tf
+487 423 Td
+(• Search) Tj
+ET
+497 461 m
+497 414 l
+S
+BT
+/F1 8.5 Tf
+487 411 Td
+(• Listings) Tj
+ET
+497 461 m
+497 402 l
+S
+BT
+/F1 8.5 Tf
+487 399 Td
+(• Appointments) Tj
+ET
+497 461 m
+497 390 l
+S
+BT
+/F1 8.5 Tf
+487 387 Td
+(• Community) Tj
+ET
+497 461 m
+497 378 l
+S
+BT
+/F1 8.5 Tf
+487 375 Td
+(• Notifications) Tj
+ET
+497 461 m
+497 366 l
+S
+BT
+/F1 8.5 Tf
+487 363 Td
+(• Chatbot) Tj
+ET
+421 535 m
+650 475 l
+S
+BT
+/F1 11 Tf
+630 465 Td
+(Data Layer) Tj
+ET
+650 461 m
+650 450 l
+S
+BT
+/F1 8.5 Tf
+640 447 Td
+(• In-memory repository) Tj
+ET
+650 461 m
+650 438 l
+S
+BT
+/F1 8.5 Tf
+640 435 Td
+(• Prisma schema \(PostgreSQL\)) Tj
+ET
+650 461 m
+650 426 l
+S
+BT
+/F1 8.5 Tf
+640 423 Td
+(• Mock data + seed) Tj
+ET
+421 535 m
+802 475 l
+S
+BT
+/F1 11 Tf
+782 465 Td
+(External Services) Tj
+ET
+802 461 m
+802 450 l
+S
+BT
+/F1 8.5 Tf
+792 447 Td
+(• SMTP email \(OTP reset\)) Tj
+ET
+802 461 m
+802 438 l
+S
+BT
+/F1 8.5 Tf
+792 435 Td
+(• Leaflet \(unpkg CDN\)) Tj
+ET
+802 461 m
+802 426 l
+S
+BT
+/F1 8.5 Tf
+792 423 Td
+(• OpenStreetMap tiles) Tj
+ET
+802 461 m
+802 414 l
+S
+BT
+/F1 8.5 Tf
+792 411 Td
+(• Google Maps link) Tj
+ET
+802 461 m
+802 402 l
+S
+BT
+/F1 8.5 Tf
+792 399 Td
+(• WhatsApp link) Tj
+ET
+endstream
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000241 00000 n 
+0000000311 00000 n 
+trailer
+<< /Size 6 /Root 1 0 R >>
+startxref
+3677
+%%EOF

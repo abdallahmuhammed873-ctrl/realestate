@@ -49,6 +49,7 @@ Use `/auth` and choose role:
 - `/p/[id]` Property details
 - `/compare`
 - `/favorites`
+- `/buyer/appointments`
 - `/auth`
 
 ### Seller
@@ -70,6 +71,10 @@ Use `/auth` and choose role:
   Body: `{ propertyId }`
 - `POST /api/appointments`  
   Body: `{ propertyId, datetime, contactName, contactPhone, notes? }`
+- `PATCH /api/seller/appointments/[id]`  
+  Body: `{ action: "APPROVE" | "DENY" | "RESCHEDULE", slots?: string[] }`
+- `PATCH /api/buyer/appointments/[id]`  
+  Body: `{ datetime }` (must match one suggested slot)
 - `POST /api/saved-searches`  
   Body: `{ query: Record<string,string> }`
 - `POST /api/seller/listings`  

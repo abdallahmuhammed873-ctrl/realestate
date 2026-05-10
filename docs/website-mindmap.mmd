@@ -1,0 +1,46 @@
+mindmap
+  root((Cheque & Key Marketplace))
+    Pages
+      Public
+        / (Home)
+        /search
+        /p/[id]
+        /compare
+        /favorites
+        /community
+        /notifications
+        /profile
+        /appointments
+        /buyer/appointments
+        /auth (+ forgot-password, signup)
+        /about
+      Seller
+        /seller/dashboard
+        /seller/new (+ payment, thank-you)
+        /seller/listings/[id]/edit
+        /seller/users
+      Admin
+        /admin
+        /admin/login
+        /admin/pending
+        /admin/buyers
+        /admin/sellers
+        /admin/developers
+        /admin/listings/[id]
+    APIs
+      Internal Next.js route handlers (35)
+        Auth (demo-login, signup, logout, forgot-password)
+        Search + compare + favorites
+        Listings + approvals (seller/admin)
+        Appointments (buyer/seller/admin)
+        Community (posts, likes, comments)
+        Notifications + profile (/api/me)
+        Chatbot (/api/chat)
+    Data Layer
+      In-memory repository (demo runtime)
+      Prisma schema for PostgreSQL (optional DB mode)
+      Mock data (seed + demo listings)
+    External Services
+      SMTP email (nodemailer) for OTP reset
+      OpenStreetMap tiles + Leaflet (via unpkg CDN)
+      Google Maps link + WhatsApp link

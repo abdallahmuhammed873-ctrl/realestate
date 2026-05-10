@@ -1,11 +1,14 @@
 import { notFound } from "next/navigation";
-import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { FavoriteToggle } from "@/components/property/favorite-toggle";
 import { CompareToggle } from "@/components/property/compare-toggle";
 import { BookViewingModal } from "@/components/property/book-viewing-modal";
+import { PropertyGallery } from "@/components/property/property-gallery";
 import { PropertyCard } from "@/components/property/property-card";
+import { ContactActions } from "@/components/property/contact-actions";
+import { OSMMapView } from "@/components/maps/osm-map";
+import { GoogleMapsButton } from "@/components/maps/google-maps-button";
 import { getPublicPropertyById, getRecommendations } from "@/lib/repository";
 import { formatPrice } from "@/lib/utils";
 
@@ -20,9 +23,7 @@ export default async function PropertyDetailsPage({ params }: { params: Promise<
     <div className="space-y-6">
       <div className="grid gap-4 md:grid-cols-[2fr,1fr]">
         <Card className="p-0">
-          <div className="relative h-80 w-full">
-            <Image src={property.images[0]} alt={property.title} fill className="rounded-2xl object-cover" />
-          </div>
+          <PropertyGallery images={property.images} title={property.title} />
         </Card>
         <Card>
           <div className="space-y-2">
@@ -34,21 +35,18 @@ export default async function PropertyDetailsPage({ params }: { params: Promise<
             <p className="text-xl font-bold">{formatPrice(price, property.currency)}</p>
             <p className="text-sm text-slate-600">{property.address}</p>
             <p className="text-sm text-slate-600">
-              {property.bedrooms} beds · {property.bathrooms} baths · {property.areaSqm} sqm
+              {property.bedrooms} beds | {property.bathrooms} baths | {property.areaSqm} sqm
+            </p>
+            <p className="text-sm text-slate-600">
+              Listed by: {property.listedByName}
+              {property.listedByCompanyName ? ` (${property.listedByCompanyName})` : ""}
             </p>
             <div className="flex flex-wrap gap-2 pt-2">
               <BookViewingModal propertyId={property.id} />
               <FavoriteToggle propertyId={property.id} />
               <CompareToggle propertyId={property.id} />
             </div>
-            <div className="pt-2 text-sm">
-              <a href="#" className="mr-3 text-brand-700">
-                WhatsApp (stub)
-              </a>
-              <a href="#" className="text-brand-700">
-                Call (stub)
-              </a>
-            </div>
+            <ContactActions phone={property.listedByPhone} />
           </div>
         </Card>
       </div>
@@ -67,9 +65,9 @@ export default async function PropertyDetailsPage({ params }: { params: Promise<
 
       <Card>
         <h2 className="mb-2 text-lg font-bold">Map & Distance</h2>
-        <div className="grid h-48 place-items-center rounded-xl border border-dashed text-sm text-slate-500">
-          Map placeholder ({property.lat}, {property.lng})
-        </div>
+        <OSMMapView lat={property.lat} lng={property.lng} />
+        <p className="mt-2 text-xs text-slate-500">Coordinates: {property.lat}, {property.lng}</p>
+        <GoogleMapsButton lat={property.lat} lng={property.lng} />
       </Card>
 
       <section>

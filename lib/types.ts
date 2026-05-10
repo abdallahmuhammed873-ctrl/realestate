@@ -12,14 +12,19 @@ export type PropertyType =
 export type Furnishing = "FULLY" | "SEMI" | "UNFURNISHED";
 export type PaymentType = "CASH" | "INSTALLMENTS";
 export type CompletionStatus = "OFF_PLAN" | "READY";
-export type AppointmentStatus = "PENDING" | "CONFIRMED" | "CANCELLED";
+export type AppointmentStatus = "PENDING" | "CONFIRMED" | "CANCELLED" | "RESCHEDULED";
 
 export type User = {
   id: string;
   name: string;
   email: string;
   phone?: string;
+  avatarUrl?: string | null;
   role: Role;
+  isCompanyAccount?: boolean;
+  companyOwnerId?: string;
+  password?: string;
+  blocked?: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -59,6 +64,7 @@ export type Listing = {
   id: string;
   userId: string;
   status: ListingStatus;
+  feesPaid?: boolean;
   adminNotes?: string | null;
   reviewedBy?: string | null;
   reviewedAt?: string | null;
@@ -82,6 +88,7 @@ export type Appointment = {
   contactName: string;
   contactPhone: string;
   notes?: string;
+  suggestedSlots: string[];
   createdAt: string;
   updatedAt: string;
 };
@@ -93,10 +100,83 @@ export type SavedSearch = {
   createdAt: string;
 };
 
+export type SellerMessage = {
+  id: string;
+  sellerId: string;
+  buyerId: string;
+  propertyId: string;
+  appointmentId: string;
+  subject: string;
+  body: string;
+  createdAt: string;
+  readAt?: string | null;
+};
+
+export type CommunityPost = {
+  id: string;
+  userId: string;
+  text: string;
+  imageUrl?: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CommunityPostLike = {
+  id: string;
+  postId: string;
+  userId: string;
+  reaction: "LIKE" | "LOVE";
+  createdAt: string;
+};
+
+export type CommunityPostCommentLike = {
+  id: string;
+  postId: string;
+  commentId: string;
+  userId: string;
+  createdAt: string;
+};
+
+export type CommunityPostComment = {
+  id: string;
+  postId: string;
+  userId: string;
+  text: string;
+  parentCommentId?: string | null;
+  createdAt: string;
+};
+
+export type CommunityListingLike = {
+  id: string;
+  listingId: string;
+  userId: string;
+  createdAt: string;
+};
+
+export type CommunityListingCommentLike = {
+  id: string;
+  listingId: string;
+  commentId: string;
+  userId: string;
+  createdAt: string;
+};
+
+export type CommunityListingComment = {
+  id: string;
+  listingId: string;
+  userId: string;
+  text: string;
+  parentCommentId?: string | null;
+  createdAt: string;
+};
+
 export type PublicPropertyCard = Property & {
   listingStatus: ListingStatus;
   verified: boolean;
   sellerId: string;
+  listedByName: string;
+  listedByCompanyName?: string;
+  listedByPhone?: string;
   distanceKm?: number;
   goodDeal?: boolean;
 };

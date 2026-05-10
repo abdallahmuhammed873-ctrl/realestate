@@ -1,11 +1,26 @@
-import { Appointment, Favorite, Listing, Property, SavedSearch, User } from "@/lib/types";
+import {
+  CommunityListingComment,
+  CommunityListingCommentLike,
+  CommunityListingLike,
+  Appointment,
+  CommunityPost,
+  CommunityPostComment,
+  CommunityPostCommentLike,
+  CommunityPostLike,
+  Favorite,
+  Listing,
+  Property,
+  SavedSearch,
+  SellerMessage,
+  User
+} from "@/lib/types";
 
 const now = new Date().toISOString();
 
 export const seedUsers: User[] = [
-  { id: "u-buyer-1", name: "Nour Hassan", email: "buyer@example.com", phone: "+201000000001", role: "BUYER", createdAt: now, updatedAt: now },
-  { id: "u-seller-1", name: "Cairo Developments", email: "seller@example.com", phone: "+201000000002", role: "SELLER", createdAt: now, updatedAt: now },
-  { id: "u-admin-1", name: "Platform Admin", email: "admin@example.com", phone: "+201000000003", role: "ADMIN", createdAt: now, updatedAt: now }
+  { id: "u-buyer-1", name: "Nour Hassan", email: "buyer@example.com", phone: "+201000000001", role: "BUYER", password: "123456", createdAt: now, updatedAt: now },
+  { id: "u-seller-1", name: "Cairo Developments", email: "seller@example.com", phone: "+201000000002", role: "SELLER", password: "123456", createdAt: now, updatedAt: now },
+  { id: "u-admin-1", name: "Platform Admin", email: "admin@example.com", phone: "+201000000003", role: "ADMIN", password: "123456", createdAt: now, updatedAt: now }
 ];
 
 export const seedListings: Listing[] = [
@@ -207,3 +222,11 @@ export const seedFavorites: Favorite[] = [
 
 export const seedAppointments: Appointment[] = [];
 export const seedSavedSearches: SavedSearch[] = [];
+export const seedSellerMessages: SellerMessage[] = [];
+export const seedCommunityPosts: CommunityPost[] = [];
+export const seedCommunityPostLikes: CommunityPostLike[] = [];
+export const seedCommunityPostCommentLikes: CommunityPostCommentLike[] = [];
+export const seedCommunityPostComments: CommunityPostComment[] = [];
+export const seedCommunityListingLikes: CommunityListingLike[] = [];
+export const seedCommunityListingCommentLikes: CommunityListingCommentLike[] = [];
+export const seedCommunityListingComments: CommunityListingComment[] = [];

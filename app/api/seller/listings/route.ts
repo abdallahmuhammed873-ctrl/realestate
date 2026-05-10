@@ -14,6 +14,7 @@ export async function POST(req: NextRequest) {
   const result = createOrUpdateSellerListing({
     listingId: body.listingId ? String(body.listingId) : undefined,
     sellerId: user.id,
+    feesPaid: Boolean(body.feesPaid),
     property: body.property
   });
   if (!result) return NextResponse.json({ error: "Listing not found." }, { status: 404 });

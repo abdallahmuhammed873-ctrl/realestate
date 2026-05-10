@@ -2,29 +2,37 @@
   "name": "cheque-key-marketplace",
   "version": "1.0.0",
   "private": true,
+  "engines": {
+    "node": ">=22 <23"
+  },
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
+    "dev": "set NEXT_DISABLE_SWC_NATIVE=1 && next dev",
+    "build": "set NEXT_DISABLE_SWC_NATIVE=1 && next build",
+    "prestart": "npm run build",
+    "start": "set NEXT_DISABLE_SWC_NATIVE=1 && next start",
     "lint": "next lint",
     "seed": "ts-node --transpile-only prisma/seed.ts"
   },
   "dependencies": {
-    "@prisma/client": "^6.0.0",
+    "@prisma/client": "6.0.0",
+    "@tailwindcss/vite": "^4.2.1",
     "clsx": "^2.1.1",
     "next": "^15.0.0",
+    "nodemailer": "^8.0.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "resend": "^6.9.3",
     "zod": "^3.23.8"
   },
   "devDependencies": {
     "@types/node": "^22.7.5",
+    "@types/nodemailer": "^6.4.14",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "autoprefixer": "^10.4.20",
     "postcss": "^8.4.47",
-    "prisma": "^6.0.0",
-    "tailwindcss": "^3.4.14",
+    "prisma": "6.0.0",
+    "tailwindcss": "^3.4.19",
     "ts-node": "^10.9.2",
     "typescript": "^5.6.2"
   }

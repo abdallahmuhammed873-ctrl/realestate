@@ -16,8 +16,7 @@ export default async function SellerEditListingPage({ params }: { params: Promis
         listingId={data.listing.id}
         initial={{
           ...data.property,
-          amenities: data.property.amenities.join(","),
-          images: data.property.images.join(",")
+          amenities: data.property.amenities.join(",")
         }}
       />
     </div>

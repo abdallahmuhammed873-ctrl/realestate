@@ -1,22 +1,106 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useLanguage } from "@/components/layout/language-provider";
 import { cn } from "@/lib/utils";
-
-const tabs = [
-  { href: "/", label: "Home" },
-  { href: "/search", label: "Search" },
-  { href: "/favorites", label: "Favorites" },
-  { href: "/compare", label: "Compare" },
-  { href: "/auth", label: "Profile" }
-];
 
 export function MobileNav() {
   const pathname = usePathname();
+  const router = useRouter();
+  const { t } = useLanguage();
+  const [unread, setUnread] = useState(0);
+  const [role, setRole] = useState<string | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  const baseTabs = [
+    { href: "/", label: t("home") },
+    { href: "/search", label: t("search") },
+    { href: "/notifications", label: t("notify") },
+    { href: "/appointments", label: t("appointments") },
+    { href: "/favorites", label: t("favorites") },
+    { href: "/compare", label: t("compare") },
+    { href: "/community", label: t("community") }
+  ];
+
+  useEffect(() => {
+    let mounted = true;
+    const loadUnread = () => {
+      fetch("/api/notifications/unread", { cache: "no-store" })
+        .then((r) => r.json())
+        .then((data) => {
+          if (mounted) setUnread(Number(data.unread ?? 0));
+        })
+        .catch(() => undefined);
+    };
+    const loadSession = () => {
+      fetch("/api/me")
+        .then((r) => r.json())
+        .then((data) => {
+          if (!mounted) return;
+          const nextRole = data?.user?.role ?? null;
+          setRole(nextRole);
+          setIsLoggedIn(Boolean(data?.user));
+        })
+        .catch(() => {
+          if (!mounted) return;
+          setRole(null);
+          setIsLoggedIn(false);
+        });
+    };
+    const loadAll = () => {
+      loadUnread();
+      loadSession();
+    };
+    loadAll();
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === "visible") loadUnread();
+    }, 8000);
+    window.addEventListener("focus", loadAll);
+    return () => {
+      window.removeEventListener("focus", loadAll);
+      window.clearInterval(timer);
+      mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    const handler = () => {
+      fetch("/api/notifications/unread", { cache: "no-store" })
+        .then((r) => r.json())
+        .then((data) => setUnread(Number(data.unread ?? 0)))
+        .catch(() => undefined);
+    };
+    window.addEventListener("notifications:changed", handler as EventListener);
+    return () => window.removeEventListener("notifications:changed", handler as EventListener);
+  }, []);
+
+  async function logout() {
+    if (loggingOut) return;
+    setLoggingOut(true);
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+      setRole(null);
+      setIsLoggedIn(false);
+      router.push(role === "ADMIN" ? "/admin/login" : "/auth");
+      router.refresh();
+    } finally {
+      setLoggingOut(false);
+    }
+  }
+
+  const tabs =
+    role === "SELLER"
+      ? [...baseTabs, { href: "/seller/dashboard", label: t("seller") }]
+      : role === "ADMIN"
+        ? [...baseTabs, { href: "/admin", label: t("admin") }]
+        : baseTabs;
+
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200 bg-white md:hidden">
-      <ul className="grid grid-cols-5">
+      <ul className="grid" style={{ gridTemplateColumns: `repeat(${tabs.length + 1}, minmax(0, 1fr))` }}>
         {tabs.map((tab) => (
           <li key={tab.href}>
             <Link
@@ -26,10 +110,35 @@ export function MobileNav() {
                 pathname === tab.href ? "font-bold text-brand-700" : "text-slate-500"
               )}
             >
-              {tab.label}
+              {tab.href === "/notifications" && unread > 0 ? `${tab.label} (${unread})` : tab.label}
             </Link>
           </li>
         ))}
+        <li>
+          {isLoggedIn ? (
+            <button
+              type="button"
+              onClick={logout}
+              disabled={loggingOut}
+              className={cn(
+                "block w-full px-2 py-3 text-center text-xs",
+                pathname === "/auth" ? "font-bold text-brand-700" : "text-slate-500"
+              )}
+            >
+              {loggingOut ? t("loggingOut") : t("logout")}
+            </button>
+          ) : (
+            <Link
+              href="/auth"
+              className={cn(
+                "block px-2 py-3 text-center text-xs",
+                pathname === "/auth" ? "font-bold text-brand-700" : "text-slate-500"
+              )}
+            >
+              {t("login")}
+            </Link>
+          )}
+        </li>
       </ul>
     </nav>
   );

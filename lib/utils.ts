@@ -5,9 +5,13 @@ export function cn(...inputs: ClassValue[]) {
   return clsx(inputs);
 }
 
-export function formatPrice(value: number | null, currency = "EGP") {
+export function isValidPhoneNumber(phone: string) {
+  return /^01\d{9}$/.test(phone.trim());
+}
+
+export function formatPrice(value: number | null, currency = "EGP", language: "en" | "ar" = "en") {
   if (value === null) return "N/A";
-  return new Intl.NumberFormat("en-EG", { style: "currency", currency, maximumFractionDigits: 0 }).format(value);
+  return new Intl.NumberFormat(language === "ar" ? "ar-EG" : "en-EG", { style: "currency", currency, maximumFractionDigits: 0 }).format(value);
 }
 
 export function haversineDistanceKm(lat1: number, lng1: number, lat2: number, lng2: number): number {

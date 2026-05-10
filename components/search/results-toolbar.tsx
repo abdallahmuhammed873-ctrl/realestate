@@ -1,7 +1,6 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { SORT_OPTIONS } from "@/lib/constants";
 
@@ -11,15 +10,6 @@ export function ResultsToolbar({ total }: { total: number }) {
   const router = useRouter();
 
   const sort = params.get("sort") ?? "FEATURED";
-
-  async function createAlert() {
-    await fetch("/api/saved-searches", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ query: Object.fromEntries(params.entries()) })
-    });
-    alert("Saved search alert created.");
-  }
 
   return (
     <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl border bg-white p-3">
@@ -39,9 +29,6 @@ export function ResultsToolbar({ total }: { total: number }) {
             </option>
           ))}
         </Select>
-        <Button variant="outline" onClick={createAlert}>
-          Create Alert
-        </Button>
       </div>
     </div>
   );

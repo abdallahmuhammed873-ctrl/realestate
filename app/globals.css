@@ -28,3 +28,37 @@ body {
       transparent 28px
     );
 }
+
+@keyframes hero-slider-scroll {
+  0%,
+  28.571% {
+    transform: translateX(0%);
+  }
+  33.333%,
+  61.905% {
+    transform: translateX(-100%);
+  }
+  66.667%,
+  95.238% {
+    transform: translateX(-200%);
+  }
+  100% {
+    transform: translateX(-300%);
+  }
+}
+
+.hero-slider-track {
+  animation: hero-slider-scroll 21s ease-in-out infinite;
+  will-change: transform;
+}
+
+.hero-slider-slide {
+  flex: 0 0 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-slider-track {
+    animation: none;
+    transform: translateX(0%);
+  }
+}
