@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { PrismaClient } from "@prisma/client";
+import { parseInternalAiSearchFilters, parsePublicSearchFilters, toSearchParams } from "../../lib/search-contract.ts";
 import { loadLocalEnv } from "../../lib/server/load-env.ts";
 import { IMPORTED_INVENTORY_OWNER_ID, upsertImportedInventory } from "../../prisma/import-ai-inventory.ts";
 import { importRuntimeData } from "../../prisma/import-runtime-data.ts";
@@ -25,6 +26,32 @@ async function resetData() {
 
 async function main() {
   await resetData();
+
+  const parsedPublic = parsePublicSearchFilters({
+    type: "APARTMENT,VILLA",
+    city: "Cairo",
+    minPrice: "1000000",
+    maxPrice: "5000000",
+    page: "2",
+    pageSize: "12",
+    sort: "PRICE_ASC"
+  });
+  assert.deepEqual(parsedPublic.type, ["APARTMENT", "VILLA"], "Expected shared contract to parse comma-separated types");
+  assert.equal(parsedPublic.page, 2, "Expected shared contract to normalize public page");
+  assert.equal(parsedPublic.pageSize, 12, "Expected shared contract to normalize public page size");
+
+  const parsedInternal = parseInternalAiSearchFilters({
+    unitCode: "AL-TEST-01",
+    inventoryStatus: "Available",
+    page: 1,
+    pageSize: 5
+  });
+  assert.equal(parsedInternal.unitCode, "AL-TEST-01", "Expected internal AI contract to keep unitCode");
+  assert.equal(parsedInternal.inventoryStatus, "Available", "Expected internal AI contract to keep inventoryStatus");
+
+  const serialized = toSearchParams({ city: "Cairo", type: ["APARTMENT", "VILLA"], page: 3 });
+  assert.match(serialized, /city=Cairo/, "Expected shared contract serializer to keep city");
+  assert.match(serialized, /type=APARTMENT%2CVILLA/, "Expected shared contract serializer to keep type lists");
 
   const searchResult = await searchProperties({ page: 1, pageSize: 10 });
   assert.ok(searchResult.total > 0, "Expected approved properties to be searchable");

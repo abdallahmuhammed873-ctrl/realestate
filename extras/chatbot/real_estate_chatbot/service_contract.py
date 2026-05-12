@@ -10,6 +10,7 @@ PropertyType = Literal["APARTMENT", "VILLA", "DUPLEX", "PENTHOUSE", "CHALET", "L
 PaymentType = Literal["CASH", "INSTALLMENTS"]
 CompletionStatus = Literal["OFF_PLAN", "READY"]
 SortType = Literal["FEATURED", "NEWEST", "PRICE_ASC", "PRICE_DESC", "AREA_DESC", "DISTANCE_ASC"]
+FurnishingType = Literal["FULLY", "SEMI", "UNFURNISHED"]
 
 
 class ServiceBaseModel(BaseModel):
@@ -52,9 +53,14 @@ class AiPropertyFilters(ServiceBaseModel):
     minBaths: int | None = Field(default=None, ge=0)
     maxBaths: int | None = Field(default=None, ge=0)
     paymentType: PaymentType | None = None
+    furnishing: FurnishingType | None = None
     completionStatus: CompletionStatus | None = None
     hasGarden: bool | None = None
     hasRoof: bool | None = None
+    amenities: list[str] | None = None
+    lat: float | None = None
+    lng: float | None = None
+    distanceKm: float | None = Field(default=None, ge=0)
     downPaymentMax: float | None = Field(default=None, ge=0)
     installmentYearsMax: float | None = Field(default=None, ge=0)
     installmentMonthlyMax: float | None = Field(default=None, ge=0)
@@ -77,6 +83,12 @@ class AiPropertyFilters(ServiceBaseModel):
             maximum = getattr(self, max_key)
             if minimum is not None and maximum is not None and minimum > maximum:
                 raise ValueError(f"{min_key} cannot be greater than {max_key}")
+        if (self.lat is None) != (self.lng is None):
+            raise ValueError("lat and lng must be provided together")
+        if self.distanceKm is not None and (self.lat is None or self.lng is None):
+            raise ValueError("distanceKm requires both lat and lng")
+        if self.sort == "DISTANCE_ASC" and (self.lat is None or self.lng is None):
+            raise ValueError("DISTANCE_ASC sort requires both lat and lng")
         return self
 
     def to_payload(self) -> dict[str, Any]:

@@ -142,7 +142,7 @@
 
 ## Phase 5 - Canonical Search Contract Shared By Web, AI, And Mobile
 
-- [ ] Define one filter schema that is used everywhere:
+- [x] Define one filter schema that is used everywhere:
   - `transaction`
   - `type`
   - `city`
@@ -167,9 +167,9 @@
   - `sort`
   - `page`
   - `pageSize`
-- [ ] Keep one canonical server-side search implementation in the Next.js backend/service layer.
-- [ ] Make AI reuse that search contract instead of inventing its own pandas rules.
-- [ ] If needed, add internal AI-only fields like `unitCode` and `inventoryStatus`, but keep them versioned and documented.
+- [x] Keep one canonical server-side search implementation in the Next.js backend/service layer.
+- [x] Make AI reuse that search contract instead of inventing its own pandas rules.
+- [x] If needed, add internal AI-only fields like `unitCode` and `inventoryStatus`, but keep them versioned and documented.
 
 ## Phase 6 - Solidify The PostgreSQL Data Layer
 
@@ -364,7 +364,7 @@
 - [x] Phase 2: migrate Next.js runtime to PostgreSQL
 - [x] Phase 3: import AI inventory into PostgreSQL
 - [x] Phase 4: refactor Python into AI-only service
-- [ ] Phase 5: shared search contract
+- [x] Phase 5: shared search contract
 - [ ] Phase 6: solidify PostgreSQL data layer
 - [ ] Phase 7: local network deployment model
 - [ ] Phase 8: versioned mobile API

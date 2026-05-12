@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { aiPropertySearchSchema, isAuthorizedInternalAiRequest } from "@/lib/ai-contract";
+import { isAuthorizedInternalAiRequest, safeParseInternalAiSearchFilters } from "@/lib/ai-contract";
 import { searchAiReadableProperties } from "@/lib/repository";
 
 export async function POST(req: NextRequest) {
@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
   }
 
   const rawBody = await req.json().catch(() => null);
-  const parsed = aiPropertySearchSchema.safeParse(rawBody);
+  const parsed = safeParseInternalAiSearchFilters(rawBody);
   if (!parsed.success) {
     return NextResponse.json(
       {

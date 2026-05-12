@@ -1,9 +1,10 @@
 import type { SearchFilters } from "../types.ts";
+import { parsePublicSearchFilters } from "../search-contract.ts";
 import { mapProperty, searchPropertyCards, toPublicPropertyCard } from "../server/repository-helpers.ts";
 import { prisma } from "../server/prisma.ts";
 
 export async function searchProperties(filters: SearchFilters) {
-  return searchPropertyCards(filters);
+  return searchPropertyCards(parsePublicSearchFilters(filters));
 }
 
 export async function getPublicPropertyById(id: string) {
