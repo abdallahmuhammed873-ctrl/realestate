@@ -86,6 +86,7 @@ Use `/auth` and choose role:
 - `PATCH /api/admin/listings/[id]`  
   Body: `{ status: "APPROVED" | "REJECTED", notes? }`
 - `GET /api/properties/by-ids?ids=p-1,p-2`
+- `GET /api/health`
 - `POST /api/chat`  
   Body: `{ message, language: "EN" | "AR" }`  
   Response: `{ reply, suggestedFilters, language, extractedFilters, total, items }`
@@ -110,8 +111,9 @@ Use `/auth` and choose role:
    - `npx prisma migrate deploy`
    - `npm run seed`
 5. Start the Next.js app:
-   - `npm run dev`
-   - In development the server now logs the active environment plus PostgreSQL connection mode, host, and database name once on startup.
+   - local laptop only: `npm run dev`
+   - same-Wi-Fi demo mode: `npm run dev:network`
+   - In development the server now logs the active environment, backend bind host/port, PostgreSQL connection mode, detected network URL, and AI service target once on startup.
 6. Start the Python AI service in a second terminal:
    - `cd extras/chatbot/real_estate_chatbot`
    - `pip install -r requirements.txt`
@@ -119,6 +121,10 @@ Use `/auth` and choose role:
    - If Next.js is not running on `http://127.0.0.1:3000`, set `PLATFORM_AI_BASE_URL` before starting the service.
 7. Optional debug UI for the AI service:
    - `streamlit run app.py`
+8. For same-network mobile testing:
+   - use `npm run network:info` to print the current local IPv4 and demo URLs
+   - open `http://<laptop-ip>:3000/api/health` from the phone browser to verify backend, DB, and AI reachability
+   - see `docs/local-network-deployment.md` for the full runbook
 
 ## Notes
 
@@ -128,3 +134,4 @@ Use `/auth` and choose role:
 - The Python AI service reads shared platform data through `app/api/internal/ai/*` and no longer depends on CSV for chat-time retrieval.
 - Mobile and browser clients should talk to the Next.js backend only. PostgreSQL is intended to stay backend-only on the laptop for the graduation demo.
 - Auth still uses the current session-cookie flow, but cookie access is now centralized in shared server helpers instead of being duplicated across route handlers.
+- `GET /api/health` is the main laptop-demo readiness endpoint for backend, database, and AI checks.

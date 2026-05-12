@@ -184,22 +184,22 @@
 
 ## Phase 7 - Local Network Deployment Model
 
-- [ ] Run the Next.js backend on the laptop in a way that is reachable from other devices on the same Wi-Fi network.
-- [ ] Configure the backend server to bind to `0.0.0.0`, not only `localhost`.
-- [ ] Determine and document the laptop's local IPv4 address for testing.
-- [ ] Open/allow the backend port in the laptop firewall if needed.
-- [ ] Keep PostgreSQL bound for local/backend use only unless there is a very specific reason to expose it.
-- [ ] Run the Python AI service on the same laptop and let the backend call it locally.
-- [ ] Make the backend call the AI service internally on the laptop instead of letting the mobile app call the AI service directly.
-- [ ] Document the expected local URLs for demo/testing, for example:
+- [x] Run the Next.js backend on the laptop in a way that is reachable from other devices on the same Wi-Fi network.
+- [x] Configure the backend server to bind to `0.0.0.0`, not only `localhost`.
+- [x] Determine and document the laptop's local IPv4 address for testing.
+- [x] Open/allow the backend port in the laptop firewall if needed.
+- [x] Keep PostgreSQL bound for local/backend use only unless there is a very specific reason to expose it.
+- [x] Run the Python AI service on the same laptop and let the backend call it locally.
+- [x] Make the backend call the AI service internally on the laptop instead of letting the mobile app call the AI service directly.
+- [x] Document the expected local URLs for demo/testing, for example:
   - web app on laptop
   - backend API on `http://<laptop-ip>:<port>`
   - AI service on local internal port
-- [ ] Add simple health endpoints so the team can quickly verify:
+- [x] Add simple health endpoints so the team can quickly verify:
   - backend is reachable from phone
   - AI service is reachable from backend
   - database is reachable from backend
-- [ ] Accept that this deployment model is demo-friendly, not production-grade:
+- [x] Accept that this deployment model is demo-friendly, not production-grade:
   - laptop must stay on
   - laptop and phone must stay on the same network
   - laptop IP may change between networks
@@ -366,7 +366,7 @@
 - [x] Phase 4: refactor Python into AI-only service
 - [x] Phase 5: shared search contract
 - [x] Phase 6: solidify PostgreSQL data layer
-- [ ] Phase 7: local network deployment model
+- [x] Phase 7: local network deployment model
 - [ ] Phase 8: versioned mobile API
 - [ ] Phase 9: local media upload
 - [ ] Phase 10: 360 panorama support

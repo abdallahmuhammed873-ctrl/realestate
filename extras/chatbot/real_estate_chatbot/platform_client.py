@@ -37,7 +37,7 @@ class PlatformClient:
 
     def get_health(self) -> bool:
         try:
-            self.search_properties({"page": 1, "pageSize": 1})
-            return True
+            payload = self._request("GET", "/health")
+            return payload.get("status") == "ok"
         except Exception:
             return False

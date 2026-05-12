@@ -1,5 +1,6 @@
 import { AUTH_COOKIE_NAME } from "../auth-session.ts";
 import { loadLocalEnv } from "./load-env.ts";
+import { getBackendUrls, getPreferredLocalIpv4, getServerBindingConfig } from "./network.ts";
 
 loadLocalEnv();
 
@@ -54,12 +55,18 @@ function parseDatabaseUrl(rawUrl?: string | null): DatabaseConnectionSummary {
 export function getServerRuntimeSummary() {
   const database = parseDatabaseUrl(process.env.DATABASE_URL);
   const aiServiceUrl = process.env.PYTHON_AI_SERVICE_URL?.trim() || "http://127.0.0.1:8001";
+  const backendBinding = getServerBindingConfig();
+  const backendUrls = getBackendUrls();
+  const preferredLocalIpv4 = getPreferredLocalIpv4()?.address ?? null;
 
   return {
     nodeEnv: process.env.NODE_ENV || "development",
     database,
     aiServiceUrl,
-    authCookie: AUTH_COOKIE_NAME
+    authCookie: AUTH_COOKIE_NAME,
+    backendBinding,
+    backendUrls,
+    preferredLocalIpv4
   };
 }
 
@@ -78,12 +85,22 @@ export function logServerRuntimeOnce() {
         : "unknown PostgreSQL mode";
 
   console.info(
-    `[runtime] env=${summary.nodeEnv} db=${summary.database.provider} mode=${dbModeLabel} host=${summary.database.host}:${summary.database.port} database=${summary.database.database} ai=${summary.aiServiceUrl} authCookie=${summary.authCookie}`
+    `[runtime] env=${summary.nodeEnv} bind=${summary.backendBinding.host}:${summary.backendBinding.port} networkUrl=${summary.backendUrls.networkUrl ?? "disabled"} db=${summary.database.provider} mode=${dbModeLabel} host=${summary.database.host}:${summary.database.port} database=${summary.database.database} ai=${summary.aiServiceUrl} authCookie=${summary.authCookie}`
   );
 
   if (summary.database.mode !== "local") {
     console.warn(
       "[runtime] DATABASE_URL is not pointing at a local PostgreSQL host. For the graduation demo, keep PostgreSQL backend-only on the laptop unless you intentionally moved it."
+    );
+  }
+
+  if (!summary.backendBinding.networkReachable) {
+    console.info(
+      "[runtime] Backend is bound to localhost only. Use `npm run dev:network` or `npm run start:network` when the phone needs to reach the laptop over Wi-Fi."
+    );
+  } else if (!summary.preferredLocalIpv4) {
+    console.warn(
+      "[runtime] Backend is network-reachable, but no private IPv4 address was detected. Confirm the laptop is connected to the demo network."
     );
   }
 }
