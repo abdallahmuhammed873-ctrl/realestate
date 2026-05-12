@@ -173,14 +173,14 @@
 
 ## Phase 6 - Solidify The PostgreSQL Data Layer
 
-- [ ] Keep PostgreSQL as the real database engine.
-- [ ] Keep Prisma as the primary schema and migration tool.
-- [ ] Keep the current app auth/session logic unchanged while the data layer is migrated.
-- [ ] Centralize business rules in Next.js server code and shared services.
-- [ ] Keep high-churn custom business logic in app server code, not duplicated in clients.
-- [ ] Log the active environment and database connection mode clearly in development.
-- [ ] Use local PostgreSQL on the laptop for development/demo unless the team later decides to host it elsewhere.
-- [ ] Keep PostgreSQL accessible only to local backend/services, not directly to phones.
+- [x] Keep PostgreSQL as the real database engine.
+- [x] Keep Prisma as the primary schema and migration tool.
+- [x] Keep the current app auth/session logic unchanged while the data layer is migrated.
+- [x] Centralize business rules in Next.js server code and shared services.
+- [x] Keep high-churn custom business logic in app server code, not duplicated in clients.
+- [x] Log the active environment and database connection mode clearly in development.
+- [x] Use local PostgreSQL on the laptop for development/demo unless the team later decides to host it elsewhere.
+- [x] Keep PostgreSQL accessible only to local backend/services, not directly to phones.
 
 ## Phase 7 - Local Network Deployment Model
 
@@ -365,7 +365,7 @@
 - [x] Phase 3: import AI inventory into PostgreSQL
 - [x] Phase 4: refactor Python into AI-only service
 - [x] Phase 5: shared search contract
-- [ ] Phase 6: solidify PostgreSQL data layer
+- [x] Phase 6: solidify PostgreSQL data layer
 - [ ] Phase 7: local network deployment model
 - [ ] Phase 8: versioned mobile API
 - [ ] Phase 9: local media upload

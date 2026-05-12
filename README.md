@@ -104,22 +104,27 @@ Use `/auth` and choose role:
    - `npm install`
 2. Copy env:
    - `copy .env.example .env` (Windows)
-3. Create PostgreSQL DB and run:
+3. Create a local PostgreSQL database on the laptop and set `DATABASE_URL`.
+4. Apply Prisma schema and seed runtime data:
    - `npx prisma generate`
-   - `npx prisma db push`
+   - `npx prisma migrate deploy`
    - `npm run seed`
-4. Start the Next.js app:
+5. Start the Next.js app:
    - `npm run dev`
-5. Start the Python AI service in a second terminal:
+   - In development the server now logs the active environment plus PostgreSQL connection mode, host, and database name once on startup.
+6. Start the Python AI service in a second terminal:
    - `cd extras/chatbot/real_estate_chatbot`
    - `pip install -r requirements.txt`
    - `uvicorn api:app --host 127.0.0.1 --port 8001`
    - If Next.js is not running on `http://127.0.0.1:3000`, set `PLATFORM_AI_BASE_URL` before starting the service.
-6. Optional debug UI for the AI service:
+7. Optional debug UI for the AI service:
    - `streamlit run app.py`
 
 ## Notes
 
 - Runtime uses PostgreSQL through Prisma-backed service modules.
+- Prisma is the primary schema and migration path for runtime data changes.
 - Public listing visibility is enforced by repository-level status check (`APPROVED` only).
 - The Python AI service reads shared platform data through `app/api/internal/ai/*` and no longer depends on CSV for chat-time retrieval.
+- Mobile and browser clients should talk to the Next.js backend only. PostgreSQL is intended to stay backend-only on the laptop for the graduation demo.
+- Auth still uses the current session-cookie flow, but cookie access is now centralized in shared server helpers instead of being duplicated across route handlers.

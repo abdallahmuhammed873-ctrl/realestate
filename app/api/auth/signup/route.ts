@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { setAuthSessionCookie } from "@/lib/auth";
 import { createUserProfile } from "@/lib/repository";
 import { isValidPhoneNumber } from "@/lib/utils";
 import { toSessionUser } from "@/lib/sanitize";
@@ -43,6 +44,5 @@ export async function POST(req: NextRequest) {
   }
 
   const res = NextResponse.json({ ok: true, user: toSessionUser(user) });
-  res.cookies.set("demo_user_id", user.id, { httpOnly: false, sameSite: "lax", path: "/" });
-  return res;
+  return setAuthSessionCookie(res, user.id);
 }

@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
+import { getCurrentUserId } from "@/lib/auth";
 import { createAppointment, createViewingRequestMessage } from "@/lib/repository";
 import { isValidPhoneNumber } from "@/lib/utils";
 
 export async function POST(req: NextRequest) {
-  const cookieStore = await cookies();
-  const userId = cookieStore.get("demo_user_id")?.value;
+  const userId = await getCurrentUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = await req.json();
   if (!body.propertyId || !body.datetime || !body.contactName || !body.contactPhone) {

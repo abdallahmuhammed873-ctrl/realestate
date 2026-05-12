@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
+import { getCurrentUserId } from "@/lib/auth";
 import { getUserById, removeCompanyUser, setCompanyUserBlocked } from "@/lib/repository";
 import { toAdminDirectoryUser } from "@/lib/sanitize";
 
 async function requireSeller() {
-  const cookieStore = await cookies();
-  const userId = cookieStore.get("demo_user_id")?.value;
+  const userId = await getCurrentUserId();
   const user = await getUserById(userId);
   if (!user || user.role !== "SELLER" || user.companyOwnerId || !user.isCompanyAccount) return null;
   return user;

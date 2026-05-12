@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
+import { getCurrentUserId } from "@/lib/auth";
 import { getUserById, createOrUpdateSellerListing } from "@/lib/repository";
 
 export async function POST(req: NextRequest) {
-  const cookieStore = await cookies();
-  const userId = cookieStore.get("demo_user_id")?.value;
+  const userId = await getCurrentUserId();
   const user = await getUserById(userId);
   if (!user || user.role !== "SELLER") return NextResponse.json({ error: "Seller access required" }, { status: 403 });
 

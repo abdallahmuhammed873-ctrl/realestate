@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { setAuthSessionCookie } from "@/lib/auth";
 import { findUserByEmail, resetPassword } from "@/lib/repository";
 
 export async function POST(req: NextRequest) {
@@ -25,7 +26,7 @@ export async function POST(req: NextRequest) {
   const redirectTo = user?.role === "ADMIN" ? "/admin" : user?.role === "SELLER" ? "/seller/dashboard" : "/profile";
   const res = NextResponse.json({ ok: true, message: "Password updated successfully.", redirectTo });
   if (user) {
-    res.cookies.set("demo_user_id", user.id, { httpOnly: true, path: "/" });
+    return setAuthSessionCookie(res, user.id);
   }
   return res;
 }

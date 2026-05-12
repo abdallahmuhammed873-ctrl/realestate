@@ -1,7 +1,9 @@
 import { PrismaClient } from "@prisma/client";
 import { loadLocalEnv } from "./load-env.ts";
+import { logServerRuntimeOnce } from "./runtime-config.ts";
 
 loadLocalEnv();
+logServerRuntimeOnce();
 
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;

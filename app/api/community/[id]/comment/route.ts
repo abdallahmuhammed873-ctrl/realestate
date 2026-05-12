@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
+import { getCurrentUserId } from "@/lib/auth";
 import { addCommunityPostComment } from "@/lib/repository";
 
 type Context = { params: Promise<{ id: string }> };
 
 export async function POST(req: NextRequest, ctx: Context) {
-  const cookieStore = await cookies();
-  const userId = cookieStore.get("demo_user_id")?.value;
+  const userId = await getCurrentUserId();
   if (!userId) return NextResponse.json({ error: "Login required." }, { status: 401 });
 
   const body = await req.json().catch(() => ({}));

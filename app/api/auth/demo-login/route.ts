@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { setAuthSessionCookie } from "@/lib/auth";
 import { findUserByIdentifier, findUserForLogin, verifyUserPassword } from "@/lib/repository";
 import { toSessionUser } from "@/lib/sanitize";
 
@@ -13,6 +14,5 @@ export async function POST(req: NextRequest) {
   if (!(await verifyUserPassword(user.id, password))) return NextResponse.json({ error: "Invalid password." }, { status: 401 });
   if (user.blocked) return NextResponse.json({ error: "This account is blocked." }, { status: 403 });
   const res = NextResponse.json({ ok: true, user: toSessionUser(user) });
-  res.cookies.set("demo_user_id", user.id, { httpOnly: false, sameSite: "lax", path: "/" });
-  return res;
+  return setAuthSessionCookie(res, user.id);
 }

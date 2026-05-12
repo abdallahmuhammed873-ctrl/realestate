@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
+import { getCurrentUserId } from "@/lib/auth";
 import { addBuyerProfile, getUserById, listBuyerProfilesForAdmin } from "@/lib/repository";
 import { isValidPhoneNumber } from "@/lib/utils";
 import { toAdminDirectoryUser } from "@/lib/sanitize";
 
 async function requireAdmin() {
-  const cookieStore = await cookies();
-  const userId = cookieStore.get("demo_user_id")?.value;
+  const userId = await getCurrentUserId();
   const user = await getUserById(userId);
   if (!user || user.role !== "ADMIN") return null;
   return user;

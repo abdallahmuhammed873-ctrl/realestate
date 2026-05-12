@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
+import { getCurrentUserId } from "@/lib/auth";
 import { createCommunityPost, getUserById, listCommunityPosts } from "@/lib/repository";
 
 export async function GET() {
-  const cookieStore = await cookies();
-  const userId = cookieStore.get("demo_user_id")?.value ?? null;
+  const userId = await getCurrentUserId();
   const viewer = await getUserById(userId);
   const posts = await listCommunityPosts(userId);
   return NextResponse.json({
@@ -15,8 +14,7 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const cookieStore = await cookies();
-  const userId = cookieStore.get("demo_user_id")?.value;
+  const userId = await getCurrentUserId();
   if (!userId) return NextResponse.json({ error: "Login required." }, { status: 401 });
 
   const body = await req.json().catch(() => ({}));

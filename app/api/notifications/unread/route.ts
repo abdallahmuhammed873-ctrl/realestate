@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
+import { getCurrentUserId } from "@/lib/auth";
 import { getUnreadNotificationsCount } from "@/lib/repository";
 
 export async function GET() {
-  const cookieStore = await cookies();
-  const userId = cookieStore.get("demo_user_id")?.value;
+  const userId = await getCurrentUserId();
   if (!userId) return NextResponse.json({ unread: 0 });
   return NextResponse.json({ unread: await getUnreadNotificationsCount(userId) });
 }
