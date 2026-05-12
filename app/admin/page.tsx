@@ -8,8 +8,8 @@ import { listPendingListings, listPendingListingsDetailed } from "@/lib/reposito
 export default async function AdminOverviewPage() {
   const user = await requireRole(["ADMIN"]);
   if (!user) redirect("/admin/login");
-  const pending = listPendingListings();
-  const pendingDetailed = listPendingListingsDetailed();
+  const pending = await listPendingListings();
+  const pendingDetailed = await listPendingListingsDetailed();
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">Admin Overview</h1>

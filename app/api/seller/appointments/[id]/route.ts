@@ -5,7 +5,7 @@ import { getUserById, updateSellerAppointment } from "@/lib/repository";
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const cookieStore = await cookies();
   const userId = cookieStore.get("demo_user_id")?.value;
-  const user = getUserById(userId);
+  const user = await getUserById(userId);
   if (!user || user.role !== "SELLER") {
     return NextResponse.json({ error: "Seller access required" }, { status: 403 });
   }
@@ -24,7 +24,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
   }
 
-  const appointment = updateSellerAppointment(id, user.id, {
+  const appointment = await updateSellerAppointment(id, user.id, {
     action: action as "APPROVE" | "DENY" | "RESCHEDULE",
     datetime: body.datetime ? String(body.datetime) : undefined,
     slots: Array.isArray(body.slots) ? body.slots.map((slot: unknown) => String(slot)) : undefined

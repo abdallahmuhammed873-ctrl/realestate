@@ -10,7 +10,7 @@ export default async function SellerUsersPage() {
     return <p className="rounded-2xl border bg-white p-6">Only company-signed-up accounts can manage users.</p>;
   }
 
-  const users = listCompanyUsers(user.id);
+  const users = await listCompanyUsers(user.id);
 
   return (
     <div className="space-y-4">

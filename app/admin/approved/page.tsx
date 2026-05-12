@@ -6,7 +6,7 @@ import { listApprovedListingsDetailed } from "@/lib/repository";
 export default async function AdminApprovedPage() {
   const user = await requireRole(["ADMIN"]);
   if (!user) redirect("/admin/login");
-  const approved = listApprovedListingsDetailed();
+  const approved = await listApprovedListingsDetailed();
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">Approved Queue</h1>
@@ -14,4 +14,3 @@ export default async function AdminApprovedPage() {
     </div>
   );
 }
-

@@ -12,7 +12,7 @@ export default async function SearchPage({
 }) {
   const resolved = await searchParams;
   const filters = parseSearchParams(resolved);
-  const result = searchProperties(filters);
+  const result = await searchProperties(filters);
 
   return (
     <div className="grid gap-4 md:grid-cols-[290px,1fr]">

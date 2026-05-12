@@ -16,7 +16,7 @@ export default async function FavoritesPage() {
       </div>
     );
   }
-  const items = listFavorites(user.id);
+  const items = await listFavorites(user.id);
   return (
     <div>
       <h1 className="mb-4 text-2xl font-bold">Saved Listings</h1>

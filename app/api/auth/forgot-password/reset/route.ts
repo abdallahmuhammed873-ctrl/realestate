@@ -18,10 +18,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Password and confirmation must match." }, { status: 400 });
   }
 
-  const ok = resetPassword(email, resetToken, newPassword);
+  const ok = await resetPassword(email, resetToken, newPassword);
   if (!ok) return NextResponse.json({ error: "Invalid or expired reset session." }, { status: 400 });
 
-  const user = findUserByEmail(email);
+  const user = await findUserByEmail(email);
   const redirectTo = user?.role === "ADMIN" ? "/admin" : user?.role === "SELLER" ? "/seller/dashboard" : "/profile";
   const res = NextResponse.json({ ok: true, message: "Password updated successfully.", redirectTo });
   if (user) {

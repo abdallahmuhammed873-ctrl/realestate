@@ -13,7 +13,7 @@ export async function POST(req: NextRequest, ctx: Context) {
   const text = String(body.text ?? "");
   const parentCommentId = body.parentCommentId ? String(body.parentCommentId) : null;
   const { id } = await ctx.params;
-  const result = addCommunityListingComment(id, userId, text, parentCommentId);
+  const result = await addCommunityListingComment(id, userId, text, parentCommentId);
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 });
   return NextResponse.json({ ok: true, listing: result.listing });
 }

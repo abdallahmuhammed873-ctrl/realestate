@@ -16,11 +16,11 @@ export default async function AdminDeveloperProfilePage({ params }: { params: Pr
   if (!user) redirect("/admin/login");
   const { id } = await params;
 
-  const developer = getUserById(id);
+  const developer = await getUserById(id);
   if (!developer || developer.role !== "SELLER" || !developer.isCompanyAccount || developer.companyOwnerId) redirect("/admin/developers");
 
-  const listings = listSellerListingsForAdmin(developer.id);
-  const posts = listSellerCommunityPostsForAdmin(developer.id);
+  const listings = await listSellerListingsForAdmin(developer.id);
+  const posts = await listSellerCommunityPostsForAdmin(developer.id);
 
   const byStatus = {
     total: listings.length,

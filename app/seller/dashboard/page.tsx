@@ -17,7 +17,7 @@ export default async function SellerDashboardPage() {
   const user = await requireRole(["SELLER"]);
   if (!user) return <p className="rounded-2xl border bg-white p-6">Seller access required. Login as seller.</p>;
 
-  const data = listSellerDashboard(user.id);
+  const data = await listSellerDashboard(user.id);
 
   return (
     <div className="space-y-4">

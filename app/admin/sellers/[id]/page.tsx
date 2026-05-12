@@ -16,11 +16,11 @@ export default async function AdminSellerProfilePage({ params }: { params: Promi
   if (!user) redirect("/admin/login");
   const { id } = await params;
 
-  const seller = getUserById(id);
+  const seller = await getUserById(id);
   if (!seller || seller.role !== "SELLER" || seller.isCompanyAccount || seller.companyOwnerId) redirect("/admin/sellers");
 
-  const listings = listSellerListingsForAdmin(seller.id);
-  const posts = listSellerCommunityPostsForAdmin(seller.id);
+  const listings = await listSellerListingsForAdmin(seller.id);
+  const posts = await listSellerCommunityPostsForAdmin(seller.id);
 
   const byStatus = {
     total: listings.length,

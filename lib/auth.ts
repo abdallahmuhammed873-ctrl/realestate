@@ -5,7 +5,7 @@ import { Role } from "@/lib/types";
 export async function getCurrentUser() {
   const cookieStore = await cookies();
   const userId = cookieStore.get("demo_user_id")?.value;
-  return getUserById(userId);
+  return await getUserById(userId);
 }
 
 export async function requireRole(roles: Role[]) {

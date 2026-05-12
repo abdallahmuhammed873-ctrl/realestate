@@ -1,5 +1,5 @@
 import { clsx, type ClassValue } from "clsx";
-import { SearchFilters } from "@/lib/types";
+import type { SearchFilters } from "./types.ts";
 
 export function cn(...inputs: ClassValue[]) {
   return clsx(inputs);

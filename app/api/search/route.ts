@@ -4,5 +4,5 @@ import { parseSearchParams } from "@/lib/utils";
 
 export async function GET(req: NextRequest) {
   const filters = parseSearchParams(Object.fromEntries(req.nextUrl.searchParams.entries()));
-  return NextResponse.json(searchProperties(filters));
+  return NextResponse.json(await searchProperties(filters));
 }

@@ -7,7 +7,7 @@ import { toAdminDirectoryUser } from "@/lib/sanitize";
 async function requireSeller() {
   const cookieStore = await cookies();
   const userId = cookieStore.get("demo_user_id")?.value;
-  const user = getUserById(userId);
+  const user = await getUserById(userId);
   if (!user || user.role !== "SELLER" || user.companyOwnerId || !user.isCompanyAccount) return null;
   return user;
 }
@@ -15,7 +15,7 @@ async function requireSeller() {
 export async function GET() {
   const seller = await requireSeller();
   if (!seller) return NextResponse.json({ error: "Seller access required" }, { status: 403 });
-  const items = listCompanyUsers(seller.id)
+  const items = (await listCompanyUsers(seller.id))
     .map((user) => toAdminDirectoryUser(user))
     .filter((item): item is NonNullable<typeof item> => Boolean(item));
   return NextResponse.json({ items });
@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
   if (phone && !isValidPhoneNumber(phone)) {
     return NextResponse.json({ error: "Phone number must be 11 digits and start with 01." }, { status: 400 });
   }
-  const created = addCompanyUser(seller.id, {
+  const created = await addCompanyUser(seller.id, {
     name: String(body.name ?? ""),
     email: String(body.email ?? ""),
     phone,

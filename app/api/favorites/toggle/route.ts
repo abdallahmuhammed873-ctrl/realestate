@@ -9,5 +9,5 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const propertyId = String(body.propertyId ?? "");
   if (!propertyId) return NextResponse.json({ error: "propertyId required" }, { status: 400 });
-  return NextResponse.json(toggleFavorite(userId, propertyId));
+  return NextResponse.json(await toggleFavorite(userId, propertyId));
 }

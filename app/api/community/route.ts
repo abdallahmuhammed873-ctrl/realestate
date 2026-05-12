@@ -5,8 +5,8 @@ import { createCommunityPost, getUserById, listCommunityPosts } from "@/lib/repo
 export async function GET() {
   const cookieStore = await cookies();
   const userId = cookieStore.get("demo_user_id")?.value ?? null;
-  const viewer = getUserById(userId);
-  const posts = listCommunityPosts(userId);
+  const viewer = await getUserById(userId);
+  const posts = await listCommunityPosts(userId);
   return NextResponse.json({
     ok: true,
     posts,
@@ -22,8 +22,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
   const text = String(body.text ?? "");
   const imageUrl = String(body.imageUrl ?? "");
-  const result = createCommunityPost(userId, { text, imageUrl });
+  const result = await createCommunityPost(userId, { text, imageUrl });
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 });
   return NextResponse.json({ ok: true, post: result.post });
 }
-

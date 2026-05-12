@@ -13,7 +13,7 @@ export async function POST(req: NextRequest, ctx: Context) {
   const reaction = String(body.reaction ?? "LIKE").toUpperCase();
   const normalized = reaction === "LOVE" ? "LOVE" : "LIKE";
   const { id } = await ctx.params;
-  const result = setCommunityPostReaction(id, userId, normalized);
+  const result = await setCommunityPostReaction(id, userId, normalized);
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 });
   return NextResponse.json({ ok: true, post: result.post });
 }

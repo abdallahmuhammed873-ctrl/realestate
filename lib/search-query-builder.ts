@@ -1,5 +1,5 @@
 import { Prisma } from "@prisma/client";
-import { SearchFilters } from "@/lib/types";
+import type { SearchFilters } from "./types.ts";
 
 export function buildPrismaPropertyWhere(filters: SearchFilters): Prisma.PropertyWhereInput {
   const where: Prisma.PropertyWhereInput = {

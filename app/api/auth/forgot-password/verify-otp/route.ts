@@ -7,7 +7,7 @@ export async function POST(req: NextRequest) {
   const otp = String(body.otp ?? "").trim();
   if (!email || !otp) return NextResponse.json({ error: "Email and OTP are required." }, { status: 400 });
 
-  const result = verifyPasswordResetOtp(email, otp);
+  const result = await verifyPasswordResetOtp(email, otp);
   if (!result) return NextResponse.json({ error: "Invalid or expired OTP." }, { status: 400 });
 
   return NextResponse.json({ ok: true, resetToken: result.token });

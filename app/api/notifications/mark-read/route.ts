@@ -11,6 +11,6 @@ export async function POST(req: NextRequest) {
   const id = String(body.id ?? "");
   if (!id) return NextResponse.json({ error: "Notification id is required" }, { status: 400 });
 
-  markNotificationSeen(userId, id);
+  await markNotificationSeen(userId, id);
   return NextResponse.json({ ok: true });
 }

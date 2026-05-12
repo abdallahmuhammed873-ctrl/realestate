@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Company name is required for developers." }, { status: 400 });
   }
 
-  const user = createUserProfile({
+  const user = await createUserProfile({
     name,
     email,
     phone: phoneNumber,

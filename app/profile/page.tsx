@@ -6,11 +6,12 @@ import { ProfileClient } from "@/app/profile/profile-client";
 export default async function ProfilePage() {
   const user = await getCurrentUser();
   if (!user) redirect("/auth");
-  const companyName = user.companyOwnerId ? getUserById(user.companyOwnerId)?.name : user.isCompanyAccount ? user.name : undefined;
+  const companyOwner = user.companyOwnerId ? await getUserById(user.companyOwnerId) : null;
+  const companyName = companyOwner?.name ?? (user.isCompanyAccount ? user.name : undefined);
 
   const sellerListings =
     user.role === "SELLER"
-      ? listSellerDashboard(user.id)
+      ? (await listSellerDashboard(user.id))
           .detailed.filter((x) => Boolean(x.property))
           .map(({ listing, property, seller }) => ({
             listingId: listing.id,

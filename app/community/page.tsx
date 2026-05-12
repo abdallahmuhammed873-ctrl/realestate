@@ -13,8 +13,8 @@ export default async function CommunityPage({
   const focusListingId = (resolved.listing ?? "").trim();
   const focusCommentId = (resolved.comment ?? "").trim();
 
-  const allPosts = listCommunityPosts(user?.id);
-  const allListings = listCommunityListings(user?.id);
+  const allPosts = await listCommunityPosts(user?.id);
+  const allListings = await listCommunityListings(user?.id);
   const posts = focusListingId ? [] : focusPostId ? allPosts.filter((p) => p.id === focusPostId) : allPosts;
   const listings = focusPostId
     ? []

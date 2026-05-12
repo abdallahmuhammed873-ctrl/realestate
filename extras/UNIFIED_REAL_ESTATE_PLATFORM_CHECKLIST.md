@@ -18,7 +18,7 @@
 
 ## What I Found In The Current Code
 
-- [ ] The Next.js runtime still uses `.demo-db.json` through `lib/repository.ts` instead of Prisma-backed PostgreSQL.
+- [x] The Next.js runtime still uses `.demo-db.json` through `lib/repository.ts` instead of Prisma-backed PostgreSQL.
 - [x] The Prisma schema is only a partial match for the real runtime model.
 - [ ] The Python AI project reads from `real_estate_master.csv` and stores chat history in local JSON, so it currently has its own separate dataset.
 - [ ] `/api/chat` in Next.js is only a stub and is not connected to the Python AI service.
@@ -80,7 +80,7 @@
 
 ## Phase 2 - Replace Demo Storage In The Next.js App
 
-- [ ] Split `lib/repository.ts` into smaller server-side modules before switching implementations:
+- [x] Split `lib/repository.ts` into smaller server-side modules before switching implementations:
   - `user-service`
   - `listing-service`
   - `property-service`
@@ -88,13 +88,13 @@
   - `community-service`
   - `notification-service`
   - `ai-read-service`
-- [ ] Keep route handler contracts as stable as possible so the frontend does not break during migration.
-- [ ] Replace `.demo-db.json` reads/writes with Prisma queries.
-- [ ] Create one migration script to import current `.demo-db.json` into PostgreSQL.
-- [ ] Seed initial users/listings/properties from the migrated data, not only from `mock-data.ts`.
-- [ ] Remove disk persistence logic that only exists for demo mode.
-- [ ] Add repository/service-level tests for the migrated search, favorites, appointments, admin approval, and seller listing flows.
-- [ ] Keep one clear server-side data access boundary so route handlers do not query the database ad hoc.
+- [x] Keep route handler contracts as stable as possible so the frontend does not break during migration.
+- [x] Replace `.demo-db.json` reads/writes with Prisma queries.
+- [x] Create one migration script to import current `.demo-db.json` into PostgreSQL.
+- [x] Seed initial users/listings/properties from the migrated data, not only from `mock-data.ts`.
+- [x] Remove disk persistence logic that only exists for demo mode.
+- [x] Add repository/service-level tests for the migrated search, favorites, appointments, admin approval, and seller listing flows.
+- [x] Keep one clear server-side data access boundary so route handlers do not query the database ad hoc.
 
 ## Phase 3 - Merge The AI Inventory Into The Same Platform Data
 
@@ -361,7 +361,7 @@
 ## Recommended Implementation Order
 
 - [x] Phase 1: canonical schema
-- [ ] Phase 2: migrate Next.js runtime to PostgreSQL
+- [x] Phase 2: migrate Next.js runtime to PostgreSQL
 - [ ] Phase 3: import AI inventory into PostgreSQL
 - [ ] Phase 4: refactor Python into AI-only service
 - [ ] Phase 5: shared search contract

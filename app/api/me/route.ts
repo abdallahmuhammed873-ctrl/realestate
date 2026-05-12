@@ -6,7 +6,7 @@ import { toProfileUser, toSessionUser } from "@/lib/sanitize";
 export async function GET() {
   const cookieStore = await cookies();
   const userId = cookieStore.get("demo_user_id")?.value;
-  const user = getUserById(userId);
+  const user = await getUserById(userId);
   return NextResponse.json({ user: toSessionUser(user) });
 }
 
@@ -20,7 +20,7 @@ export async function PATCH(req: Request) {
   const email = String(body.email ?? "");
   const phone = String(body.phone ?? "");
   const avatarUrl = body.avatarUrl ? String(body.avatarUrl) : null;
-  const result = updateUserProfile(userId, { name, email, phone, avatarUrl });
+  const result = await updateUserProfile(userId, { name, email, phone, avatarUrl });
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 });
   return NextResponse.json({ ok: true, user: toProfileUser(result.user) });
 }

@@ -10,7 +10,7 @@ export async function DELETE(_: Request, ctx: Context) {
   if (!userId) return NextResponse.json({ error: "Login required." }, { status: 401 });
 
   const { id, commentId } = await ctx.params;
-  const result = deleteCommunityListingComment(id, commentId, userId);
+  const result = await deleteCommunityListingComment(id, commentId, userId);
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 });
   return NextResponse.json({ ok: true, listing: result.listing });
 }

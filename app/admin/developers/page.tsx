@@ -7,7 +7,7 @@ export default async function AdminDevelopersPage() {
   const user = await requireRole(["ADMIN"]);
   if (!user) redirect("/admin/login");
 
-  const developerProfiles = listDeveloperProfilesForAdmin();
+  const developerProfiles = await listDeveloperProfilesForAdmin();
 
   return (
     <div className="space-y-4">

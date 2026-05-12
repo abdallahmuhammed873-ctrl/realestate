@@ -7,5 +7,5 @@ export async function POST(req: NextRequest) {
   const userId = cookieStore.get("demo_user_id")?.value;
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = await req.json();
-  return NextResponse.json(createSavedSearch(userId, JSON.stringify(body.query ?? {})));
+  return NextResponse.json(await createSavedSearch(userId, JSON.stringify(body.query ?? {})));
 }

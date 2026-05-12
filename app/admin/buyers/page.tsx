@@ -7,7 +7,7 @@ export default async function AdminBuyersPage() {
   const user = await requireRole(["ADMIN"]);
   if (!user) redirect("/admin/login");
 
-  const buyerProfiles = listBuyerProfilesForAdmin();
+  const buyerProfiles = await listBuyerProfilesForAdmin();
 
   return (
     <div className="space-y-4">

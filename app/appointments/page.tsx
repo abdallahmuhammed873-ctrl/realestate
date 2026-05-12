@@ -43,7 +43,7 @@ export default async function AppointmentsPage({ searchParams }: { searchParams:
   const requestId = resolvedSearch.request;
 
   if (user.role === "BUYER") {
-    const allRows = listBuyerAppointments(user.id);
+    const allRows = await listBuyerAppointments(user.id);
     const rows = requestId ? allRows.filter((row) => row.appointment.id === requestId) : allRows;
 
     return (
@@ -114,7 +114,7 @@ export default async function AppointmentsPage({ searchParams }: { searchParams:
   }
 
   if (user.role === "SELLER") {
-    const allAppointments = listSellerAppointments(user.id);
+    const allAppointments = await listSellerAppointments(user.id);
     const appointments = requestId ? allAppointments.filter((row) => row.appointment.id === requestId) : allAppointments;
 
     return (

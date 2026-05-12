@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
   if (!isValidPhoneNumber(String(body.contactPhone))) {
     return NextResponse.json({ error: "Phone number must be 11 digits and start with 01." }, { status: 400 });
   }
-  const ap = createAppointment({
+  const ap = await createAppointment({
     userId,
     propertyId: String(body.propertyId),
     datetime: new Date(body.datetime).toISOString(),
@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
     suggestedSlots: []
   });
 
-  const sellerMessage = createViewingRequestMessage({
+  const sellerMessage = await createViewingRequestMessage({
     appointmentId: ap.id,
     buyerId: userId,
     propertyId: ap.propertyId,

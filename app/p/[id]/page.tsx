@@ -14,9 +14,9 @@ import { formatPrice } from "@/lib/utils";
 
 export default async function PropertyDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const resolved = await params;
-  const property = getPublicPropertyById(resolved.id);
+  const property = await getPublicPropertyById(resolved.id);
   if (!property) return notFound();
-  const rec = getRecommendations("u-buyer-1", property.id);
+  const rec = await getRecommendations("u-buyer-1", property.id);
   const price = property.transaction === "RENT" ? property.rentPrice : property.price;
 
   return (

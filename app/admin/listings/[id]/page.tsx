@@ -11,10 +11,10 @@ export default async function AdminListingReviewPage({ params }: { params: Promi
   const user = await requireRole(["ADMIN"]);
   if (!user) redirect("/admin/login");
 
-  const data = getListingWithProperty(resolved.id);
+  const data = await getListingWithProperty(resolved.id);
   if (!data || !data.property) return notFound();
-  const seller = getUserById(data.listing.userId);
-  const company = seller?.companyOwnerId ? getUserById(seller.companyOwnerId) : null;
+  const seller = await getUserById(data.listing.userId);
+  const company = seller?.companyOwnerId ? await getUserById(seller.companyOwnerId) : null;
   const price = data.property.transaction === "RENT" ? data.property.rentPrice : data.property.price;
 
   return (

@@ -5,7 +5,7 @@ import { buyerSelectAppointmentSlot, getUserById } from "@/lib/repository";
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const cookieStore = await cookies();
   const userId = cookieStore.get("demo_user_id")?.value;
-  const user = getUserById(userId);
+  const user = await getUserById(userId);
   if (!user || user.role !== "BUYER") {
     return NextResponse.json({ error: "Buyer access required" }, { status: 403 });
   }
@@ -16,7 +16,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json({ error: "datetime is required" }, { status: 400 });
   }
 
-  const appointment = buyerSelectAppointmentSlot(id, user.id, String(body.datetime));
+  const appointment = await buyerSelectAppointmentSlot(id, user.id, String(body.datetime));
   if (!appointment) {
     return NextResponse.json({ error: "Invalid appointment or slot" }, { status: 400 });
   }

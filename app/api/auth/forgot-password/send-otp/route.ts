@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
     const email = String(body.email ?? "").trim();
     if (!email) return NextResponse.json({ error: "Email is required." }, { status: 400 });
 
-    const result = requestPasswordResetOtp(email);
+    const result = await requestPasswordResetOtp(email);
     if (!result) return NextResponse.json({ error: "No account found with this email." }, { status: 404 });
 
     const mail = await sendPasswordResetOtpEmail({

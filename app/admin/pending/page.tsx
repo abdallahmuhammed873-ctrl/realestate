@@ -6,7 +6,7 @@ import { listPendingListingsDetailed } from "@/lib/repository";
 export default async function AdminPendingPage() {
   const user = await requireRole(["ADMIN"]);
   if (!user) redirect("/admin/login");
-  const pending = listPendingListingsDetailed();
+  const pending = await listPendingListingsDetailed();
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">Pending Approvals</h1>

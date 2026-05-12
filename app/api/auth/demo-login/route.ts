@@ -8,9 +8,9 @@ export async function POST(req: NextRequest) {
   const role = roleRaw === "ADMIN" ? "ADMIN" : roleRaw === "SELLER" ? "SELLER" : roleRaw === "BUYER" ? "BUYER" : null;
   const identifier = String(body.identifier ?? "");
   const password = String(body.password ?? "");
-  const user = role ? findUserForLogin({ role, identifier }) : findUserByIdentifier(identifier);
+  const user = role ? await findUserForLogin({ role, identifier }) : await findUserByIdentifier(identifier);
   if (!user) return NextResponse.json({ error: "User not found for demo login." }, { status: 404 });
-  if (!verifyUserPassword(user.id, password)) return NextResponse.json({ error: "Invalid password." }, { status: 401 });
+  if (!(await verifyUserPassword(user.id, password))) return NextResponse.json({ error: "Invalid password." }, { status: 401 });
   if (user.blocked) return NextResponse.json({ error: "This account is blocked." }, { status: 403 });
   const res = NextResponse.json({ ok: true, user: toSessionUser(user) });
   res.cookies.set("demo_user_id", user.id, { httpOnly: false, sameSite: "lax", path: "/" });

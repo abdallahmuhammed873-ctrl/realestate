@@ -9,12 +9,12 @@ import { getRecommendations, listNotifications, searchProperties } from "@/lib/r
 
 export default async function HomePage() {
   const language = await getRequestLanguage();
-  const topPriced = searchProperties({ sort: "PRICE_DESC", pageSize: 3, page: 1 });
-  const featured = searchProperties({ sort: "FEATURED", pageSize: 6, page: 1 });
+  const topPriced = await searchProperties({ sort: "PRICE_DESC", pageSize: 3, page: 1 });
+  const featured = await searchProperties({ sort: "FEATURED", pageSize: 6, page: 1 });
   const heroImages = topPriced.items.map((p) => p.images?.[0]).filter(Boolean);
-  const rec = getRecommendations("u-buyer-1");
+  const rec = await getRecommendations("u-buyer-1");
   const user = await getCurrentUser();
-  const notifications = user ? listNotifications(user.id) : [];
+  const notifications = user ? await listNotifications(user.id) : [];
 
   return (
     <div className="space-y-8">

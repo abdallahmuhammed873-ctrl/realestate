@@ -7,7 +7,7 @@ import { toAdminDirectoryUser } from "@/lib/sanitize";
 async function requireAdmin() {
   const cookieStore = await cookies();
   const userId = cookieStore.get("demo_user_id")?.value;
-  const user = getUserById(userId);
+  const user = await getUserById(userId);
   if (!user || user.role !== "ADMIN") return null;
   return user;
 }
@@ -15,7 +15,7 @@ async function requireAdmin() {
 export async function GET() {
   const admin = await requireAdmin();
   if (!admin) return NextResponse.json({ error: "Admin access required" }, { status: 403 });
-  const items = listBuyerProfilesForAdmin()
+  const items = (await listBuyerProfilesForAdmin())
     .map(({ buyer, stats }) => {
       const safeBuyer = toAdminDirectoryUser(buyer);
       if (!safeBuyer) return null;
@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
   if (password.length < 6) {
     return NextResponse.json({ error: "Password must be at least 6 characters." }, { status: 400 });
   }
-  const created = addBuyerProfile({
+  const created = await addBuyerProfile({
     name: String(body.name ?? ""),
     email: String(body.email ?? ""),
     phone,

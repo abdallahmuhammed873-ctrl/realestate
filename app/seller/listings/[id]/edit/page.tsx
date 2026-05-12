@@ -7,7 +7,7 @@ export default async function SellerEditListingPage({ params }: { params: Promis
   const resolved = await params;
   const user = await requireRole(["SELLER"]);
   if (!user) return <p className="rounded-2xl border bg-white p-6">Seller access required. Login as seller.</p>;
-  const data = getSellerListingById(resolved.id, user.id);
+  const data = await getSellerListingById(resolved.id, user.id);
   if (!data) return notFound();
   return (
     <div className="space-y-3">

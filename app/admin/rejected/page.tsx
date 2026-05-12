@@ -6,7 +6,7 @@ import { listRejectedListingsDetailed } from "@/lib/repository";
 export default async function AdminRejectedPage() {
   const user = await requireRole(["ADMIN"]);
   if (!user) redirect("/admin/login");
-  const rejected = listRejectedListingsDetailed();
+  const rejected = await listRejectedListingsDetailed();
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">Rejected Queue</h1>
@@ -14,4 +14,3 @@ export default async function AdminRejectedPage() {
     </div>
   );
 }
-

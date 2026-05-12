@@ -6,6 +6,5 @@ export async function GET() {
   const cookieStore = await cookies();
   const userId = cookieStore.get("demo_user_id")?.value;
   if (!userId) return NextResponse.json({ unread: 0 });
-  return NextResponse.json({ unread: getUnreadAppointmentsCount(userId) });
+  return NextResponse.json({ unread: await getUnreadAppointmentsCount(userId) });
 }
-
