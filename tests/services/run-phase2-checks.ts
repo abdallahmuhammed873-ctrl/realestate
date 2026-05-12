@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { PrismaClient } from "@prisma/client";
 import { loadLocalEnv } from "../../lib/server/load-env.ts";
+import { IMPORTED_INVENTORY_OWNER_ID, upsertImportedInventory } from "../../prisma/import-ai-inventory.ts";
 import { importRuntimeData } from "../../prisma/import-runtime-data.ts";
 import {
   buyerSelectAppointmentSlot,
@@ -100,7 +101,108 @@ async function main() {
   const savedSearch = await createSavedSearch("u-buyer-1", JSON.stringify({ city: "Cairo", transaction: "BUY" }));
   assert.match(savedSearch.queryJson, /"city":"Cairo"/, "Expected saved search JSON to be stored");
 
-  console.log("Phase 2 service checks passed");
+  const importedSummary = await upsertImportedInventory(prisma, [
+    {
+      row_index: 0,
+      source_file: "phase3.xlsx",
+      source_sheet: "aliva",
+      unit_code: "AL-TEST-01",
+      category: "Garden Apartment",
+      bua: 145,
+      garden_area: 48,
+      bedrooms: 3,
+      delivery_status: "READY TO MOVE - 1",
+      status: "Available",
+      price: 18250000,
+      price_per_sqm: 125862
+    },
+    {
+      row_index: 1,
+      source_file: "phase3.xlsx",
+      source_sheet: "lvls",
+      unit_code: "LV-TEST-99",
+      unit_type: "Villa Roof",
+      bua: 255,
+      roof_area: 65,
+      bedrooms: 4,
+      delivery_status: "OFF PLAN - 4",
+      status: "Sold",
+      price: 42000000,
+      price_per_sqm: 164706
+    }
+  ]);
+
+  assert.equal(importedSummary.rowsPrepared, 2, "Expected imported inventory rows to be prepared");
+
+  const importedOwner = await prisma.user.findUnique({ where: { id: IMPORTED_INVENTORY_OWNER_ID } });
+  assert.equal(importedOwner?.role, "SELLER", "Expected imported inventory owner account to exist");
+
+  const importedAliva = await prisma.property.findFirst({
+    where: {
+      sourceType: "IMPORTED",
+      unitCode: "AL-TEST-01"
+    },
+    include: { listing: true }
+  });
+  assert.equal(importedAliva?.projectName, "Aliva", "Expected project names to be normalized for imported inventory");
+  assert.equal(importedAliva?.area, "New Cairo", "Expected imported project location to be normalized");
+  assert.equal(importedAliva?.listing.status, "APPROVED", "Expected available imported units to be public");
+
+  const importedLvls = await prisma.property.findFirst({
+    where: {
+      sourceType: "IMPORTED",
+      unitCode: "LV-TEST-99"
+    },
+    include: { listing: true }
+  });
+  assert.equal(importedLvls?.projectName, "LVLS", "Expected acronym project names to stay normalized");
+  assert.equal(importedLvls?.listing.status, "REJECTED", "Expected sold imported units to stay out of public search");
+
+  const importedSearch = await searchProperties({ q: "Aliva", page: 1, pageSize: 20 });
+  assert.ok(
+    importedSearch.items.some((item) => item.unitCode === "AL-TEST-01" && item.sourceType === "IMPORTED"),
+    "Expected imported approved inventory to be searchable through the shared property service"
+  );
+
+  const soldSearch = await searchProperties({ q: "LV-TEST-99", page: 1, pageSize: 20 });
+  assert.ok(
+    soldSearch.items.every((item) => item.unitCode !== "LV-TEST-99"),
+    "Expected rejected imported inventory to stay hidden from public search"
+  );
+
+  await upsertImportedInventory(prisma, [
+    {
+      row_index: 0,
+      source_file: "phase3.xlsx",
+      source_sheet: "aliva",
+      unit_code: "AL-TEST-01",
+      category: "Garden Apartment",
+      bua: 145,
+      garden_area: 48,
+      bedrooms: 3,
+      delivery_status: "READY TO MOVE - 1",
+      status: "Available",
+      price: 19000000,
+      price_per_sqm: 131034
+    }
+  ]);
+
+  const updatedImported = await prisma.property.findFirst({
+    where: {
+      sourceType: "IMPORTED",
+      unitCode: "AL-TEST-01"
+    }
+  });
+  assert.equal(updatedImported?.price, 19000000, "Expected repeated imports to update canonical property rows");
+
+  const remainingImportedCount = await prisma.property.count({
+    where: {
+      sourceType: "IMPORTED"
+    }
+  });
+  assert.equal(remainingImportedCount, 1, "Expected stale imported inventory rows to be removed on re-import");
+
+  console.log("Phase 2 and Phase 3 service checks passed");
 }
 
 main()

@@ -8,7 +8,14 @@ export function buildPrismaPropertyWhere(filters: SearchFilters): Prisma.Propert
   if (filters.q) {
     where.OR = [
       { title: { contains: filters.q, mode: "insensitive" } },
-      { description: { contains: filters.q, mode: "insensitive" } }
+      { description: { contains: filters.q, mode: "insensitive" } },
+      { projectName: { contains: filters.q, mode: "insensitive" } },
+      { unitCode: { contains: filters.q, mode: "insensitive" } },
+      { inventoryStatus: { contains: filters.q, mode: "insensitive" } },
+      { address: { contains: filters.q, mode: "insensitive" } },
+      { city: { contains: filters.q, mode: "insensitive" } },
+      { area: { contains: filters.q, mode: "insensitive" } },
+      { district: { contains: filters.q, mode: "insensitive" } }
     ];
   }
   if (filters.transaction) where.transaction = filters.transaction;

@@ -98,18 +98,18 @@
 
 ## Phase 3 - Merge The AI Inventory Into The Same Platform Data
 
-- [ ] Treat the CSV/Excel inventory as **input data**, not as a second runtime database.
-- [ ] Decide the mapping rule: each imported CSV row becomes one `Property`/unit record in PostgreSQL.
-- [ ] Keep an import source flag so imported inventory and seller-created inventory can coexist.
-- [ ] Create one import pipeline:
+- [x] Treat the CSV/Excel inventory as **input data**, not as a second runtime database.
+- [x] Decide the mapping rule: each imported CSV row becomes one `Property`/unit record in PostgreSQL.
+- [x] Keep an import source flag so imported inventory and seller-created inventory can coexist.
+- [x] Create one import pipeline:
   - raw Excel files
   - normalize fields
   - upsert into PostgreSQL
   - mark source metadata
-- [ ] Reuse the existing Python preprocessing knowledge, but change its output target from CSV to PostgreSQL upsert payloads.
-- [ ] Create a dedicated developer/system owner for imported inventory if the imported rows do not belong to normal seller accounts yet.
-- [ ] Normalize imported project names so AI queries like `Aliva`, `LVLS`, `New Cairo`, `roof`, and `garden` can be answered from the same main database.
-- [ ] Ensure imported units respect listing visibility rules:
+- [x] Reuse the existing Python preprocessing knowledge, but change its output target from CSV to PostgreSQL upsert payloads.
+- [x] Create a dedicated developer/system owner for imported inventory if the imported rows do not belong to normal seller accounts yet.
+- [x] Normalize imported project names so AI queries like `Aliva`, `LVLS`, `New Cairo`, `roof`, and `garden` can be answered from the same main database.
+- [x] Ensure imported units respect listing visibility rules:
   - public assistant sees only approved/public records
   - admin tools can see pending/rejected records through protected endpoints
 
@@ -362,7 +362,7 @@
 
 - [x] Phase 1: canonical schema
 - [x] Phase 2: migrate Next.js runtime to PostgreSQL
-- [ ] Phase 3: import AI inventory into PostgreSQL
+- [x] Phase 3: import AI inventory into PostgreSQL
 - [ ] Phase 4: refactor Python into AI-only service
 - [ ] Phase 5: shared search contract
 - [ ] Phase 6: solidify PostgreSQL data layer

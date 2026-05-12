@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test, { beforeEach } from "node:test";
 import { PrismaClient } from "@prisma/client";
 import { loadLocalEnv } from "../../lib/server/load-env.ts";
+import { IMPORTED_INVENTORY_OWNER_ID, upsertImportedInventory } from "../../prisma/import-ai-inventory.ts";
 import { importRuntimeData } from "../../prisma/import-runtime-data.ts";
 import {
   buyerSelectAppointmentSlot,
@@ -116,4 +117,87 @@ test("saved searches are written to PostgreSQL", async () => {
   const saved = await createSavedSearch("u-buyer-1", JSON.stringify({ city: "Cairo", transaction: "BUY" }));
   assert.equal(saved.userId, "u-buyer-1");
   assert.match(saved.queryJson, /"city":"Cairo"/);
+});
+
+test("imported AI inventory is upserted into the shared PostgreSQL property model", async () => {
+  await upsertImportedInventory(prisma, [
+    {
+      row_index: 0,
+      source_file: "phase3.xlsx",
+      source_sheet: "aliva",
+      unit_code: "AL-TEST-01",
+      category: "Garden Apartment",
+      bua: 145,
+      garden_area: 48,
+      bedrooms: 3,
+      delivery_status: "READY TO MOVE - 1",
+      status: "Available",
+      price: 18250000,
+      price_per_sqm: 125862
+    },
+    {
+      row_index: 1,
+      source_file: "phase3.xlsx",
+      source_sheet: "lvls",
+      unit_code: "LV-TEST-99",
+      unit_type: "Villa Roof",
+      bua: 255,
+      roof_area: 65,
+      bedrooms: 4,
+      delivery_status: "OFF PLAN - 4",
+      status: "Sold",
+      price: 42000000
+    }
+  ]);
+
+  const importedOwner = await prisma.user.findUnique({ where: { id: IMPORTED_INVENTORY_OWNER_ID } });
+  assert.equal(importedOwner?.role, "SELLER");
+
+  const importedAliva = await prisma.property.findFirst({
+    where: {
+      sourceType: "IMPORTED",
+      unitCode: "AL-TEST-01"
+    },
+    include: { listing: true }
+  });
+
+  assert.equal(importedAliva?.projectName, "Aliva");
+  assert.equal(importedAliva?.area, "New Cairo");
+  assert.equal(importedAliva?.listing.status, "APPROVED");
+
+  const importedSearch = await searchProperties({ q: "Aliva", page: 1, pageSize: 20 });
+  assert.ok(importedSearch.items.some((item) => item.unitCode === "AL-TEST-01"));
+
+  const soldSearch = await searchProperties({ q: "LV-TEST-99", page: 1, pageSize: 20 });
+  assert.ok(soldSearch.items.every((item) => item.unitCode !== "LV-TEST-99"));
+
+  await upsertImportedInventory(prisma, [
+    {
+      row_index: 0,
+      source_file: "phase3.xlsx",
+      source_sheet: "aliva",
+      unit_code: "AL-TEST-01",
+      category: "Garden Apartment",
+      bua: 145,
+      garden_area: 48,
+      bedrooms: 3,
+      delivery_status: "READY TO MOVE - 1",
+      status: "Available",
+      price: 19000000,
+      price_per_sqm: 131034
+    }
+  ]);
+
+  const updatedImported = await prisma.property.findFirst({
+    where: {
+      sourceType: "IMPORTED",
+      unitCode: "AL-TEST-01"
+    }
+  });
+  assert.equal(updatedImported?.price, 19000000);
+
+  const remainingImportedCount = await prisma.property.count({
+    where: { sourceType: "IMPORTED" }
+  });
+  assert.equal(remainingImportedCount, 1);
 });
