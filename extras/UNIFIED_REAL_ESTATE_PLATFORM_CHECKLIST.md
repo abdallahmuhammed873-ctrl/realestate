@@ -19,7 +19,7 @@
 ## What I Found In The Current Code
 
 - [ ] The Next.js runtime still uses `.demo-db.json` through `lib/repository.ts` instead of Prisma-backed PostgreSQL.
-- [ ] The Prisma schema is only a partial match for the real runtime model.
+- [x] The Prisma schema is only a partial match for the real runtime model.
 - [ ] The Python AI project reads from `real_estate_master.csv` and stores chat history in local JSON, so it currently has its own separate dataset.
 - [ ] `/api/chat` in Next.js is only a stub and is not connected to the Python AI service.
 - [ ] The current i18n layer is only partial: the language provider is hard-coded to English and the root layout is fixed to `lang="en"` and `dir="ltr"`.
@@ -37,18 +37,18 @@
 
 ## Phase 1 - Lock The Canonical Data Model
 
-- [ ] Expand Prisma so it matches the actual runtime behavior before any feature work continues.
-- [ ] Keep the existing core tables: `User`, `Listing`, `Property`, `Favorite`, `Appointment`, `SavedSearch`.
-- [ ] Extend `User` with the fields already used by runtime logic:
+- [x] Expand Prisma so it matches the actual runtime behavior before any feature work continues.
+- [x] Keep the existing core tables: `User`, `Listing`, `Property`, `Favorite`, `Appointment`, `SavedSearch`.
+- [x] Extend `User` with the fields already used by runtime logic:
   - `passwordHash` or keep the current password field temporarily, then migrate cleanly later
   - `avatarPath`
   - `blocked`
   - `isCompanyAccount`
   - `companyOwnerId`
-- [ ] Extend `Listing` with:
+- [x] Extend `Listing` with:
   - `feesPaid`
   - review metadata already used by admin flow
-- [ ] Extend `Property` so AI-imported inventory can live in the same model:
+- [x] Extend `Property` so AI-imported inventory can live in the same model:
   - `projectName`
   - `unitCode`
   - `inventoryStatus`
@@ -61,8 +61,8 @@
   - `sourceType`
   - `sourceFile`
   - `sourceSheet`
-- [ ] Add a `PropertyMedia` table instead of depending only on `images: string[]`.
-- [ ] Add missing community entities because they already exist in runtime logic:
+- [x] Add a `PropertyMedia` table instead of depending only on `images: string[]`.
+- [x] Add missing community entities because they already exist in runtime logic:
   - `CommunityPost`
   - `CommunityPostLike`
   - `CommunityPostComment`
@@ -70,13 +70,13 @@
   - `CommunityListingLike`
   - `CommunityListingComment`
   - `CommunityListingCommentLike`
-- [ ] Add a `SellerMessage` table if seller/buyer messaging is staying in scope.
-- [ ] Add a `PasswordResetToken` table instead of keeping reset state only in memory/JSON.
-- [ ] Update appointment modeling to cover the current runtime behavior:
+- [x] Add a `SellerMessage` table if seller/buyer messaging is staying in scope.
+- [x] Add a `PasswordResetToken` table instead of keeping reset state only in memory/JSON.
+- [x] Update appointment modeling to cover the current runtime behavior:
   - support `RESCHEDULED`
   - support suggested slots
-- [ ] Keep compare lists in `localStorage` for MVP unless cross-device sync becomes a must-have.
-- [ ] Keep notification rows derived/computed for MVP if that is faster than adding a dedicated notification table.
+- [x] Keep compare lists in `localStorage` for MVP unless cross-device sync becomes a must-have.
+- [x] Keep notification rows derived/computed for MVP if that is faster than adding a dedicated notification table.
 
 ## Phase 2 - Replace Demo Storage In The Next.js App
 
@@ -360,7 +360,7 @@
 
 ## Recommended Implementation Order
 
-- [ ] Phase 1: canonical schema
+- [x] Phase 1: canonical schema
 - [ ] Phase 2: migrate Next.js runtime to PostgreSQL
 - [ ] Phase 3: import AI inventory into PostgreSQL
 - [ ] Phase 4: refactor Python into AI-only service

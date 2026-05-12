@@ -29,11 +29,7 @@ export function CompareClient() {
   const [items, setItems] = useState<CompareItem[]>([]);
 
   async function load() {
-    const localIds = JSON.parse(localStorage.getItem(KEY) ?? "[]") as string[];
-    const compareRes = await fetch("/api/compare");
-    const compareData = await compareRes.json();
-    const serverIds = Array.isArray(compareData.ids) ? (compareData.ids as string[]) : [];
-    const ids = [...new Set([...serverIds, ...localIds])].slice(0, 4);
+    const ids = (JSON.parse(localStorage.getItem(KEY) ?? "[]") as string[]).slice(0, 4);
     localStorage.setItem(KEY, JSON.stringify(ids));
     if (!ids.length) {
       setItems([]);
@@ -52,11 +48,6 @@ export function CompareClient() {
 
   function clear() {
     localStorage.removeItem(KEY);
-    fetch("/api/compare", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ids: [] })
-    }).catch(() => null);
     load();
   }
 

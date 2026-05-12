@@ -56,49 +56,109 @@ enum AppointmentStatus {
   PENDING
   CONFIRMED
   CANCELLED
+  RESCHEDULED
+}
+
+enum PropertySourceType {
+  MANUAL
+  IMPORTED
+}
+
+enum PropertyMediaKind {
+  IMAGE
+  PANORAMA_360
+  SPIN_360_FRAME
+}
+
+enum PasswordResetTokenType {
+  OTP
+  VERIFIED_TOKEN
+}
+
+enum CommunityReaction {
+  LIKE
+  LOVE
 }
 
 model User {
-  id           String        @id @default(cuid())
-  name         String
-  email        String        @unique
-  phone        String?
-  role         Role
-  listings     Listing[]
-  favorites    Favorite[]
-  appointments Appointment[]
-  savedSearches SavedSearch[]
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  id                           String                        @id @default(cuid())
+  name                         String
+  email                        String                        @unique
+  phone                        String?
+  password                     String?
+  avatarPath                   String?
+  blocked                      Boolean                       @default(false)
+  role                         Role
+  isCompanyAccount             Boolean                       @default(false)
+  companyOwnerId               String?
+  companyOwner                 User?                         @relation("CompanyUsers", fields: [companyOwnerId], references: [id], onDelete: SetNull)
+  companyUsers                 User[]                        @relation("CompanyUsers")
+  listings                     Listing[]                     @relation("ListingOwner")
+  reviewedListings             Listing[]                     @relation("ListingReviewer")
+  favorites                    Favorite[]
+  appointments                 Appointment[]
+  savedSearches                SavedSearch[]
+  buyerMessages                SellerMessage[]               @relation("BuyerMessages")
+  sellerMessages               SellerMessage[]               @relation("SellerMessages")
+  communityPosts               CommunityPost[]
+  communityPostLikes           CommunityPostLike[]
+  communityPostComments        CommunityPostComment[]
+  communityPostCommentLikes    CommunityPostCommentLike[]
+  communityListingLikes        CommunityListingLike[]
+  communityListingComments     CommunityListingComment[]
+  communityListingCommentLikes CommunityListingCommentLike[]
+  passwordResetTokens          PasswordResetToken[]
+  createdAt                    DateTime                      @default(now())
+  updatedAt                    DateTime                      @updatedAt
+
+  @@index([role])
+  @@index([companyOwnerId])
 }
 
 model Listing {
-  id         String        @id @default(cuid())
-  userId     String
-  status     ListingStatus @default(DRAFT)
-  adminNotes String?
-  reviewedBy String?
-  reviewedAt DateTime?
-  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  property   Property?
-  createdAt  DateTime      @default(now())
-  updatedAt  DateTime      @updatedAt
+  id                          String                        @id @default(cuid())
+  userId                      String
+  status                      ListingStatus                 @default(DRAFT)
+  feesPaid                    Boolean                       @default(false)
+  adminNotes                  String?
+  reviewedBy                  String?
+  reviewedAt                  DateTime?
+  user                        User                          @relation("ListingOwner", fields: [userId], references: [id], onDelete: Cascade)
+  reviewer                    User?                         @relation("ListingReviewer", fields: [reviewedBy], references: [id], onDelete: SetNull)
+  property              Property?
+  communityLikes        CommunityListingLike[]
+  communityComments     CommunityListingComment[]
+  communityCommentLikes CommunityListingCommentLike[]
+  createdAt             DateTime                      @default(now())
+  updatedAt             DateTime                      @updatedAt
+
+  @@index([userId, status])
+  @@index([status, updatedAt])
 }
 
 model Property {
-  id                     String           @id @default(cuid())
-  listingId              String           @unique
-  listing                Listing          @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  id                     String             @id @default(cuid())
+  listingId              String             @unique
+  listing                Listing            @relation(fields: [listingId], references: [id], onDelete: Cascade)
   title                  String
   description            String
+  projectName            String?
+  unitCode               String?
+  inventoryStatus        String?
   transaction            TransactionType
   type                   PropertyType
   price                  Int?
   rentPrice              Int?
-  currency               String           @default("EGP")
+  currency               String             @default("EGP")
+  pricePerSqm            Int?
   bedrooms               Int
   bathrooms              Int
   areaSqm                Int
+  landArea               Int?
+  gardenArea             Int?
+  roofArea               Int?
+  hasGarden              Boolean            @default(false)
+  hasRoof                Boolean            @default(false)
   lat                    Float
   lng                    Float
   address                String
@@ -109,14 +169,41 @@ model Property {
   paymentType            PaymentType
   completionStatus       CompletionStatus
   amenities              String[]
-  images                 String[]
+  images                 String[]           @default([])
+  media                  PropertyMedia[]
   installmentDownPayment Int?
   installmentYears       Int?
   installmentMonthly     Int?
+  sourceType             PropertySourceType @default(MANUAL)
+  sourceFile             String?
+  sourceSheet            String?
   favorites              Favorite[]
   appointments           Appointment[]
-  createdAt              DateTime         @default(now())
-  updatedAt              DateTime         @updatedAt
+  sellerMessages         SellerMessage[]
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+
+  @@index([transaction, type])
+  @@index([city, area, district])
+  @@index([projectName])
+  @@index([unitCode])
+  @@index([sourceType])
+}
+
+model PropertyMedia {
+  id         String            @id @default(cuid())
+  propertyId String
+  property   Property          @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  kind       PropertyMediaKind @default(IMAGE)
+  path       String
+  label      String?
+  altText    String?
+  sortOrder  Int               @default(0)
+  mimeType   String?
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+
+  @@index([propertyId, sortOrder])
 }
 
 model Favorite {
@@ -131,18 +218,23 @@ model Favorite {
 }
 
 model Appointment {
-  id           String            @id @default(cuid())
-  userId       String
-  propertyId   String
-  datetime     DateTime
-  status       AppointmentStatus @default(PENDING)
-  contactName  String
-  contactPhone String
-  notes        String?
-  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  property     Property          @relation(fields: [propertyId], references: [id], onDelete: Cascade)
-  createdAt    DateTime          @default(now())
-  updatedAt    DateTime          @updatedAt
+  id             String            @id @default(cuid())
+  userId         String
+  propertyId     String
+  datetime       DateTime
+  status         AppointmentStatus @default(PENDING)
+  contactName    String
+  contactPhone   String
+  notes          String?
+  suggestedSlots DateTime[]        @default([])
+  user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  property       Property          @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  messages       SellerMessage[]
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  @@index([userId, status])
+  @@index([propertyId, status])
 }
 
 model SavedSearch {
@@ -151,4 +243,141 @@ model SavedSearch {
   queryJson Json
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+model SellerMessage {
+  id            String      @id @default(cuid())
+  sellerId      String
+  buyerId       String
+  propertyId    String
+  appointmentId String
+  subject       String
+  body          String
+  readAt        DateTime?
+  seller        User        @relation("SellerMessages", fields: [sellerId], references: [id], onDelete: Cascade)
+  buyer         User        @relation("BuyerMessages", fields: [buyerId], references: [id], onDelete: Cascade)
+  property      Property    @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  appointment   Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  createdAt     DateTime    @default(now())
+
+  @@index([sellerId, createdAt])
+  @@index([buyerId, createdAt])
+  @@index([appointmentId])
+}
+
+model CommunityPost {
+  id                       String                     @id @default(cuid())
+  userId                   String
+  text                     String
+  imagePath                String?
+  user         User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  likes        CommunityPostLike[]
+  comments     CommunityPostComment[]
+  commentLikes CommunityPostCommentLike[]
+  createdAt    DateTime                   @default(now())
+  updatedAt    DateTime                   @updatedAt
+
+  @@index([userId, createdAt])
+}
+
+model CommunityPostLike {
+  id        String            @id @default(cuid())
+  postId    String
+  userId    String
+  reaction  CommunityReaction @default(LIKE)
+  post      CommunityPost     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime          @default(now())
+
+  @@unique([postId, userId])
+}
+
+model CommunityPostComment {
+  id              String                     @id @default(cuid())
+  postId          String
+  userId          String
+  text            String
+  parentCommentId String?
+  post            CommunityPost              @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user            User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parentComment   CommunityPostComment?      @relation("CommunityPostCommentReplies", fields: [parentCommentId], references: [id], onDelete: Cascade)
+  replies         CommunityPostComment[]     @relation("CommunityPostCommentReplies")
+  likes           CommunityPostCommentLike[]
+  createdAt       DateTime                   @default(now())
+
+  @@index([postId, createdAt])
+  @@index([parentCommentId])
+}
+
+model CommunityPostCommentLike {
+  id        String               @id @default(cuid())
+  postId    String
+  commentId String
+  userId    String
+  post      CommunityPost        @relation(fields: [postId], references: [id], onDelete: Cascade)
+  comment   CommunityPostComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user      User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime             @default(now())
+
+  @@unique([commentId, userId])
+  @@index([postId])
+}
+
+model CommunityListingLike {
+  id        String   @id @default(cuid())
+  listingId String
+  userId    String
+  listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([listingId, userId])
+}
+
+model CommunityListingComment {
+  id              String                        @id @default(cuid())
+  listingId       String
+  userId          String
+  text            String
+  parentCommentId String?
+  listing         Listing                       @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  user            User                          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parentComment   CommunityListingComment?      @relation("CommunityListingCommentReplies", fields: [parentCommentId], references: [id], onDelete: Cascade)
+  replies         CommunityListingComment[]     @relation("CommunityListingCommentReplies")
+  likes           CommunityListingCommentLike[]
+  createdAt       DateTime                      @default(now())
+
+  @@index([listingId, createdAt])
+  @@index([parentCommentId])
+}
+
+model CommunityListingCommentLike {
+  id        String                  @id @default(cuid())
+  listingId String
+  commentId String
+  userId    String
+  listing   Listing                 @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  comment   CommunityListingComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user      User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime                @default(now())
+
+  @@unique([commentId, userId])
+  @@index([listingId])
+}
+
+model PasswordResetToken {
+  id         String                 @id @default(cuid())
+  userId     String
+  email      String
+  token      String                 @unique
+  type       PasswordResetTokenType
+  expiresAt  DateTime
+  consumedAt DateTime?
+  user       User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime               @default(now())
+
+  @@index([email, type, expiresAt])
+  @@index([userId, type, expiresAt])
 }

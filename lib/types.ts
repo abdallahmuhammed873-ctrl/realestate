@@ -13,6 +13,8 @@ export type Furnishing = "FULLY" | "SEMI" | "UNFURNISHED";
 export type PaymentType = "CASH" | "INSTALLMENTS";
 export type CompletionStatus = "OFF_PLAN" | "READY";
 export type AppointmentStatus = "PENDING" | "CONFIRMED" | "CANCELLED" | "RESCHEDULED";
+export type PropertySourceType = "MANUAL" | "IMPORTED";
+export type PropertyMediaKind = "IMAGE" | "PANORAMA_360" | "SPIN_360_FRAME";
 
 export type User = {
   id: string;
@@ -20,6 +22,7 @@ export type User = {
   email: string;
   phone?: string;
   avatarUrl?: string | null;
+  avatarPath?: string | null;
   role: Role;
   isCompanyAccount?: boolean;
   companyOwnerId?: string;
@@ -34,14 +37,23 @@ export type Property = {
   listingId: string;
   title: string;
   description: string;
+  projectName?: string | null;
+  unitCode?: string | null;
+  inventoryStatus?: string | null;
   transaction: TransactionType;
   type: PropertyType;
   price: number | null;
   rentPrice: number | null;
   currency: string;
+  pricePerSqm?: number | null;
   bedrooms: number;
   bathrooms: number;
   areaSqm: number;
+  landArea?: number | null;
+  gardenArea?: number | null;
+  roofArea?: number | null;
+  hasGarden?: boolean;
+  hasRoof?: boolean;
   lat: number;
   lng: number;
   address: string;
@@ -53,9 +65,26 @@ export type Property = {
   completionStatus: CompletionStatus;
   amenities: string[];
   images: string[];
+  media?: PropertyMedia[];
   installmentDownPayment?: number | null;
   installmentYears?: number | null;
   installmentMonthly?: number | null;
+  sourceType?: PropertySourceType;
+  sourceFile?: string | null;
+  sourceSheet?: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type PropertyMedia = {
+  id: string;
+  propertyId: string;
+  kind: PropertyMediaKind;
+  path: string;
+  label?: string | null;
+  altText?: string | null;
+  sortOrder: number;
+  mimeType?: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -117,6 +146,7 @@ export type CommunityPost = {
   userId: string;
   text: string;
   imageUrl?: string | null;
+  imagePath?: string | null;
   createdAt: string;
   updatedAt: string;
 };
