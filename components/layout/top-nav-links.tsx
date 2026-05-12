@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useLanguage } from "@/components/layout/language-provider";
 import { NotificationBell } from "@/components/layout/notification-bell";
+import { AppointmentsLink } from "@/components/layout/appointments-link";
 import { LogoutButton } from "@/components/layout/logout-button";
 import { ProfileMenu } from "@/components/layout/profile-menu";
 
@@ -22,7 +23,7 @@ export function TopNavLinks({ user }: { user: TopNavUser | null }) {
     <nav className="hidden items-center gap-4 text-sm md:flex">
       <Link href="/search">{t("search")}</Link>
       <NotificationBell />
-      <Link href="/appointments">{t("appointments")}</Link>
+      <AppointmentsLink />
       <Link href="/favorites">{t("favorites")}</Link>
       <Link href="/compare">{t("compare")}</Link>
       <Link href="/community">{t("community")}</Link>

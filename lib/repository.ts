@@ -231,6 +231,34 @@ export function listBuyerProfilesForAdmin() {
     }));
 }
 
+export function listSellerListingsForAdmin(sellerId: string) {
+  const scopeIds = getSellerDashboardScopeIds(sellerId);
+  const scopeSet = new Set(scopeIds);
+  return db()
+    .listings.filter((l) => scopeSet.has(l.userId))
+    .map((listing) => {
+      const property = db().properties.find((p) => p.listingId === listing.id) ?? null;
+      const seller = db().users.find((u) => u.id === listing.userId) ?? null;
+      const company = seller?.companyOwnerId ? db().users.find((u) => u.id === seller.companyOwnerId) ?? null : null;
+      return { listing, property, seller, company };
+    })
+    .filter((x): x is { listing: Listing; property: Property; seller: User | null; company: User | null } => Boolean(x.property))
+    .sort((a, b) => Date.parse(b.listing.updatedAt) - Date.parse(a.listing.updatedAt));
+}
+
+export function listSellerCommunityPostsForAdmin(sellerId: string) {
+  const scopeSet = new Set(getSellerDashboardScopeIds(sellerId));
+  const userById = new Map(db().users.map((u) => [u.id, u]));
+  return db()
+    .communityPosts.filter((p) => scopeSet.has(p.userId))
+    .slice()
+    .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
+    .map((post) => ({
+      post,
+      author: userById.get(post.userId) ?? null
+    }));
+}
+
 export function addSellerProfile(input: { name: string; email: string; phone?: string; password: string }) {
   const name = input.name.trim();
   const email = input.email.trim().toLowerCase();
@@ -598,6 +626,32 @@ export function listPendingListingsDetailed() {
     .sort((a, b) => Date.parse(b.listing.updatedAt) - Date.parse(a.listing.updatedAt));
 }
 
+export function listApprovedListingsDetailed() {
+  return db()
+    .listings.filter((l) => l.status === "APPROVED")
+    .map((listing) => {
+      const property = db().properties.find((p) => p.listingId === listing.id) ?? null;
+      const seller = db().users.find((u) => u.id === listing.userId) ?? null;
+      const company = seller?.companyOwnerId ? db().users.find((u) => u.id === seller.companyOwnerId) ?? null : null;
+      return { listing, property, seller, company };
+    })
+    .filter((x): x is { listing: Listing; property: Property; seller: User | null; company: User | null } => Boolean(x.property))
+    .sort((a, b) => Date.parse(b.listing.updatedAt) - Date.parse(a.listing.updatedAt));
+}
+
+export function listRejectedListingsDetailed() {
+  return db()
+    .listings.filter((l) => l.status === "REJECTED")
+    .map((listing) => {
+      const property = db().properties.find((p) => p.listingId === listing.id) ?? null;
+      const seller = db().users.find((u) => u.id === listing.userId) ?? null;
+      const company = seller?.companyOwnerId ? db().users.find((u) => u.id === seller.companyOwnerId) ?? null : null;
+      return { listing, property, seller, company };
+    })
+    .filter((x): x is { listing: Listing; property: Property; seller: User | null; company: User | null } => Boolean(x.property))
+    .sort((a, b) => Date.parse(b.listing.updatedAt) - Date.parse(a.listing.updatedAt));
+}
+
 export function getListingWithProperty(listingId: string) {
   const listing = db().listings.find((l) => l.id === listingId);
   if (!listing) return null;
@@ -902,12 +956,13 @@ export function listSellerMessages(sellerId: string) {
 }
 
 export function listSellerAppointments(sellerId: string) {
+  const scopeIds = new Set(getSellerDashboardScopeIds(sellerId));
   return db()
     .appointments.map((appointment) => {
       const property = db().properties.find((p) => p.id === appointment.propertyId);
       if (!property) return null;
       const listing = db().listings.find((l) => l.id === property.listingId);
-      if (!listing || listing.userId !== sellerId) return null;
+      if (!listing || !scopeIds.has(listing.userId)) return null;
       const buyer = db().users.find((u) => u.id === appointment.userId);
       return {
         appointment,
@@ -916,6 +971,24 @@ export function listSellerAppointments(sellerId: string) {
       };
     })
     .filter((x): x is { appointment: Appointment; property: Property; buyer: User | null } => Boolean(x))
+    .sort((a, b) => Date.parse(b.appointment.createdAt) - Date.parse(a.appointment.createdAt));
+}
+
+export function listAdminAppointments() {
+  const listingById = new Map(db().listings.map((l) => [l.id, l]));
+  const userById = new Map(db().users.map((u) => [u.id, u]));
+  const propertyById = new Map(db().properties.map((p) => [p.id, p]));
+
+  return db()
+    .appointments.slice()
+    .map((appointment) => {
+      const property = propertyById.get(appointment.propertyId) ?? null;
+      const listing = property ? listingById.get(property.listingId) ?? null : null;
+      const buyer = userById.get(appointment.userId) ?? null;
+      const seller = listing ? userById.get(listing.userId) ?? null : null;
+      return { appointment, property, listing, buyer, seller };
+    })
+    .filter((row) => Boolean(row.property && row.listing))
     .sort((a, b) => Date.parse(b.appointment.createdAt) - Date.parse(a.appointment.createdAt));
 }
 
@@ -1516,6 +1589,29 @@ export function getUnreadNotificationsCount(userId: string) {
   return listAllNotifications(userId).filter((n) => !seen.has(n.id)).length;
 }
 
+export function getUnreadAppointmentsCount(userId: string) {
+  const user = getUserById(userId);
+  if (!user) return 0;
+
+  if (user.role === "ADMIN") return 0;
+
+  if (user.role === "SELLER") {
+    const scopeIds = new Set(getSellerDashboardScopeIds(userId));
+    const propertyById = new Map(db().properties.map((p) => [p.id, p]));
+    const listingById = new Map(db().listings.map((l) => [l.id, l]));
+    return db().appointments.filter((a) => {
+      if (a.status !== "PENDING") return false;
+      const property = propertyById.get(a.propertyId);
+      if (!property) return false;
+      const listing = listingById.get(property.listingId);
+      if (!listing) return false;
+      return scopeIds.has(listing.userId);
+    }).length;
+  }
+
+  return 0;
+}
+
 export function markNotificationsSeen(userId: string) {
   const ids = listAllNotifications(userId).map((n) => n.id);
   db().seenNotificationIdsByUser[userId] = ids;
@@ -1605,7 +1701,7 @@ export function listAllNotifications(userId: string): NotificationItem[] {
         id: `n-community-post-comment-${comment.id}`,
         text: `${actorName} commented on your community post.`,
         createdAt: comment.createdAt,
-        href: `/community?post=${encodeURIComponent(post.id)}`
+        href: `/community?post=${encodeURIComponent(post.id)}&comment=${encodeURIComponent(comment.id)}`
       };
     });
 
@@ -1628,7 +1724,7 @@ export function listAllNotifications(userId: string): NotificationItem[] {
         id: `n-community-post-participant-comment-${comment.id}-${userId}`,
         text: `${actorName} commented on a post you commented on.`,
         createdAt: comment.createdAt,
-        href: `/community?post=${encodeURIComponent(post.id)}`
+        href: `/community?post=${encodeURIComponent(post.id)}&comment=${encodeURIComponent(comment.id)}`
       };
     });
 
@@ -1676,7 +1772,7 @@ export function listAllNotifications(userId: string): NotificationItem[] {
         id: `n-community-listing-comment-${comment.id}`,
         text: `${actorName} commented on ${label}.`,
         createdAt: comment.createdAt,
-        href: `/community?listing=${encodeURIComponent(listing.id)}`
+        href: `/community?listing=${encodeURIComponent(listing.id)}&comment=${encodeURIComponent(comment.id)}`
       };
     });
 
@@ -1698,7 +1794,7 @@ export function listAllNotifications(userId: string): NotificationItem[] {
         id: `n-community-listing-participant-comment-${comment.id}-${userId}`,
         text: `${actorName} commented on a listing you commented on.`,
         createdAt: comment.createdAt,
-        href: `/community?listing=${encodeURIComponent(comment.listingId)}`
+        href: `/community?listing=${encodeURIComponent(comment.listingId)}&comment=${encodeURIComponent(comment.id)}`
       };
     });
 
@@ -1719,7 +1815,9 @@ export function listAllNotifications(userId: string): NotificationItem[] {
         id: `n-community-post-reply-${comment.id}`,
         text: `${actorName} replied to your comment.`,
         createdAt: comment.createdAt,
-        href: post ? `/community?post=${encodeURIComponent(post.id)}` : "/community"
+        href: post
+          ? `/community?post=${encodeURIComponent(post.id)}&comment=${encodeURIComponent(comment.id)}`
+          : "/community"
       };
     });
 
@@ -1739,7 +1837,7 @@ export function listAllNotifications(userId: string): NotificationItem[] {
         id: `n-community-listing-reply-${comment.id}`,
         text: `${actorName} replied to your comment.`,
         createdAt: comment.createdAt,
-        href: `/community?listing=${encodeURIComponent(comment.listingId)}`
+        href: `/community?listing=${encodeURIComponent(comment.listingId)}&comment=${encodeURIComponent(comment.id)}`
       };
     });
 
@@ -1758,7 +1856,9 @@ export function listAllNotifications(userId: string): NotificationItem[] {
         id: `n-community-post-comment-like-${like.id}`,
         text: `${actorName} liked your comment.`,
         createdAt: like.createdAt,
-        href: post ? `/community?post=${encodeURIComponent(post.id)}` : "/community"
+        href: post
+          ? `/community?post=${encodeURIComponent(post.id)}&comment=${encodeURIComponent(like.commentId)}`
+          : "/community"
       };
     });
 
@@ -1776,7 +1876,7 @@ export function listAllNotifications(userId: string): NotificationItem[] {
         id: `n-community-listing-comment-like-${like.id}`,
         text: `${actorName} liked your comment.`,
         createdAt: like.createdAt,
-        href: `/community?listing=${encodeURIComponent(like.listingId)}`
+        href: `/community?listing=${encodeURIComponent(like.listingId)}&comment=${encodeURIComponent(like.commentId)}`
       };
     });
 
@@ -1820,12 +1920,13 @@ export function listAllNotifications(userId: string): NotificationItem[] {
   }
 
   if (user.role === "SELLER") {
+    const scopeIds = new Set(getSellerDashboardScopeIds(userId));
     const appointmentNotes: NotificationItem[] = [];
     db().appointments.forEach((a) => {
       const property = propertyById.get(a.propertyId);
       if (!property) return;
       const listing = listingById.get(property.listingId);
-      if (!listing || listing.userId !== userId) return;
+      if (!listing || !scopeIds.has(listing.userId)) return;
       if (a.status !== "PENDING") return;
       const buyer = userById.get(a.userId);
       const buyerLabel = buyer?.name ?? "Buyer";
@@ -1843,7 +1944,7 @@ export function listAllNotifications(userId: string): NotificationItem[] {
     });
 
     const listingReviewNotes: NotificationItem[] = db()
-      .listings.filter((l) => l.userId === userId && Boolean(l.reviewedAt) && (l.status === "APPROVED" || l.status === "REJECTED"))
+      .listings.filter((l) => scopeIds.has(l.userId) && Boolean(l.reviewedAt) && (l.status === "APPROVED" || l.status === "REJECTED"))
       .map((listing) => {
         const property = db().properties.find((p) => p.listingId === listing.id);
         const label = property?.title ?? `Listing ${listing.id}`;
@@ -1877,6 +1978,21 @@ export function listAllNotifications(userId: string): NotificationItem[] {
   }
 
   if (user.role === "ADMIN") {
+    const adminAppointmentNotes: NotificationItem[] = db()
+      .appointments.filter((a) => a.status === "PENDING")
+      .map((a) => {
+        const buyer = userById.get(a.userId);
+        const buyerName = buyer?.name ?? "Buyer";
+        const property = propertyById.get(a.propertyId);
+        const label = property?.title ?? a.propertyId;
+        return {
+          id: `n-admin-ap-${a.id}-${a.updatedAt}`,
+          text: `New viewing request from ${buyerName} for ${label}.`,
+          createdAt: a.updatedAt,
+          href: `/admin?appointment=${encodeURIComponent(a.id)}`
+        };
+      });
+
     const adminListingSubmissionNotes: NotificationItem[] = db()
       .listings.filter((l) => l.status === "PENDING")
       .map((listing) => {
@@ -1896,6 +2012,7 @@ export function listAllNotifications(userId: string): NotificationItem[] {
       });
 
     return [
+      ...adminAppointmentNotes,
       ...adminListingSubmissionNotes,
       ...communityPostLikeNotes,
       ...communityPostCommentNotes,

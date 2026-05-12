@@ -63,11 +63,13 @@ type Viewer = {
 export function CommunityFeed({
   initialPosts,
   listings,
-  viewer
+  viewer,
+  focus
 }: {
   initialPosts: PostView[];
   listings: ListingView[];
   viewer: Viewer;
+  focus?: { kind: "post" | "listing"; id: string; commentId?: string } | null;
 }) {
   function initials(name: string) {
     const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -115,9 +117,93 @@ export function CommunityFeed({
   const [replyByListingCommentId, setReplyByListingCommentId] = useState<Record<string, string>>({});
   const [replyListingCommentLoadingId, setReplyListingCommentLoadingId] = useState<string | null>(null);
   const [expandedListingReplies, setExpandedListingReplies] = useState<Record<string, boolean>>({});
+  const [expandedPostComments, setExpandedPostComments] = useState<Record<string, boolean>>({});
+  const [expandedListingComments, setExpandedListingComments] = useState<Record<string, boolean>>({});
   const [showLoginRequired, setShowLoginRequired] = useState(false);
   const [likedPostIds, setLikedPostIds] = useState<Record<string, boolean>>({});
   const [likedListingIds, setLikedListingIds] = useState<Record<string, boolean>>({});
+
+  const COMMENTS_PREVIEW_COUNT = 3;
+
+  function buildParentMap(comments: CommentView[]) {
+    const map = new Map<string, string>();
+    const walk = (items: CommentView[]) => {
+      for (const item of items) {
+        const replies = item.replies ?? [];
+        for (const child of replies) {
+          map.set(child.id, item.id);
+        }
+        if (replies.length) walk(replies);
+      }
+    };
+    walk(comments);
+    return map;
+  }
+
+  useEffect(() => {
+    if (!focus?.id) return;
+
+    const containerId = focus.kind === "post" ? `community-post-${focus.id}` : `community-listing-${focus.id}`;
+    const container = document.getElementById(containerId);
+    container?.scrollIntoView({ block: "start", behavior: "smooth" });
+
+    if (!focus.commentId) return;
+
+    if (focus.kind === "post") {
+      setExpandedPostComments((prev) => ({ ...prev, [focus.id]: true }));
+    } else {
+      setExpandedListingComments((prev) => ({ ...prev, [focus.id]: true }));
+    }
+
+    if (focus.kind === "post") {
+      const post = posts.find((p) => p.id === focus.id);
+      if (post) {
+        const parents = buildParentMap(post.comments);
+        const toExpand: string[] = [];
+        let cursor = focus.commentId;
+        while (parents.has(cursor)) {
+          const parentId = parents.get(cursor)!;
+          toExpand.push(parentId);
+          cursor = parentId;
+        }
+        if (toExpand.length) {
+          setExpandedPostReplies((prev) => {
+            const next = { ...prev };
+            toExpand.forEach((id) => {
+              next[id] = true;
+            });
+            return next;
+          });
+        }
+      }
+    } else {
+      const listing = listingItems.find((l) => l.listingId === focus.id);
+      if (listing) {
+        const parents = buildParentMap(listing.comments);
+        const toExpand: string[] = [];
+        let cursor = focus.commentId;
+        while (parents.has(cursor)) {
+          const parentId = parents.get(cursor)!;
+          toExpand.push(parentId);
+          cursor = parentId;
+        }
+        if (toExpand.length) {
+          setExpandedListingReplies((prev) => {
+            const next = { ...prev };
+            toExpand.forEach((id) => {
+              next[id] = true;
+            });
+            return next;
+          });
+        }
+      }
+    }
+
+    window.setTimeout(() => {
+      const commentEl = document.getElementById(`community-comment-${focus.commentId}`);
+      commentEl?.scrollIntoView({ block: "center", behavior: "smooth" });
+    }, 50);
+  }, [focus, listingItems, posts]);
 
   const postLikesStorageKey = viewer ? `ck:community:post-likes:${viewer.id}` : "";
   const listingLikesStorageKey = viewer ? `ck:community:listing-likes:${viewer.id}` : "";
@@ -425,7 +511,7 @@ export function CommunityFeed({
     const repliesCount = comment.repliesCount ?? comment.replies?.length ?? 0;
     const isExpanded = Boolean(expandedPostReplies[comment.id]);
     return (
-      <div key={comment.id} className="rounded-xl bg-slate-100 p-2.5">
+      <div key={comment.id} id={`community-comment-${comment.id}`} className="rounded-xl bg-slate-100 p-2.5">
         <div className="flex items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2">
             <Avatar user={comment.user} size={22} />
@@ -518,7 +604,7 @@ export function CommunityFeed({
     const repliesCount = comment.repliesCount ?? comment.replies?.length ?? 0;
     const isExpanded = Boolean(expandedListingReplies[comment.id]);
     return (
-      <div key={comment.id} className="rounded-xl bg-slate-100 p-2">
+      <div key={comment.id} id={`community-comment-${comment.id}`} className="rounded-xl bg-slate-100 p-2">
         <div className="flex items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2">
             <Avatar user={comment.user} size={22} />
@@ -610,14 +696,15 @@ export function CommunityFeed({
   return (
     <>
       <div className="mx-auto max-w-3xl space-y-4">
-        <Card className="space-y-3">
-          <h2 className="text-lg font-semibold">Latest Approved Listings</h2>
-          {listingItems.length === 0 ? (
-            <p className="text-sm text-slate-600">No approved listings yet.</p>
-          ) : (
-            <div className="space-y-3">
-              {listingItems.map((listing) => (
-                <div key={listing.listingId} className="overflow-hidden rounded-xl border border-slate-200">
+        {!focus || focus.kind !== "post" ? (
+          <Card className="space-y-3">
+            <h2 className="text-lg font-semibold">Latest Approved Listings</h2>
+            {listingItems.length === 0 ? (
+              <p className="text-sm text-slate-600">No approved listings yet.</p>
+            ) : (
+              <div className="space-y-3">
+                {listingItems.map((listing) => (
+                  <div key={listing.listingId} id={`community-listing-${listing.listingId}`} className="overflow-hidden rounded-xl border border-slate-200">
                   <div className="p-3">
                     <div className="flex items-center gap-2">
                       <Avatar user={listing.seller} size={28} />
@@ -654,6 +741,7 @@ export function CommunityFeed({
                     <button
                       type="button"
                       onClick={() => {
+                        setExpandedListingComments((prev) => ({ ...prev, [listing.listingId]: true }));
                         const field = document.getElementById(`listing-comment-${listing.listingId}`) as HTMLInputElement | null;
                         field?.focus();
                         if (!viewer) setShowLoginRequired(true);
@@ -663,28 +751,47 @@ export function CommunityFeed({
                       Comment
                     </button>
                   </div>
-                  <div className="space-y-2 px-3 py-3">
-                    {listing.comments.map((comment) => renderListingComment(listing.listingId, comment))}
-                  </div>
-                  <form className="flex gap-2 border-t border-slate-200 px-3 py-3" onSubmit={(e) => addListingComment(listing.listingId, e)}>
-                    <Input
-                      id={`listing-comment-${listing.listingId}`}
-                      placeholder={viewer ? "Write a comment on this listing..." : "Log in to comment"}
-                      value={commentByListingId[listing.listingId] ?? ""}
-                      onFocus={() => {
-                        if (!viewer) setShowLoginRequired(true);
-                      }}
-                      onChange={(e) => setCommentByListingId((prev) => ({ ...prev, [listing.listingId]: e.target.value }))}
-                      readOnly={!viewer}
-                    />
-                    <Button
-                      type="submit"
-                      variant="outline"
-                      disabled={listingCommentLoadingId === listing.listingId}
-                    >
-                      Comment
-                    </Button>
-                  </form>
+
+                  {(() => {
+                    const expanded = Boolean(expandedListingComments[listing.listingId]);
+                    const visible = expanded ? listing.comments : listing.comments.slice(-COMMENTS_PREVIEW_COUNT);
+                    return (
+                      <div className="border-t border-slate-200 px-3 py-3">
+                        {listing.comments.length > COMMENTS_PREVIEW_COUNT ? (
+                          <button
+                            type="button"
+                            onClick={() => setExpandedListingComments((prev) => ({ ...prev, [listing.listingId]: !expanded }))}
+                            className="mb-2 text-xs font-semibold text-brand-700 hover:underline"
+                          >
+                            {expanded ? "Hide comments" : `View all comments (${listing.commentsCount.toLocaleString()})`}
+                          </button>
+                        ) : null}
+
+                        <div className="space-y-2">
+                          {visible.map((comment) => renderListingComment(listing.listingId, comment))}
+                        </div>
+
+                        {expanded ? (
+                          <form className="mt-3 flex gap-2" onSubmit={(e) => addListingComment(listing.listingId, e)}>
+                            <Input
+                              id={`listing-comment-${listing.listingId}`}
+                              placeholder={viewer ? "Write a comment on this listing..." : "Log in to comment"}
+                              value={commentByListingId[listing.listingId] ?? ""}
+                              onFocus={() => {
+                                if (!viewer) setShowLoginRequired(true);
+                              }}
+                              onChange={(e) => setCommentByListingId((prev) => ({ ...prev, [listing.listingId]: e.target.value }))}
+                              readOnly={!viewer}
+                            />
+                            <Button type="submit" variant="outline" disabled={listingCommentLoadingId === listing.listingId}>
+                              Comment
+                            </Button>
+                          </form>
+                        ) : null}
+                      </div>
+                    );
+                  })()}
+
                   <div className="flex items-center justify-between border-t border-slate-200 px-3 py-2">
                     <p className="text-xs text-slate-500">Updated: {new Date(listing.updatedAt).toLocaleString()}</p>
                     <Link href={`/p/${listing.propertyId}`} className="text-xs font-semibold text-brand-700 hover:underline">
@@ -696,8 +803,9 @@ export function CommunityFeed({
             </div>
           )}
         </Card>
+        ) : null}
 
-        {viewer?.canCreatePost ? (
+        {viewer?.canCreatePost && !focus ? (
           <Card className="space-y-3">
             <h2 className="text-lg font-semibold">Create Post</h2>
             <Textarea
@@ -720,7 +828,7 @@ export function CommunityFeed({
 
         {posts.length === 0 ? null : (
           posts.map((post) => (
-            <Card key={post.id} className="overflow-hidden border-slate-200 bg-white p-0 text-slate-900">
+            <Card key={post.id} id={`community-post-${post.id}`} className="overflow-hidden border-slate-200 bg-white p-0 text-slate-900">
               <div className="p-4 pb-3">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex min-w-0 items-start gap-3">
@@ -772,6 +880,7 @@ export function CommunityFeed({
                 <button
                   type="button"
                   onClick={() => {
+                    setExpandedPostComments((prev) => ({ ...prev, [post.id]: true }));
                     const field = document.getElementById(`comment-${post.id}`) as HTMLInputElement | null;
                     field?.focus();
                     if (!viewer) setShowLoginRequired(true);
@@ -782,31 +891,51 @@ export function CommunityFeed({
                 </button>
               </div>
 
-              <div className="space-y-2 px-4 py-3">
-                {post.comments.map((comment) => renderPostComment(post.id, comment))}
-              </div>
+              {(() => {
+                const expanded = Boolean(expandedPostComments[post.id]);
+                const visible = expanded ? post.comments : post.comments.slice(-COMMENTS_PREVIEW_COUNT);
+                return (
+                  <div className="border-t border-slate-200 px-4 py-3">
+                    {post.comments.length > COMMENTS_PREVIEW_COUNT ? (
+                      <button
+                        type="button"
+                        onClick={() => setExpandedPostComments((prev) => ({ ...prev, [post.id]: !expanded }))}
+                        className="mb-2 text-xs font-semibold text-brand-700 hover:underline"
+                      >
+                        {expanded ? "Hide comments" : `View all comments (${post.commentsCount.toLocaleString()})`}
+                      </button>
+                    ) : null}
 
-              <form className="flex gap-2 border-t border-slate-200 px-4 py-3" onSubmit={(e) => addComment(post.id, e)}>
-                <Input
-                  id={`comment-${post.id}`}
-                  placeholder={viewer ? "Write a comment..." : "Log in to comment"}
-                  value={commentByPostId[post.id] ?? ""}
-                  onFocus={() => {
-                    if (!viewer) setShowLoginRequired(true);
-                  }}
-                  onChange={(e) => setCommentByPostId((prev) => ({ ...prev, [post.id]: e.target.value }))}
-                  readOnly={!viewer}
-                  className="border-slate-300 bg-white text-slate-900 placeholder:text-slate-500"
-                />
-                <Button
-                  type="submit"
-                  variant="outline"
-                  disabled={commentLoadingId === post.id}
-                  className="border-slate-300 bg-white text-slate-800 hover:bg-slate-50"
-                >
-                  Comment
-                </Button>
-              </form>
+                    <div className="space-y-2">
+                      {visible.map((comment) => renderPostComment(post.id, comment))}
+                    </div>
+
+                    {expanded ? (
+                      <form className="mt-3 flex gap-2" onSubmit={(e) => addComment(post.id, e)}>
+                        <Input
+                          id={`comment-${post.id}`}
+                          placeholder={viewer ? "Write a comment..." : "Log in to comment"}
+                          value={commentByPostId[post.id] ?? ""}
+                          onFocus={() => {
+                            if (!viewer) setShowLoginRequired(true);
+                          }}
+                          onChange={(e) => setCommentByPostId((prev) => ({ ...prev, [post.id]: e.target.value }))}
+                          readOnly={!viewer}
+                          className="border-slate-300 bg-white text-slate-900 placeholder:text-slate-500"
+                        />
+                        <Button
+                          type="submit"
+                          variant="outline"
+                          disabled={commentLoadingId === post.id}
+                          className="border-slate-300 bg-white text-slate-800 hover:bg-slate-50"
+                        >
+                          Comment
+                        </Button>
+                      </form>
+                    ) : null}
+                  </div>
+                );
+              })()}
             </Card>
           ))
         )}

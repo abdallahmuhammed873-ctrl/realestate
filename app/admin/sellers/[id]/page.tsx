@@ -1,0 +1,128 @@
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { Card } from "@/components/ui/card";
+import { requireRole } from "@/lib/auth";
+import { getUserById, listSellerCommunityPostsForAdmin, listSellerListingsForAdmin } from "@/lib/repository";
+
+function StatusBadge({ status }: { status: "DRAFT" | "PENDING" | "APPROVED" | "REJECTED" }) {
+  if (status === "APPROVED") return <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700">Approved</span>;
+  if (status === "REJECTED") return <span className="rounded-full bg-rose-100 px-2 py-1 text-xs font-semibold text-rose-700">Rejected</span>;
+  if (status === "PENDING") return <span className="rounded-full bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-700">Pending</span>;
+  return <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700">Draft</span>;
+}
+
+export default async function AdminSellerProfilePage({ params }: { params: Promise<{ id: string }> }) {
+  const user = await requireRole(["ADMIN"]);
+  if (!user) redirect("/admin/login");
+  const { id } = await params;
+
+  const seller = getUserById(id);
+  if (!seller || seller.role !== "SELLER" || seller.isCompanyAccount || seller.companyOwnerId) redirect("/admin/sellers");
+
+  const listings = listSellerListingsForAdmin(seller.id);
+  const posts = listSellerCommunityPostsForAdmin(seller.id);
+
+  const byStatus = {
+    total: listings.length,
+    approved: listings.filter((x) => x.listing.status === "APPROVED").length,
+    pending: listings.filter((x) => x.listing.status === "PENDING").length,
+    rejected: listings.filter((x) => x.listing.status === "REJECTED").length
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h1 className="text-2xl font-bold">{seller.name}</h1>
+          <p className="text-sm text-slate-600">{seller.email}</p>
+          <p className="text-sm text-slate-600">{seller.phone ?? "No phone provided"}</p>
+        </div>
+        <Link href="/admin/sellers" className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-slate-800">
+          Back to Seller Profiles
+        </Link>
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-4">
+        <Card>
+          <p className="text-xs text-slate-500">Total</p>
+          <p className="text-2xl font-bold">{byStatus.total}</p>
+        </Card>
+        <Card>
+          <p className="text-xs text-slate-500">Approved</p>
+          <p className="text-2xl font-bold">{byStatus.approved}</p>
+        </Card>
+        <Card>
+          <p className="text-xs text-slate-500">Pending</p>
+          <p className="text-2xl font-bold">{byStatus.pending}</p>
+        </Card>
+        <Card>
+          <p className="text-xs text-slate-500">Rejected</p>
+          <p className="text-2xl font-bold">{byStatus.rejected}</p>
+        </Card>
+      </div>
+
+      <Card>
+        <h2 className="text-lg font-bold">Listings</h2>
+        {listings.length === 0 ? (
+          <p className="mt-2 text-sm text-slate-600">No listings found.</p>
+        ) : (
+          <div className="mt-3 overflow-x-auto">
+            <table className="w-full min-w-[860px] border-separate border-spacing-y-2 text-sm">
+              <thead>
+                <tr className="text-left text-xs text-slate-500">
+                  <th className="px-3">Status</th>
+                  <th className="px-3">Title</th>
+                  <th className="px-3">Uploaded By</th>
+                  <th className="px-3">Updated</th>
+                  <th className="px-3">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {listings.map(({ listing, property, seller: uploader, company }) => (
+                  <tr key={listing.id} className="rounded-xl bg-white">
+                    <td className="px-3 py-3">
+                      <StatusBadge status={listing.status} />
+                    </td>
+                    <td className="px-3 py-3 font-semibold text-slate-900">{property.title}</td>
+                    <td className="px-3 py-3 text-slate-700">
+                      {uploader?.name ?? listing.userId}
+                      {company ? <span className="text-xs text-slate-500"> (Company: {company.name})</span> : null}
+                    </td>
+                    <td className="px-3 py-3 text-slate-600">{new Date(listing.updatedAt).toLocaleString()}</td>
+                    <td className="px-3 py-3">
+                      <Link href={`/admin/listings/${listing.id}`} className="font-semibold text-brand-700 hover:underline">
+                        Review
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+
+      <Card>
+        <h2 className="text-lg font-bold">Community Posts</h2>
+        {posts.length === 0 ? (
+          <p className="mt-2 text-sm text-slate-600">No community posts found.</p>
+        ) : (
+          <ul className="mt-3 space-y-2">
+            {posts.map(({ post, author }) => (
+              <li key={post.id} className="rounded-xl border p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-sm font-semibold text-slate-900">{author?.name ?? post.userId}</p>
+                  <p className="text-xs text-slate-500">{new Date(post.createdAt).toLocaleString()}</p>
+                </div>
+                <p className="mt-1 line-clamp-3 text-sm text-slate-700">{post.text}</p>
+                <Link href={`/community?post=${encodeURIComponent(post.id)}`} className="mt-2 inline-block text-sm font-semibold text-brand-700">
+                  Open post
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+    </div>
+  );
+}

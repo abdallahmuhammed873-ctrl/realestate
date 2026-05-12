@@ -11,6 +11,7 @@ export function MobileNav() {
   const router = useRouter();
   const { t } = useLanguage();
   const [unread, setUnread] = useState(0);
+  const [unreadAppointments, setUnreadAppointments] = useState(0);
   const [role, setRole] = useState<string | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
@@ -35,6 +36,14 @@ export function MobileNav() {
         })
         .catch(() => undefined);
     };
+    const loadUnreadAppointments = () => {
+      fetch("/api/appointments/unread", { cache: "no-store" })
+        .then((r) => r.json())
+        .then((data) => {
+          if (mounted) setUnreadAppointments(Number(data.unread ?? 0));
+        })
+        .catch(() => undefined);
+    };
     const loadSession = () => {
       fetch("/api/me")
         .then((r) => r.json())
@@ -52,11 +61,15 @@ export function MobileNav() {
     };
     const loadAll = () => {
       loadUnread();
+      loadUnreadAppointments();
       loadSession();
     };
     loadAll();
     const timer = window.setInterval(() => {
-      if (document.visibilityState === "visible") loadUnread();
+      if (document.visibilityState === "visible") {
+        loadUnread();
+        loadUnreadAppointments();
+      }
     }, 8000);
     window.addEventListener("focus", loadAll);
     return () => {
@@ -75,6 +88,17 @@ export function MobileNav() {
     };
     window.addEventListener("notifications:changed", handler as EventListener);
     return () => window.removeEventListener("notifications:changed", handler as EventListener);
+  }, []);
+
+  useEffect(() => {
+    const handler = () => {
+      fetch("/api/appointments/unread", { cache: "no-store" })
+        .then((r) => r.json())
+        .then((data) => setUnreadAppointments(Number(data.unread ?? 0)))
+        .catch(() => undefined);
+    };
+    window.addEventListener("appointments:changed", handler as EventListener);
+    return () => window.removeEventListener("appointments:changed", handler as EventListener);
   }, []);
 
   async function logout() {
@@ -110,7 +134,11 @@ export function MobileNav() {
                 pathname === tab.href ? "font-bold text-brand-700" : "text-slate-500"
               )}
             >
-              {tab.href === "/notifications" && unread > 0 ? `${tab.label} (${unread})` : tab.label}
+              {tab.href === "/notifications" && unread > 0
+                ? `${tab.label} (${unread})`
+                : tab.href === "/appointments" && unreadAppointments > 0
+                  ? `${tab.label} (${unreadAppointments})`
+                  : tab.label}
             </Link>
           </li>
         ))}

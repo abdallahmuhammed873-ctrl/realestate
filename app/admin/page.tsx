@@ -30,6 +30,12 @@ export default async function AdminOverviewPage() {
         <Link href="/admin/buyers" className="inline-block rounded-xl border border-slate-300 bg-white px-4 py-2 text-slate-800">
           View Buyer Profiles
         </Link>
+        <Link href="/admin/approved" className="inline-block rounded-xl border border-slate-300 bg-white px-4 py-2 text-slate-800">
+          Open Approved Queue
+        </Link>
+        <Link href="/admin/rejected" className="inline-block rounded-xl border border-slate-300 bg-white px-4 py-2 text-slate-800">
+          Open Rejected Queue
+        </Link>
       </div>
       <section className="space-y-3">
         <h2 className="text-lg font-bold">All Pending Listings</h2>

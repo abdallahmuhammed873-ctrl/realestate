@@ -45,6 +45,8 @@ export function AppointmentActions({ appointmentId, currentDatetime, status }: P
       }
       setEditOpen(false);
       setRescheduleOpen(false);
+      window.dispatchEvent(new Event("appointments:changed"));
+      window.dispatchEvent(new Event("notifications:changed"));
       router.refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to update appointment");

@@ -9,7 +9,7 @@
     "dev": "set NEXT_DISABLE_SWC_NATIVE=1 && next dev",
     "build": "set NEXT_DISABLE_SWC_NATIVE=1 && next build",
     "prestart": "npm run build",
-    "start": "set NEXT_DISABLE_SWC_NATIVE=1 && next start",
+    "start": "set NEXT_DISABLE_SWC_NATIVE=1 && next start -p 3001",
     "lint": "next lint",
     "seed": "ts-node --transpile-only prisma/seed.ts"
   },

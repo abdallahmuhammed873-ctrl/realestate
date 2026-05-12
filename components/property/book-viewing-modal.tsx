@@ -47,7 +47,11 @@ export function BookViewingModal({ propertyId }: { propertyId: string }) {
       setError(String(data?.error ?? "Failed to submit request."));
       return;
     }
-    if (res.ok) setSubmitted(true);
+    if (res.ok) {
+      setSubmitted(true);
+      window.dispatchEvent(new Event("appointments:changed"));
+      window.dispatchEvent(new Event("notifications:changed"));
+    }
   }
 
   if (!open) {

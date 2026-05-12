@@ -2,10 +2,34 @@ import { CommunityFeed } from "@/components/community/community-feed";
 import { getCurrentUser } from "@/lib/auth";
 import { listCommunityListings, listCommunityPosts } from "@/lib/repository";
 
-export default async function CommunityPage() {
+export default async function CommunityPage({
+  searchParams
+}: {
+  searchParams: Promise<{ post?: string; listing?: string; comment?: string }>;
+}) {
   const user = await getCurrentUser();
-  const posts = listCommunityPosts(user?.id);
-  const listings = listCommunityListings(user?.id);
+  const resolved = await searchParams;
+  const focusPostId = (resolved.post ?? "").trim();
+  const focusListingId = (resolved.listing ?? "").trim();
+  const focusCommentId = (resolved.comment ?? "").trim();
+
+  const allPosts = listCommunityPosts(user?.id);
+  const allListings = listCommunityListings(user?.id);
+  const posts = focusListingId ? [] : focusPostId ? allPosts.filter((p) => p.id === focusPostId) : allPosts;
+  const listings = focusPostId
+    ? []
+    : focusListingId
+      ? allListings.filter((l) => l.listingId === focusListingId)
+      : allListings;
+
+  const focus =
+    focusPostId || focusListingId
+      ? {
+          kind: focusPostId ? ("post" as const) : ("listing" as const),
+          id: focusPostId || focusListingId,
+          commentId: focusCommentId || undefined
+        }
+      : null;
 
   return (
     <div className="space-y-4">
@@ -13,6 +37,7 @@ export default async function CommunityPage() {
       <CommunityFeed
         initialPosts={posts}
         listings={listings}
+        focus={focus}
         viewer={
           user
             ? {
