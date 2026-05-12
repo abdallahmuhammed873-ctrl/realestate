@@ -1,0 +1,15 @@
+{
+  "name": "graduation-project-runner",
+  "private": true,
+  "scripts": {
+    "dev": "npm --prefix \"Abdallah grad project\" run dev",
+    "build": "npm --prefix \"Abdallah grad project\" run build",
+    "start": "npm --prefix \"Abdallah grad project\" run start",
+    "lint": "npm --prefix \"Abdallah grad project\" run lint",
+    "seed": "npm --prefix \"Abdallah grad project\" run seed"
+  },
+  "dependencies": {
+    "@google-cloud/translate": "^9.3.0",
+    "nodemailer": "^8.0.2"
+  }
+}
