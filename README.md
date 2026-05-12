@@ -6,8 +6,8 @@ Next.js App Router marketplace inspired by OLX/Dubizzle browsing and Property Fi
 
 - Next.js (App Router) + TypeScript
 - Tailwind CSS (shadcn-style reusable UI primitives)
-- Prisma schema for PostgreSQL (with seed script)
-- In-memory mocked repository for demo runtime
+- Prisma + PostgreSQL for runtime platform data
+- Python AI service for intent extraction, grounded retrieval orchestration, and answer generation
 
 ## Features
 
@@ -26,7 +26,11 @@ Next.js App Router marketplace inspired by OLX/Dubizzle browsing and Property Fi
 - Favorites, compare (localStorage up to 4), recommendations
 - Appointment booking flow + notification stub response
 - Saved search alerts
-- Optional EN/AR-ready chatbot drawer + API contract (`/api/chat`)
+- EN/AR-ready chatbot drawer via `POST /api/chat`
+- Internal AI data path:
+  - Next.js exposes protected internal AI-read endpoints backed by PostgreSQL
+  - Python AI service calls those endpoints instead of reading CSV files
+  - Ollama stays behind a Python adapter with a grounded fallback response
 - Responsive UX:
   - mobile bottom nav
   - mobile filters bottom sheet
@@ -84,14 +88,15 @@ Use `/auth` and choose role:
 - `GET /api/properties/by-ids?ids=p-1,p-2`
 - `POST /api/chat`  
   Body: `{ message, language: "EN" | "AR" }`  
-  Response: `{ reply, suggestedFilters, language }`
+  Response: `{ reply, suggestedFilters, language, extractedFilters, total, items }`
 
 ## Project Structure
 
 - `app/` routes and API handlers
 - `components/` reusable UI and feature modules
-- `lib/` types, mock repository, distance/search helpers, auth helpers
+- `lib/` types, Prisma-backed services, AI contract, distance/search helpers, auth helpers
 - `prisma/` schema and seed
+- `extras/chatbot/real_estate_chatbot/` Python AI service + Streamlit debug UI
 
 ## Setup
 
@@ -99,14 +104,22 @@ Use `/auth` and choose role:
    - `npm install`
 2. Copy env:
    - `copy .env.example .env` (Windows)
-3. (Optional DB mode) create PostgreSQL DB and run:
+3. Create PostgreSQL DB and run:
    - `npx prisma generate`
    - `npx prisma db push`
    - `npm run seed`
-4. Start dev server:
+4. Start the Next.js app:
    - `npm run dev`
+5. Start the Python AI service in a second terminal:
+   - `cd extras/chatbot/real_estate_chatbot`
+   - `pip install -r requirements.txt`
+   - `uvicorn api:app --host 127.0.0.1 --port 8001`
+   - If Next.js is not running on `http://127.0.0.1:3000`, set `PLATFORM_AI_BASE_URL` before starting the service.
+6. Optional debug UI for the AI service:
+   - `streamlit run app.py`
 
 ## Notes
 
-- Runtime currently uses in-memory repository for demo simplicity while Prisma schema/query builder are ready for DB mode.
+- Runtime uses PostgreSQL through Prisma-backed service modules.
 - Public listing visibility is enforced by repository-level status check (`APPROVED` only).
+- The Python AI service reads shared platform data through `app/api/internal/ai/*` and no longer depends on CSV for chat-time retrieval.

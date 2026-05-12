@@ -218,6 +218,7 @@ export type SearchFilters = {
   city?: string;
   area?: string;
   district?: string;
+  projectName?: string;
   minPrice?: number;
   maxPrice?: number;
   minArea?: number;
@@ -229,6 +230,8 @@ export type SearchFilters = {
   paymentType?: PaymentType;
   furnishing?: Furnishing;
   completionStatus?: CompletionStatus;
+  hasGarden?: boolean;
+  hasRoof?: boolean;
   amenities?: string[];
   lat?: number;
   lng?: number;
@@ -236,6 +239,8 @@ export type SearchFilters = {
   downPaymentMax?: number;
   installmentYearsMax?: number;
   installmentMonthlyMax?: number;
+  unitCode?: string;
+  inventoryStatus?: string;
   page?: number;
   pageSize?: number;
   sort?: "FEATURED" | "NEWEST" | "PRICE_ASC" | "PRICE_DESC" | "AREA_DESC" | "DISTANCE_ASC";

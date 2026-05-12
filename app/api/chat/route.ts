@@ -1,18 +1,58 @@
 import { NextRequest, NextResponse } from "next/server";
+import { aiChatRequestSchema } from "@/lib/ai-contract";
+
+function getAiServiceUrl() {
+  return process.env.PYTHON_AI_SERVICE_URL?.trim() || "http://127.0.0.1:8001";
+}
 
 export async function POST(req: NextRequest) {
-  const body = await req.json();
-  const language = body.language === "AR" ? "AR" : "EN";
-  const message = String(body.message ?? "").toLowerCase();
-  const reply =
-    language === "AR"
-      ? "ممتاز. ما الميزانية؟ شراء أم إيجار؟ وأي منطقة تفضلها؟"
-      : message.includes("rent")
-        ? "Great. What monthly budget and preferred district should I target?"
-        : "Great. What is your budget, transaction type (buy/rent), and preferred location?";
-  return NextResponse.json({
-    reply,
-    suggestedFilters: ["transaction", "minPrice", "maxPrice", "city", "area", "beds"],
-    language
-  });
+  const rawBody = await req.json().catch(() => null);
+  const parsed = aiChatRequestSchema.safeParse(rawBody);
+
+  if (!parsed.success) {
+    return NextResponse.json(
+      {
+        error: "Invalid chat payload.",
+        issues: parsed.error.flatten()
+      },
+      { status: 400 }
+    );
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 20_000);
+
+  try {
+    const response = await fetch(`${getAiServiceUrl()}/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(parsed.data),
+      cache: "no-store",
+      signal: controller.signal
+    });
+
+    const data = await response.json().catch(() => null);
+    if (!response.ok) {
+      return NextResponse.json(
+        {
+          error: data?.error || "AI service request failed.",
+          details: data
+        },
+        { status: response.status }
+      );
+    }
+
+    return NextResponse.json(data);
+  } catch (error) {
+    const details = error instanceof Error ? error.message : "Unknown AI service error.";
+    return NextResponse.json(
+      {
+        error: "Python AI service is unavailable.",
+        details
+      },
+      { status: 503 }
+    );
+  } finally {
+    clearTimeout(timeout);
+  }
 }

@@ -23,9 +23,14 @@ export function buildPrismaPropertyWhere(filters: SearchFilters): Prisma.Propert
   if (filters.city) where.city = filters.city;
   if (filters.area) where.area = filters.area;
   if (filters.district) where.district = filters.district;
+  if (filters.projectName) where.projectName = { contains: filters.projectName, mode: "insensitive" };
+  if (filters.unitCode) where.unitCode = { contains: filters.unitCode, mode: "insensitive" };
+  if (filters.inventoryStatus) where.inventoryStatus = { contains: filters.inventoryStatus, mode: "insensitive" };
   if (filters.paymentType) where.paymentType = filters.paymentType;
   if (filters.furnishing) where.furnishing = filters.furnishing;
   if (filters.completionStatus) where.completionStatus = filters.completionStatus;
+  if (filters.hasGarden !== undefined) where.hasGarden = filters.hasGarden;
+  if (filters.hasRoof !== undefined) where.hasRoof = filters.hasRoof;
   if (filters.amenities?.length) where.amenities = { hasEvery: filters.amenities };
   if (filters.minArea !== undefined || filters.maxArea !== undefined) {
     where.areaSqm = { gte: filters.minArea, lte: filters.maxArea };

@@ -20,8 +20,8 @@
 
 - [x] The Next.js runtime still uses `.demo-db.json` through `lib/repository.ts` instead of Prisma-backed PostgreSQL.
 - [x] The Prisma schema is only a partial match for the real runtime model.
-- [ ] The Python AI project reads from `real_estate_master.csv` and stores chat history in local JSON, so it currently has its own separate dataset.
-- [ ] `/api/chat` in Next.js is only a stub and is not connected to the Python AI service.
+- [x] The Python AI project read from `real_estate_master.csv` and stored chat history in local JSON, so it had its own separate dataset.
+- [x] `/api/chat` in Next.js was a stub and is now proxied to the Python AI service.
 - [ ] The current i18n layer is only partial: the language provider is hard-coded to English and the root layout is fixed to `lang="en"` and `dir="ltr"`.
 - [ ] There is no real dark/light theme system yet.
 - [ ] Property images are currently remote URLs or base64 data URLs, not local uploaded files.
@@ -115,30 +115,30 @@
 
 ## Phase 4 - Refactor The Python AI Project Into A Real AI Service
 
-- [ ] Keep Python, but narrow its responsibility to:
+- [x] Keep Python, but narrow its responsibility to:
   - intent extraction
   - grounded retrieval orchestration
   - LLM answer generation
-- [ ] Remove CSV as a runtime dependency from the AI chat path.
-- [ ] Keep Streamlit only as an internal debugging UI, or retire it after the new API is ready.
-- [ ] Add a proper Python service layer with endpoints such as:
+- [x] Remove CSV as a runtime dependency from the AI chat path.
+- [x] Keep Streamlit only as an internal debugging UI, or retire it after the new API is ready.
+- [x] Add a proper Python service layer with endpoints such as:
   - `GET /health`
   - `POST /chat`
   - `POST /extract-filters`
-- [ ] Keep the current LLM provider behind an adapter so Ollama can stay for MVP and be swapped later.
-- [ ] Change AI retrieval to use the shared platform data instead of pandas CSV filtering.
-- [ ] Recommended MVP retrieval path:
+- [x] Keep the current LLM provider behind an adapter so Ollama can stay for MVP and be swapped later.
+- [x] Change AI retrieval to use the shared platform data instead of pandas CSV filtering.
+- [x] Recommended MVP retrieval path:
   - Python calls internal Next.js AI read endpoints backed by PostgreSQL
   - Python never reads a separate property file
-- [ ] Add an internal shared search contract so AI filters map directly to platform filters.
-- [ ] Return structured filters from AI, not only plain text.
-- [ ] Validate extracted filters before querying:
+- [x] Add an internal shared search contract so AI filters map directly to platform filters.
+- [x] Return structured filters from AI, not only plain text.
+- [x] Validate extracted filters before querying:
   - Python: Pydantic
   - Next.js: Zod or server-side validation
-- [ ] Keep all answers grounded:
+- [x] Keep all answers grounded:
   - the model only sees retrieved database-backed rows
   - if nothing matches, the answer must say so clearly
-- [ ] Update Next.js `/api/chat` so it proxies to the Python AI service instead of returning a stub response.
+- [x] Update Next.js `/api/chat` so it proxies to the Python AI service instead of returning a stub response.
 
 ## Phase 5 - Canonical Search Contract Shared By Web, AI, And Mobile
 
@@ -363,7 +363,7 @@
 - [x] Phase 1: canonical schema
 - [x] Phase 2: migrate Next.js runtime to PostgreSQL
 - [x] Phase 3: import AI inventory into PostgreSQL
-- [ ] Phase 4: refactor Python into AI-only service
+- [x] Phase 4: refactor Python into AI-only service
 - [ ] Phase 5: shared search contract
 - [ ] Phase 6: solidify PostgreSQL data layer
 - [ ] Phase 7: local network deployment model
