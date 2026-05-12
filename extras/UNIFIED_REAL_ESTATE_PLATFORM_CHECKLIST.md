@@ -14,7 +14,7 @@
   - mobile app calls the laptop backend over the same network
 - [ ] Store **all media locally on disk** and save only relative file paths in the database.
 - [ ] Support **regular photos + 360 panorama media** in the first MVP.
-- [ ] Expose **versioned JSON APIs** from Next.js for both web and mobile.
+- [x] Expose **versioned JSON APIs** from Next.js for both web and mobile.
 
 ## What I Found In The Current Code
 
@@ -31,7 +31,7 @@
 - [ ] Do **not** keep CSV as a runtime source once integration starts.
 - [ ] Do **not** let Python and Next.js maintain different filtering/business rules for the same inventory.
 - [ ] Do **not** keep storing property photos as base64 strings in JSON/database records.
-- [ ] Do **not** build the mobile app directly on page-specific web APIs without versioning and token auth.
+- [x] Do **not** build the mobile app directly on page-specific web APIs without versioning and token auth.
 - [ ] Do **not** let the mobile app connect directly to PostgreSQL.
 - [ ] Do **not** expose DB credentials or AI-service internals to the mobile app.
 
@@ -205,10 +205,10 @@
   - laptop IP may change between networks
 ## Phase 8 - Mobile-Ready API Layer
 
-- [ ] Create `/api/v1/*` endpoints instead of exposing only web-era route shapes.
-- [ ] Make mobile use bearer token auth, not cookie-based demo auth.
-- [ ] Keep response DTOs stable and UI-agnostic.
-- [ ] Add these mobile-ready endpoints first:
+- [x] Create `/api/v1/*` endpoints instead of exposing only web-era route shapes.
+- [x] Make mobile use bearer token auth, not cookie-based demo auth.
+- [x] Keep response DTOs stable and UI-agnostic.
+- [x] Add these mobile-ready endpoints first:
   - `GET /api/v1/me`
   - `GET /api/v1/properties`
   - `GET /api/v1/properties/:id`
@@ -218,9 +218,9 @@
   - `GET /api/v1/appointments`
   - `GET /api/v1/notifications`
   - `POST /api/v1/chat`
-- [ ] Keep web pages free to call server-side services directly, but make mobile consume the versioned API only.
-- [ ] Return absolute media URLs for the mobile app.
-- [ ] Keep pagination and filter semantics identical between web and mobile.
+- [x] Keep web pages free to call server-side services directly, but make mobile consume the versioned API only.
+- [x] Return absolute media URLs for the mobile app.
+- [x] Keep pagination and filter semantics identical between web and mobile.
 
 ## Phase 9 - Local Media Storage
 
@@ -367,7 +367,7 @@
 - [x] Phase 5: shared search contract
 - [x] Phase 6: solidify PostgreSQL data layer
 - [x] Phase 7: local network deployment model
-- [ ] Phase 8: versioned mobile API
+- [x] Phase 8: versioned mobile API
 - [ ] Phase 9: local media upload
 - [ ] Phase 10: 360 panorama support
 - [ ] Phase 11: dark/light theme

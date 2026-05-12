@@ -90,6 +90,20 @@ Use `/auth` and choose role:
 - `POST /api/chat`  
   Body: `{ message, language: "EN" | "AR" }`  
   Response: `{ reply, suggestedFilters, language, extractedFilters, total, items }`
+- `POST /api/v1/auth/login`
+  Body: `{ identifier, password, role? }`
+  Response: `{ ok, accessToken, tokenType: "Bearer", expiresAt, user }`
+- `GET /api/v1/me`
+- `GET /api/v1/properties?...filters`
+- `GET /api/v1/properties/:id`
+- `GET /api/v1/favorites`
+- `POST /api/v1/favorites/toggle`
+  Body: `{ propertyId }`
+- `GET /api/v1/appointments`
+- `POST /api/v1/appointments`
+  Body: `{ propertyId, datetime, contactName, contactPhone, notes? }`
+- `GET /api/v1/notifications`
+- `POST /api/v1/chat`
 
 ## Project Structure
 
@@ -124,6 +138,7 @@ Use `/auth` and choose role:
 8. For same-network mobile testing:
    - use `npm run network:info` to print the current local IPv4 and demo URLs
    - open `http://<laptop-ip>:3000/api/health` from the phone browser to verify backend, DB, and AI reachability
+   - call `POST http://<laptop-ip>:3000/api/v1/auth/login` first, then send `Authorization: Bearer <token>` to authenticated `/api/v1/*` routes
    - see `docs/local-network-deployment.md` for the full runbook
 
 ## Notes
@@ -133,5 +148,5 @@ Use `/auth` and choose role:
 - Public listing visibility is enforced by repository-level status check (`APPROVED` only).
 - The Python AI service reads shared platform data through `app/api/internal/ai/*` and no longer depends on CSV for chat-time retrieval.
 - Mobile and browser clients should talk to the Next.js backend only. PostgreSQL is intended to stay backend-only on the laptop for the graduation demo.
-- Auth still uses the current session-cookie flow, but cookie access is now centralized in shared server helpers instead of being duplicated across route handlers.
+- Web auth still uses the current session-cookie flow, while mobile-ready `/api/v1/*` routes now use a signed bearer token issued by `POST /api/v1/auth/login`.
 - `GET /api/health` is the main laptop-demo readiness endpoint for backend, database, and AI checks.
