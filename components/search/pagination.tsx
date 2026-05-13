@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useLanguage } from "@/components/layout/language-provider";
 import { Button } from "@/components/ui/button";
 
 export function Pagination({ page, pageSize, total }: { page: number; pageSize: number; total: number }) {
@@ -8,6 +9,7 @@ export function Pagination({ page, pageSize, total }: { page: number; pageSize: 
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
+  const { t } = useLanguage();
 
   function setPage(nextPage: number) {
     const next = new URLSearchParams(params.toString());
@@ -18,13 +20,13 @@ export function Pagination({ page, pageSize, total }: { page: number; pageSize: 
   return (
     <div className="mt-6 flex items-center justify-center gap-2">
       <Button variant="outline" disabled={page <= 1} onClick={() => setPage(page - 1)}>
-        Prev
+        {t("prev")}
       </Button>
       <span className="text-sm text-slate-600">
-        Page {page} / {pages}
+        {t("pageXofY", { page, pages })}
       </span>
       <Button variant="outline" disabled={page >= pages} onClick={() => setPage(page + 1)}>
-        Next
+        {t("next")}
       </Button>
     </div>
   );

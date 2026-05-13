@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useLanguage } from "@/components/layout/language-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -8,6 +9,7 @@ import { LoginRequiredModal } from "@/components/auth/login-required-modal";
 import { isValidPhoneNumber } from "@/lib/utils";
 
 export function BookViewingModal({ propertyId }: { propertyId: string }) {
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const [showLoginRequired, setShowLoginRequired] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -29,7 +31,7 @@ export function BookViewingModal({ propertyId }: { propertyId: string }) {
   async function submit() {
     setError("");
     if (!isValidPhoneNumber(form.contactPhone)) {
-      setError("Phone number must be 11 digits and start with 01.");
+      setError(t("phoneValidation"));
       return;
     }
     const res = await fetch("/api/appointments", {
@@ -44,7 +46,7 @@ export function BookViewingModal({ propertyId }: { propertyId: string }) {
     }
     if (!res.ok) {
       const data = await res.json().catch(() => null);
-      setError(String(data?.error ?? "Failed to submit request."));
+      setError(String(data?.error ?? t("submitFailed")));
       return;
     }
     if (res.ok) {
@@ -57,7 +59,7 @@ export function BookViewingModal({ propertyId }: { propertyId: string }) {
   if (!open) {
     return (
       <>
-        <Button onClick={openModal}>Book Viewing</Button>
+        <Button onClick={openModal}>{t("bookViewing")}</Button>
         <LoginRequiredModal open={showLoginRequired} onClose={() => setShowLoginRequired(false)} />
       </>
     );
@@ -69,31 +71,31 @@ export function BookViewingModal({ propertyId }: { propertyId: string }) {
         <div className="surface-panel w-full max-w-md rounded-2xl p-4">
           {submitted ? (
             <div className="space-y-3 text-center">
-              <h3 className="text-lg font-bold">Appointment Requested</h3>
-              <p className="text-muted text-sm">We sent your request to the seller. You will receive a notification update soon.</p>
-              <Button onClick={() => setOpen(false)}>Close</Button>
+              <h3 className="text-lg font-bold">{t("appointmentRequested")}</h3>
+              <p className="text-muted text-sm">{t("appointmentRequestedDesc")}</p>
+              <Button onClick={() => setOpen(false)}>{t("closeButton")}</Button>
             </div>
           ) : (
             <div className="space-y-3">
-              <h3 className="text-lg font-bold">Book a Viewing</h3>
+              <h3 className="text-lg font-bold">{t("bookViewingTitle")}</h3>
               <Input type="datetime-local" value={form.datetime} onChange={(e) => setForm((f) => ({ ...f, datetime: e.target.value }))} />
-              <Input placeholder="Contact name" value={form.contactName} onChange={(e) => setForm((f) => ({ ...f, contactName: e.target.value }))} />
+              <Input placeholder={t("contactName")} value={form.contactName} onChange={(e) => setForm((f) => ({ ...f, contactName: e.target.value }))} />
               <Input
                 type="tel"
-                placeholder="Contact phone"
+                placeholder={t("contactPhone")}
                 value={form.contactPhone}
                 onChange={(e) => setForm((f) => ({ ...f, contactPhone: e.target.value }))}
                 pattern="01[0-9]{9}"
                 minLength={11}
                 maxLength={11}
-                title="Phone number must be 11 digits and start with 01"
+                title={t("phoneValidation")}
                 required
               />
-              <Textarea placeholder="Notes (optional)" value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} />
+              <Textarea placeholder={t("notesOptional")} value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} />
               <div className="flex gap-2">
-                <Button onClick={submit}>Confirm</Button>
+                <Button onClick={submit}>{t("confirm")}</Button>
                 <Button variant="outline" onClick={() => setOpen(false)}>
-                  Cancel
+                  {t("cancel")}
                 </Button>
               </div>
               {error ? <p className="text-xs text-red-600">{error}</p> : null}

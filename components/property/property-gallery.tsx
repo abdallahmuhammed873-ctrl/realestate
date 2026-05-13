@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useLanguage } from "@/components/layout/language-provider";
 import type { PropertyMedia } from "@/lib/types";
 import { PanoramaViewer } from "@/components/property/panorama-viewer";
 
@@ -11,6 +12,7 @@ type PropertyGalleryProps = {
 };
 
 export function PropertyGallery({ images, title, media = [] }: PropertyGalleryProps) {
+  const { t } = useLanguage();
   const photoMedia = media
     .filter((item) => item.kind === "IMAGE")
     .sort((a, b) => a.sortOrder - b.sortOrder);
@@ -50,7 +52,7 @@ export function PropertyGallery({ images, title, media = [] }: PropertyGalleryPr
                 type="button"
                 onClick={goPrev}
                 className="absolute left-3 top-1/2 z-30 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border theme-divider bg-[var(--surface)] text-2xl font-bold text-[var(--ink)] shadow-lg ring-1 ring-[var(--border-strong)] hover:bg-[var(--surface-soft)]"
-                aria-label="Previous photo"
+                aria-label={t("previousPhoto")}
               >
                 <span aria-hidden="true">&#x2039;</span>
               </button>
@@ -58,7 +60,7 @@ export function PropertyGallery({ images, title, media = [] }: PropertyGalleryPr
                 type="button"
                 onClick={goNext}
                 className="absolute right-3 top-1/2 z-30 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border theme-divider bg-[var(--surface)] text-2xl font-bold text-[var(--ink)] shadow-lg ring-1 ring-[var(--border-strong)] hover:bg-[var(--surface-soft)]"
-                aria-label="Next photo"
+                aria-label={t("nextPhoto")}
               >
                 <span aria-hidden="true">&#x203A;</span>
               </button>
@@ -75,9 +77,9 @@ export function PropertyGallery({ images, title, media = [] }: PropertyGalleryPr
                 className={`relative h-16 overflow-hidden rounded-lg border ${
                   index === activeImageIndex ? "border-brand-700 ring-1 ring-brand-700" : "theme-divider"
                 }`}
-                aria-label={`Show image ${index + 1}`}
+                aria-label={t("showImage", { index: index + 1 })}
               >
-                <img src={src} alt={`${title} image ${index + 1}`} className="h-full w-full object-cover" />
+                <img src={src} alt={t("imageAlt", { title, index: index + 1 })} className="h-full w-full object-cover" />
               </button>
             ))}
           </div>
@@ -88,14 +90,14 @@ export function PropertyGallery({ images, title, media = [] }: PropertyGalleryPr
         <div className="surface-subtle space-y-3 rounded-2xl p-3">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-sm font-semibold text-[var(--ink)]">360 Tour</p>
-              <p className="text-soft text-xs">Interactive panorama view for this property.</p>
+              <p className="text-sm font-semibold text-[var(--ink)]">{t("panoramaTitle")}</p>
+              <p className="text-soft text-xs">{t("panoramaDescription")}</p>
             </div>
             <span className="status-brand rounded-full px-3 py-1 text-xs font-semibold">
               {activePanoramaIndex + 1} / {panoramaMedia.length}
             </span>
           </div>
-          <PanoramaViewer src={activePanorama.path} alt={activePanorama.altText || activePanorama.label || `${title} 360 panorama`} />
+          <PanoramaViewer src={activePanorama.path} alt={activePanorama.altText || activePanorama.label || t("panoramaAlt", { title })} />
           {panoramaMedia.length > 1 ? (
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
               {panoramaMedia.map((item, index) => (
@@ -107,8 +109,12 @@ export function PropertyGallery({ images, title, media = [] }: PropertyGalleryPr
                     index === activePanoramaIndex ? "border-brand-700 ring-1 ring-brand-700" : "theme-divider"
                   }`}
                 >
-                  <img src={item.path} alt={item.altText || item.label || `${title} 360 panorama ${index + 1}`} className="h-20 w-full object-cover" />
-                  <div className="px-3 py-2 text-xs text-[var(--muted)]">{item.label || `360 View ${index + 1}`}</div>
+                  <img
+                    src={item.path}
+                    alt={item.altText || item.label || t("panoramaAltIndexed", { title, index: index + 1 })}
+                    className="h-20 w-full object-cover"
+                  />
+                  <div className="px-3 py-2 text-xs text-[var(--muted)]">{item.label || t("panoramaViewLabel", { index: index + 1 })}</div>
                 </button>
               ))}
             </div>

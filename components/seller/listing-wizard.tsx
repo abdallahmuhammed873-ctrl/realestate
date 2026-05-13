@@ -2,7 +2,16 @@
 
 import { useState, type ChangeEvent, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { useLanguage } from "@/components/layout/language-provider";
 import { deleteUploadedPath, uploadFiles } from "@/lib/client/uploads";
+import {
+  normalizeLanguage,
+  translateCompletionStatus,
+  translateFurnishing,
+  translatePaymentType,
+  translatePropertyType,
+  translateTransaction
+} from "@/lib/i18n";
 import type { PropertyMediaKind } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -61,13 +70,18 @@ function normalizeInitialMedia(initial?: Record<string, unknown>) {
 
 export function ListingWizard({ listingId, initial }: { listingId?: string; initial?: Record<string, unknown> }) {
   const router = useRouter();
+  const { language, t } = useLanguage();
   const [error, setError] = useState("");
   const [uploading, setUploading] = useState(false);
   const [media, setMedia] = useState<ListingMediaDraft[]>(() => normalizeInitialMedia(initial));
   const [form, setForm] = useState<Record<string, unknown>>(
     initial ?? {
       title: "",
+      titleEn: "",
+      titleAr: "",
       description: "",
+      descriptionEn: "",
+      descriptionAr: "",
       transaction: "BUY",
       type: "APARTMENT",
       city: "Cairo",
@@ -105,8 +119,8 @@ export function ListingWizard({ listingId, initial }: { listingId?: string; init
     if (nextCount > limit) {
       setError(
         kind === "IMAGE"
-          ? `You can upload up to ${MAX_PHOTOS} photos per listing.`
-          : `You can upload up to ${MAX_PANORAMAS} panorama files per listing.`
+          ? t("uploadPhotoLimit")
+          : t("uploadPanoramaLimit")
       );
       e.target.value = "";
       return;
@@ -127,7 +141,7 @@ export function ListingWizard({ listingId, initial }: { listingId?: string; init
       ]);
       setError("");
     } catch (uploadError) {
-      setError(uploadError instanceof Error ? uploadError.message : "Could not upload one or more files. Please try again.");
+      setError(uploadError instanceof Error ? uploadError.message : t("uploadFailed"));
     } finally {
       setUploading(false);
       e.target.value = "";
@@ -141,7 +155,7 @@ export function ListingWizard({ listingId, initial }: { listingId?: string; init
       try {
         await deleteUploadedPath(target.path);
       } catch {
-        setError("File removed locally, but the temporary upload could not be cleaned up.");
+        setError(t("tempCleanupFailed"));
       }
     }
   }
@@ -155,6 +169,17 @@ export function ListingWizard({ listingId, initial }: { listingId?: string; init
 
     const transaction = String(form.transaction ?? "");
     const paymentType = String(form.paymentType ?? "");
+    const normalizedLanguage = normalizeLanguage(language);
+    const rawTitle = String(form.title ?? "").trim();
+    const rawDescription = String(form.description ?? "").trim();
+    const rawTitleEn = String(form.titleEn ?? "").trim();
+    const rawTitleAr = String(form.titleAr ?? "").trim();
+    const rawDescriptionEn = String(form.descriptionEn ?? "").trim();
+    const rawDescriptionAr = String(form.descriptionAr ?? "").trim();
+    const titleEn = rawTitleEn || (normalizedLanguage === "en" ? rawTitle : "");
+    const titleAr = rawTitleAr || (normalizedLanguage === "ar" ? rawTitle : "");
+    const descriptionEn = rawDescriptionEn || (normalizedLanguage === "en" ? rawDescription : "");
+    const descriptionAr = rawDescriptionAr || (normalizedLanguage === "ar" ? rawDescription : "");
     const requiresRentPrice = transaction === "RENT";
     const requiresInstallments = paymentType === "INSTALLMENTS";
 
@@ -188,15 +213,15 @@ export function ListingWizard({ listingId, initial }: { listingId?: string; init
 
     const hasMissing = requiredFields.some(([, value]) => String(value ?? "").trim() === "");
     if (hasMissing) {
-      setError("Please fill all required fields before submitting.");
+      setError(t("fillRequiredFields"));
       return null;
     }
     if (photos.length === 0) {
-      setError("Please upload at least one standard property photo.");
+      setError(t("uploadOnePhoto"));
       return null;
     }
     if (uploading) {
-      setError("Please wait for uploads to finish.");
+      setError(t("waitForUploads"));
       return null;
     }
 
@@ -217,6 +242,12 @@ export function ListingWizard({ listingId, initial }: { listingId?: string; init
       listingId,
       property: {
         ...form,
+        title: rawTitle,
+        titleEn: titleEn || null,
+        titleAr: titleAr || null,
+        description: rawDescription,
+        descriptionEn: descriptionEn || null,
+        descriptionAr: descriptionAr || null,
         amenities: String(form.amenities ?? "")
           .split(",")
           .map((x) => x.trim())
@@ -275,17 +306,17 @@ export function ListingWizard({ listingId, initial }: { listingId?: string; init
                     className={`w-full rounded-lg border object-cover ${kind === "PANORAMA_360" ? "h-28" : "h-24"}`}
                   />
                   <Input
-                    placeholder={kind === "PANORAMA_360" ? "Viewer label" : "Photo label"}
+                    placeholder={kind === "PANORAMA_360" ? t("viewerLabel") : t("photoLabel")}
                     value={item.label}
                     onChange={(e) => updateMediaField(index, "label", e.target.value)}
                   />
                   <Input
-                    placeholder={kind === "PANORAMA_360" ? "360 alt text" : "Photo alt text"}
+                    placeholder={kind === "PANORAMA_360" ? t("panoramaAltText") : t("photoAltText")}
                     value={item.altText}
                     onChange={(e) => updateMediaField(index, "altText", e.target.value)}
                   />
                   <Button type="button" variant="outline" className="w-full text-xs" onClick={() => void removeMedia(index)}>
-                    Remove
+                    {t("remove")}
                   </Button>
                 </div>
               );
@@ -294,8 +325,8 @@ export function ListingWizard({ listingId, initial }: { listingId?: string; init
         ) : (
           <p className="text-soft text-xs">
             {kind === "PANORAMA_360"
-              ? "Optional. Add one or more wide equirectangular images for the 360 viewer."
-              : "Upload one or more standard listing photos from your device."}
+              ? t("optionalPanoramaHint")
+              : t("uploadPhotoHint")}
           </p>
         )}
       </div>
@@ -305,36 +336,70 @@ export function ListingWizard({ listingId, initial }: { listingId?: string; init
   return (
     <form className="surface-card rounded-2xl p-4" onSubmit={submit}>
       <div className="grid gap-3">
-        <Input placeholder="Title" value={String(form.title ?? "")} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} required />
-        <Textarea placeholder="Description" value={String(form.description ?? "")} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} required />
+        <div className="grid gap-2 md:grid-cols-2">
+          <Input
+            placeholder={t("title")}
+            value={String(form.title ?? "")}
+            onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+            required
+          />
+          <Input
+            placeholder={t("titleEnglishOptional")}
+            value={String(form.titleEn ?? "")}
+            onChange={(e) => setForm((f) => ({ ...f, titleEn: e.target.value }))}
+          />
+        </div>
+        <Input
+          placeholder={t("titleArabicOptional")}
+          value={String(form.titleAr ?? "")}
+          onChange={(e) => setForm((f) => ({ ...f, titleAr: e.target.value }))}
+        />
+        <Textarea
+          placeholder={t("description")}
+          value={String(form.description ?? "")}
+          onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+          required
+        />
+        <div className="grid gap-2 md:grid-cols-2">
+          <Textarea
+            placeholder={t("descriptionEnglishOptional")}
+            value={String(form.descriptionEn ?? "")}
+            onChange={(e) => setForm((f) => ({ ...f, descriptionEn: e.target.value }))}
+          />
+          <Textarea
+            placeholder={t("descriptionArabicOptional")}
+            value={String(form.descriptionAr ?? "")}
+            onChange={(e) => setForm((f) => ({ ...f, descriptionAr: e.target.value }))}
+          />
+        </div>
         <div className="grid grid-cols-2 gap-2">
           <Select value={String(form.transaction)} onChange={(e) => setForm((f) => ({ ...f, transaction: e.target.value }))} required>
-            <option value="BUY">Buy</option>
-            <option value="RENT">Rent</option>
-            <option value="VACATION">Vacation</option>
+            <option value="BUY">{translateTransaction("BUY", language)}</option>
+            <option value="RENT">{translateTransaction("RENT", language)}</option>
+            <option value="VACATION">{translateTransaction("VACATION", language)}</option>
           </Select>
           <Select value={String(form.type)} onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))} required>
-            <option value="APARTMENT">Apartment</option>
-            <option value="VILLA">Villa</option>
-            <option value="DUPLEX">Duplex</option>
-            <option value="PENTHOUSE">Penthouse</option>
-            <option value="CHALET">Chalet</option>
-            <option value="LAND">Land</option>
-            <option value="COMMERCIAL">Commercial</option>
+            <option value="APARTMENT">{translatePropertyType("APARTMENT", language)}</option>
+            <option value="VILLA">{translatePropertyType("VILLA", language)}</option>
+            <option value="DUPLEX">{translatePropertyType("DUPLEX", language)}</option>
+            <option value="PENTHOUSE">{translatePropertyType("PENTHOUSE", language)}</option>
+            <option value="CHALET">{translatePropertyType("CHALET", language)}</option>
+            <option value="LAND">{translatePropertyType("LAND", language)}</option>
+            <option value="COMMERCIAL">{translatePropertyType("COMMERCIAL", language)}</option>
           </Select>
         </div>
         <div className="grid grid-cols-2 gap-2">
-          <Input placeholder="City" value={String(form.city ?? "")} onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))} required />
-          <Input placeholder="Area" value={String(form.area ?? "")} onChange={(e) => setForm((f) => ({ ...f, area: e.target.value }))} required />
+          <Input placeholder={t("city")} value={String(form.city ?? "")} onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))} required />
+          <Input placeholder={t("area")} value={String(form.area ?? "")} onChange={(e) => setForm((f) => ({ ...f, area: e.target.value }))} required />
         </div>
-        <Input placeholder="District" value={String(form.district ?? "")} onChange={(e) => setForm((f) => ({ ...f, district: e.target.value }))} required />
-        <Input placeholder="Address" value={String(form.address ?? "")} onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))} required />
+        <Input placeholder={t("district")} value={String(form.district ?? "")} onChange={(e) => setForm((f) => ({ ...f, district: e.target.value }))} required />
+        <Input placeholder={t("address")} value={String(form.address ?? "")} onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))} required />
         <div className="grid grid-cols-2 gap-2">
-          <Input type="number" placeholder="Lat" value={String(form.lat ?? "")} onChange={(e) => setForm((f) => ({ ...f, lat: e.target.value }))} required />
-          <Input type="number" placeholder="Lng" value={String(form.lng ?? "")} onChange={(e) => setForm((f) => ({ ...f, lng: e.target.value }))} required />
+          <Input type="number" placeholder={t("latitude")} value={String(form.lat ?? "")} onChange={(e) => setForm((f) => ({ ...f, lat: e.target.value }))} required />
+          <Input type="number" placeholder={t("longitude")} value={String(form.lng ?? "")} onChange={(e) => setForm((f) => ({ ...f, lng: e.target.value }))} required />
         </div>
         <div className="space-y-1">
-          <p className="text-sm font-semibold text-[var(--ink)]">Pick Location on Map</p>
+          <p className="text-sm font-semibold text-[var(--ink)]">{t("pickLocationOnMap")}</p>
           <OSMMapPicker
             lat={Number(form.lat ?? 30.02)}
             lng={Number(form.lng ?? 31.49)}
@@ -346,78 +411,83 @@ export function ListingWizard({ listingId, initial }: { listingId?: string; init
               }))
             }
           />
-          <p className="text-soft text-xs">Click on map or drag marker to set exact property location.</p>
+          <p className="text-soft text-xs">{t("mapHelper")}</p>
         </div>
         <div className="grid grid-cols-2 gap-2">
           <Input
             type="number"
-            placeholder="Price"
+            placeholder={t("price")}
             value={String(form.price ?? "")}
             onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))}
             required={String(form.transaction) !== "RENT"}
           />
           <Input
             type="number"
-            placeholder="Rent Price"
+            placeholder={t("rentPrice")}
             value={String(form.rentPrice ?? "")}
             onChange={(e) => setForm((f) => ({ ...f, rentPrice: e.target.value }))}
             required={String(form.transaction) === "RENT"}
           />
         </div>
         <Select value={String(form.paymentType)} onChange={(e) => setForm((f) => ({ ...f, paymentType: e.target.value }))} required>
-          <option value="CASH">Cash</option>
-          <option value="INSTALLMENTS">Installments</option>
+          <option value="CASH">{translatePaymentType("CASH", language)}</option>
+          <option value="INSTALLMENTS">{translatePaymentType("INSTALLMENTS", language)}</option>
         </Select>
         <div className="grid grid-cols-3 gap-2">
           <Input
             type="number"
-            placeholder="Down Payment"
+            placeholder={t("downPayment")}
             value={String(form.installmentDownPayment ?? "")}
             onChange={(e) => setForm((f) => ({ ...f, installmentDownPayment: e.target.value }))}
             required={String(form.paymentType) === "INSTALLMENTS"}
           />
           <Input
             type="number"
-            placeholder="Years"
+            placeholder={t("years")}
             value={String(form.installmentYears ?? "")}
             onChange={(e) => setForm((f) => ({ ...f, installmentYears: e.target.value }))}
             required={String(form.paymentType) === "INSTALLMENTS"}
           />
           <Input
             type="number"
-            placeholder="Monthly"
+            placeholder={t("monthly")}
             value={String(form.installmentMonthly ?? "")}
             onChange={(e) => setForm((f) => ({ ...f, installmentMonthly: e.target.value }))}
             required={String(form.paymentType) === "INSTALLMENTS"}
           />
         </div>
         <div className="grid grid-cols-3 gap-2">
-          <Input type="number" placeholder="Beds" value={String(form.bedrooms ?? "")} onChange={(e) => setForm((f) => ({ ...f, bedrooms: e.target.value }))} required />
-          <Input type="number" placeholder="Baths" value={String(form.bathrooms ?? "")} onChange={(e) => setForm((f) => ({ ...f, bathrooms: e.target.value }))} required />
-          <Input type="number" placeholder="Area sqm" value={String(form.areaSqm ?? "")} onChange={(e) => setForm((f) => ({ ...f, areaSqm: e.target.value }))} required />
+          <Input type="number" placeholder={t("beds")} value={String(form.bedrooms ?? "")} onChange={(e) => setForm((f) => ({ ...f, bedrooms: e.target.value }))} required />
+          <Input type="number" placeholder={t("baths")} value={String(form.bathrooms ?? "")} onChange={(e) => setForm((f) => ({ ...f, bathrooms: e.target.value }))} required />
+          <Input type="number" placeholder={t("areaSqmLabel")} value={String(form.areaSqm ?? "")} onChange={(e) => setForm((f) => ({ ...f, areaSqm: e.target.value }))} required />
         </div>
         <div className="grid grid-cols-2 gap-2">
           <Select value={String(form.furnishing)} onChange={(e) => setForm((f) => ({ ...f, furnishing: e.target.value }))} required>
-            <option value="FULLY">Fully</option>
-            <option value="SEMI">Semi</option>
-            <option value="UNFURNISHED">Unfurnished</option>
+            <option value="FULLY">{translateFurnishing("FULLY", language)}</option>
+            <option value="SEMI">{translateFurnishing("SEMI", language)}</option>
+            <option value="UNFURNISHED">{translateFurnishing("UNFURNISHED", language)}</option>
           </Select>
           <Select value={String(form.completionStatus)} onChange={(e) => setForm((f) => ({ ...f, completionStatus: e.target.value }))} required>
-            <option value="READY">Ready</option>
-            <option value="OFF_PLAN">Off-plan</option>
+            <option value="READY">{translateCompletionStatus("READY", language)}</option>
+            <option value="OFF_PLAN">{translateCompletionStatus("OFF_PLAN", language)}</option>
           </Select>
         </div>
-        <Input placeholder="Amenities comma separated" value={String(form.amenities ?? "")} onChange={(e) => setForm((f) => ({ ...f, amenities: e.target.value }))} required />
-        {renderMediaSection("IMAGE", "Property Photos", "Upload up to 12 JPG, PNG, or WebP images. Each file must be 6MB or smaller.", photos)}
-        {renderMediaSection("PANORAMA_360", "360 Panorama Files", "Upload up to 6 panorama images. Wide equirectangular JPG, PNG, or WebP files work best.", panoramas)}
-        {uploading ? <p className="text-xs text-[var(--brand)]">Uploading media...</p> : null}
+        <Input
+          placeholder={t("amenitiesCommaSeparated")}
+          value={String(form.amenities ?? "")}
+          onChange={(e) => setForm((f) => ({ ...f, amenities: e.target.value }))}
+          required
+        />
+        {renderMediaSection("IMAGE", t("propertyPhotos"), t("propertyPhotosHelp"), photos)}
+        {renderMediaSection("PANORAMA_360", t("panoramaFiles"), t("panoramaFilesHelp"), panoramas)}
+        {uploading ? <p className="text-xs text-[var(--brand)]">{t("uploadingMedia")}</p> : null}
       </div>
       <div className="mt-4 space-y-2">
         {listingId ? (
-          <Button type="submit" disabled={uploading}>Submit for Approval</Button>
+          <Button type="submit" disabled={uploading}>{t("submitForApproval")}</Button>
         ) : (
           <Button type="button" onClick={goToPayment} disabled={uploading}>
-            Proceed to Pay
+            {t("proceedToPay")}
           </Button>
         )}
         {error ? <p className="text-sm text-red-600">{error}</p> : null}

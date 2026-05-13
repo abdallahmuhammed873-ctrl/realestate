@@ -22,7 +22,7 @@
 - [x] The Prisma schema is only a partial match for the real runtime model.
 - [x] The Python AI project read from `real_estate_master.csv` and stored chat history in local JSON, so it had its own separate dataset.
 - [x] `/api/chat` in Next.js was a stub and is now proxied to the Python AI service.
-- [ ] The current i18n layer is only partial: the language provider is hard-coded to English and the root layout is fixed to `lang="en"` and `dir="ltr"`.
+- [x] The current i18n layer is only partial: the language provider is hard-coded to English and the root layout is fixed to `lang="en"` and `dir="ltr"`.
 - [x] There is no real dark/light theme system yet.
 - [ ] Property images are currently remote URLs or base64 data URLs, not local uploaded files.
 
@@ -276,10 +276,10 @@
 
 ## Phase 12 - Arabic/English Support
 
-- [ ] Replace the current no-op language provider with a real client/server language state.
-- [ ] Drive `<html lang>` and `<html dir>` from the selected language.
-- [ ] Store the selected language in cookie/local storage and hydrate it correctly.
-- [ ] Move translations into a structured dictionary layout by feature area.
+- [x] Replace the current no-op language provider with a real client/server language state.
+- [x] Drive `<html lang>` and `<html dir>` from the selected language.
+- [x] Store the selected language in cookie/local storage and hydrate it correctly.
+- [x] Move translations into a structured dictionary layout by feature area.
 - [ ] Translate all static UI labels across:
   - public pages
   - seller pages
@@ -287,20 +287,20 @@
   - chatbot UI
   - validation messages
 - [ ] Make all layouts RTL-safe when Arabic is selected.
-- [ ] Use canonical codes for controlled values and translate only at presentation time:
+- [x] Use canonical codes for controlled values and translate only at presentation time:
   - cities
   - areas
   - districts
   - property types
   - payment types
   - statuses
-- [ ] For property content fields, support bilingual values with fallback:
+- [x] For property content fields, support bilingual values with fallback:
   - `titleEn`
   - `titleAr`
   - `descriptionEn`
   - `descriptionAr`
 - [ ] If bilingual manual entry is too heavy, allow one source language plus optional assisted translation later, but keep stored fields explicit.
-- [ ] Make AI responses language-aware and keep the answer language aligned with the UI/app request.
+- [x] Make AI responses language-aware and keep the answer language aligned with the UI/app request.
 
 ## Phase 13 - Update The Seller/Admin Flows To Match The New Architecture
 

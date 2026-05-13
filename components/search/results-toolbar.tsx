@@ -1,19 +1,24 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useLanguage } from "@/components/layout/language-provider";
 import { Select } from "@/components/ui/select";
 import { SORT_OPTIONS } from "@/lib/constants";
+import { translateSortOption } from "@/lib/i18n";
 
 export function ResultsToolbar({ total }: { total: number }) {
   const params = useSearchParams();
   const pathname = usePathname();
   const router = useRouter();
+  const { language, t } = useLanguage();
 
   const sort = params.get("sort") ?? "FEATURED";
 
   return (
     <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl border bg-white p-3">
-      <p className="text-sm text-slate-600">{total} listings found</p>
+      <p className="text-sm text-slate-600">
+        {total} {t("listingsFound")}
+      </p>
       <div className="flex items-center gap-2">
         <Select
           value={sort}
@@ -25,7 +30,7 @@ export function ResultsToolbar({ total }: { total: number }) {
         >
           {SORT_OPTIONS.map((s) => (
             <option key={s.value} value={s.value}>
-              {s.label}
+              {translateSortOption(s.value, language)}
             </option>
           ))}
         </Select>

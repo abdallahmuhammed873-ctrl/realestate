@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useLanguage } from "@/components/layout/language-provider";
 import { NotificationBell } from "@/components/layout/notification-bell";
 import { AppointmentsLink } from "@/components/layout/appointments-link";
+import { LanguageToggle } from "@/components/layout/language-toggle";
 import { LogoutButton } from "@/components/layout/logout-button";
 import { ProfileMenu } from "@/components/layout/profile-menu";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
@@ -47,6 +48,7 @@ export function TopNavLinks({ user }: { user: TopNavUser | null }) {
           {t("admin")}
         </Link>
       ) : null}
+      <LanguageToggle />
       <ThemeToggle />
       {user ? (
         <>

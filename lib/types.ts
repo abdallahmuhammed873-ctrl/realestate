@@ -36,7 +36,11 @@ export type Property = {
   id: string;
   listingId: string;
   title: string;
+  titleEn?: string | null;
+  titleAr?: string | null;
   description: string;
+  descriptionEn?: string | null;
+  descriptionAr?: string | null;
   projectName?: string | null;
   unitCode?: string | null;
   inventoryStatus?: string | null;

@@ -9,36 +9,47 @@ import { PropertyCard } from "@/components/property/property-card";
 import { ContactActions } from "@/components/property/contact-actions";
 import { OSMMapView } from "@/components/maps/osm-map";
 import { GoogleMapsButton } from "@/components/maps/google-maps-button";
+import { getRequestLanguage } from "@/lib/i18n-server";
 import { getPublicPropertyById, getRecommendations } from "@/lib/repository";
 import { formatPrice } from "@/lib/utils";
+import {
+  getLocalizedPropertyDescription,
+  getLocalizedPropertyTitle,
+  t,
+  translateAmenity,
+  translatePaymentType
+} from "@/lib/i18n";
 
 export default async function PropertyDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const resolved = await params;
+  const language = await getRequestLanguage();
   const property = await getPublicPropertyById(resolved.id);
   if (!property) return notFound();
   const rec = await getRecommendations("u-buyer-1", property.id);
   const price = property.transaction === "RENT" ? property.rentPrice : property.price;
+  const title = getLocalizedPropertyTitle(property, language);
+  const description = getLocalizedPropertyDescription(property, language);
 
   return (
     <div className="space-y-6">
       <div className="grid gap-4 md:grid-cols-[2fr,1fr]">
         <Card className="p-0">
-          <PropertyGallery images={property.images} media={property.media} title={property.title} />
+          <PropertyGallery images={property.images} media={property.media} title={title} />
         </Card>
         <Card>
           <div className="space-y-2">
             <div className="flex gap-2">
-              {property.verified && <Badge className="status-positive">Verified by platform</Badge>}
-              <Badge className="status-brand">{property.paymentType}</Badge>
+              {property.verified && <Badge className="status-positive">{t(language, "verifiedByPlatform")}</Badge>}
+              <Badge className="status-brand">{translatePaymentType(property.paymentType, language)}</Badge>
             </div>
-            <h1 className="text-2xl font-bold">{property.title}</h1>
-            <p className="text-xl font-bold">{formatPrice(price, property.currency)}</p>
+            <h1 className="text-2xl font-bold">{title}</h1>
+            <p className="text-xl font-bold">{formatPrice(price, property.currency, language)}</p>
             <p className="text-muted text-sm">{property.address}</p>
             <p className="text-muted text-sm">
-              {property.bedrooms} beds | {property.bathrooms} baths | {property.areaSqm} sqm
+              {property.bedrooms} {t(language, "beds")} | {property.bathrooms} {t(language, "baths")} | {property.areaSqm} {t(language, "sqm")}
             </p>
             <p className="text-muted text-sm">
-              Listed by: {property.listedByName}
+              {t(language, "listedBy")}: {property.listedByName}
               {property.listedByCompanyName ? ` (${property.listedByCompanyName})` : ""}
             </p>
             <div className="flex flex-wrap gap-2 pt-2">
@@ -52,29 +63,31 @@ export default async function PropertyDetailsPage({ params }: { params: Promise<
       </div>
 
       <Card>
-        <h2 className="mb-2 text-lg font-bold">Details</h2>
-        <p className="text-muted text-sm">{property.description}</p>
+        <h2 className="mb-2 text-lg font-bold">{t(language, "details")}</h2>
+        <p className="text-muted text-sm">{description}</p>
         <div className="mt-3 flex flex-wrap gap-2">
           {property.amenities.map((a) => (
             <Badge key={a} className="status-neutral">
-              {a}
+              {translateAmenity(a, language)}
             </Badge>
           ))}
         </div>
       </Card>
 
       <Card>
-        <h2 className="mb-2 text-lg font-bold">Map & Distance</h2>
+        <h2 className="mb-2 text-lg font-bold">{t(language, "mapAndDistance")}</h2>
         <OSMMapView lat={property.lat} lng={property.lng} />
-        <p className="text-soft mt-2 text-xs">Coordinates: {property.lat}, {property.lng}</p>
+        <p className="text-soft mt-2 text-xs">
+          {t(language, "coordinates")}: {property.lat}, {property.lng}
+        </p>
         <GoogleMapsButton lat={property.lat} lng={property.lng} />
       </Card>
 
       <section>
-        <h2 className="mb-3 text-xl font-bold">Recommended for you</h2>
+        <h2 className="mb-3 text-xl font-bold">{t(language, "recommendedForYou")}</h2>
         <div className="grid gap-4 md:grid-cols-3">
           {rec.map((p) => (
-            <PropertyCard key={p.id} property={p} />
+            <PropertyCard key={p.id} property={p} language={language} />
           ))}
         </div>
       </section>

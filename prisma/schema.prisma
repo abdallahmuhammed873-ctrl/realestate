@@ -141,7 +141,11 @@ model Property {
   listingId              String             @unique
   listing                Listing            @relation(fields: [listingId], references: [id], onDelete: Cascade)
   title                  String
+  titleEn                String?
+  titleAr                String?
   description            String
+  descriptionEn          String?
+  descriptionAr          String?
   projectName            String?
   unitCode               String?
   inventoryStatus        String?

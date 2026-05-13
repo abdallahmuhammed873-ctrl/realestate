@@ -155,7 +155,11 @@ type SellerListingInput = {
 function toPropertyCreateData(input: SellerListingInput["property"]) {
   return {
     title: input.title,
+    titleEn: input.titleEn ?? null,
+    titleAr: input.titleAr ?? null,
     description: input.description,
+    descriptionEn: input.descriptionEn ?? null,
+    descriptionAr: input.descriptionAr ?? null,
     projectName: input.projectName ?? null,
     unitCode: input.unitCode ?? null,
     inventoryStatus: input.inventoryStatus ?? null,

@@ -2,11 +2,22 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useLanguage } from "@/components/layout/language-provider";
 import { AMENITIES, LOCATION_TREE } from "@/lib/constants";
+import type { PropertyType } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { DebouncedInput } from "@/components/search/debounced-input";
+import {
+  translateAmenity,
+  translateCompletionStatus,
+  translateFurnishing,
+  translateLocation,
+  translatePaymentType,
+  translatePropertyType,
+  translateTransaction
+} from "@/lib/i18n";
 
 function setParam(params: URLSearchParams, key: string, value?: string) {
   if (!value) params.delete(key);
@@ -17,6 +28,7 @@ export function FiltersPanel() {
   const router = useRouter();
   const pathname = usePathname();
   const current = useSearchParams();
+  const { language, t } = useLanguage();
   const [openMobile, setOpenMobile] = useState(false);
   const params = useMemo(() => new URLSearchParams(current.toString()), [current]);
 
@@ -43,7 +55,7 @@ export function FiltersPanel() {
   function content() {
     return (
       <div className="space-y-3">
-        <DebouncedInput initialValue={current.get("q") ?? ""} placeholder="Keyword" onDebouncedChange={onKeywordChange} />
+        <DebouncedInput initialValue={current.get("q") ?? ""} placeholder={t("keyword")} onDebouncedChange={onKeywordChange} />
         <Select
           defaultValue={current.get("transaction") ?? ""}
           onChange={(e) => {
@@ -52,10 +64,10 @@ export function FiltersPanel() {
             apply(next);
           }}
         >
-          <option value="">Transaction</option>
-          <option value="BUY">Buy</option>
-          <option value="RENT">Rent</option>
-          <option value="VACATION">Vacation</option>
+          <option value="">{t("transaction")}</option>
+          <option value="BUY">{translateTransaction("BUY", language)}</option>
+          <option value="RENT">{translateTransaction("RENT", language)}</option>
+          <option value="VACATION">{translateTransaction("VACATION", language)}</option>
         </Select>
         <Select
           defaultValue={current.get("type") ?? ""}
@@ -65,10 +77,10 @@ export function FiltersPanel() {
             apply(next);
           }}
         >
-          <option value="">Property Type</option>
-          {["APARTMENT", "VILLA", "DUPLEX", "PENTHOUSE", "CHALET", "LAND", "COMMERCIAL"].map((t) => (
-            <option key={t} value={t}>
-              {t}
+          <option value="">{t("propertyType")}</option>
+          {["APARTMENT", "VILLA", "DUPLEX", "PENTHOUSE", "CHALET", "LAND", "COMMERCIAL"].map((propertyType) => (
+            <option key={propertyType} value={propertyType}>
+              {translatePropertyType(propertyType as PropertyType, language)}
             </option>
           ))}
         </Select>
@@ -82,10 +94,10 @@ export function FiltersPanel() {
             apply(next);
           }}
         >
-          <option value="">City</option>
+          <option value="">{t("city")}</option>
           {Object.keys(LOCATION_TREE).map((c) => (
             <option key={c} value={c}>
-              {c}
+              {translateLocation(c, language)}
             </option>
           ))}
         </Select>
@@ -98,10 +110,10 @@ export function FiltersPanel() {
             apply(next);
           }}
         >
-          <option value="">Area</option>
+          <option value="">{t("area")}</option>
           {areaOptions.map((a) => (
             <option key={a} value={a}>
-              {a}
+              {translateLocation(a, language)}
             </option>
           ))}
         </Select>
@@ -113,10 +125,10 @@ export function FiltersPanel() {
             apply(next);
           }}
         >
-          <option value="">District</option>
+          <option value="">{t("district")}</option>
           {districtOptions.map((d) => (
             <option key={d} value={d}>
-              {d}
+              {translateLocation(d, language)}
             </option>
           ))}
         </Select>
@@ -124,7 +136,7 @@ export function FiltersPanel() {
         <div className="grid grid-cols-2 gap-2">
           <Input
             type="number"
-            placeholder="Min Price"
+            placeholder={t("minPrice")}
             defaultValue={current.get("minPrice") ?? ""}
             onBlur={(e) => {
               const next = new URLSearchParams(params);
@@ -134,7 +146,7 @@ export function FiltersPanel() {
           />
           <Input
             type="number"
-            placeholder="Max Price"
+            placeholder={t("maxPrice")}
             defaultValue={current.get("maxPrice") ?? ""}
             onBlur={(e) => {
               const next = new URLSearchParams(params);
@@ -167,7 +179,7 @@ export function FiltersPanel() {
         <div className="grid grid-cols-2 gap-2">
           <Input
             type="number"
-            placeholder="Min Area"
+            placeholder={t("minArea")}
             defaultValue={current.get("minArea") ?? ""}
             onBlur={(e) => {
               const next = new URLSearchParams(params);
@@ -177,7 +189,7 @@ export function FiltersPanel() {
           />
           <Input
             type="number"
-            placeholder="Max Area"
+            placeholder={t("maxArea")}
             defaultValue={current.get("maxArea") ?? ""}
             onBlur={(e) => {
               const next = new URLSearchParams(params);
@@ -189,7 +201,7 @@ export function FiltersPanel() {
         <div className="grid grid-cols-2 gap-2">
           <Input
             type="number"
-            placeholder="Min Beds"
+            placeholder={t("minBeds")}
             defaultValue={current.get("minBeds") ?? ""}
             onBlur={(e) => {
               const next = new URLSearchParams(params);
@@ -199,7 +211,7 @@ export function FiltersPanel() {
           />
           <Input
             type="number"
-            placeholder="Max Beds"
+            placeholder={t("maxBeds")}
             defaultValue={current.get("maxBeds") ?? ""}
             onBlur={(e) => {
               const next = new URLSearchParams(params);
@@ -211,7 +223,7 @@ export function FiltersPanel() {
         <div className="grid grid-cols-2 gap-2">
           <Input
             type="number"
-            placeholder="Min Baths"
+            placeholder={t("minBaths")}
             defaultValue={current.get("minBaths") ?? ""}
             onBlur={(e) => {
               const next = new URLSearchParams(params);
@@ -221,7 +233,7 @@ export function FiltersPanel() {
           />
           <Input
             type="number"
-            placeholder="Max Baths"
+            placeholder={t("maxBaths")}
             defaultValue={current.get("maxBaths") ?? ""}
             onBlur={(e) => {
               const next = new URLSearchParams(params);
@@ -233,7 +245,7 @@ export function FiltersPanel() {
         <div className="grid grid-cols-2 gap-2">
           <Input
             type="number"
-            placeholder="Ref Lat"
+            placeholder={t("referenceLat")}
             defaultValue={current.get("lat") ?? ""}
             onBlur={(e) => {
               const next = new URLSearchParams(params);
@@ -243,7 +255,7 @@ export function FiltersPanel() {
           />
           <Input
             type="number"
-            placeholder="Ref Lng"
+            placeholder={t("referenceLng")}
             defaultValue={current.get("lng") ?? ""}
             onBlur={(e) => {
               const next = new URLSearchParams(params);
@@ -253,7 +265,7 @@ export function FiltersPanel() {
           />
         </div>
         <div className="space-y-1">
-          <label className="text-xs text-slate-600">Distance (km)</label>
+          <label className="text-xs text-slate-600">{t("distanceKm")}</label>
           <input
             type="range"
             min={1}
@@ -273,7 +285,7 @@ export function FiltersPanel() {
           />
           <Input
             type="number"
-            placeholder="Distance (km)"
+            placeholder={t("distanceKm")}
             defaultValue={current.get("distanceKm") ?? ""}
             onBlur={(e) => {
               const next = new URLSearchParams(params);
@@ -290,14 +302,14 @@ export function FiltersPanel() {
             apply(next);
           }}
         >
-          <option value="">Payment</option>
-          <option value="CASH">Cash</option>
-          <option value="INSTALLMENTS">Installments</option>
+          <option value="">{t("payment")}</option>
+          <option value="CASH">{translatePaymentType("CASH", language)}</option>
+          <option value="INSTALLMENTS">{translatePaymentType("INSTALLMENTS", language)}</option>
         </Select>
         <div className="grid grid-cols-3 gap-2">
           <Input
             type="number"
-            placeholder="Down Pmt <= "
+            placeholder={t("downPaymentMax")}
             defaultValue={current.get("downPaymentMax") ?? ""}
             onBlur={(e) => {
               const next = new URLSearchParams(params);
@@ -307,7 +319,7 @@ export function FiltersPanel() {
           />
           <Input
             type="number"
-            placeholder="Years <= "
+            placeholder={t("yearsMax")}
             defaultValue={current.get("installmentYearsMax") ?? ""}
             onBlur={(e) => {
               const next = new URLSearchParams(params);
@@ -317,7 +329,7 @@ export function FiltersPanel() {
           />
           <Input
             type="number"
-            placeholder="Monthly <= "
+            placeholder={t("monthlyMax")}
             defaultValue={current.get("installmentMonthlyMax") ?? ""}
             onBlur={(e) => {
               const next = new URLSearchParams(params);
@@ -334,10 +346,10 @@ export function FiltersPanel() {
             apply(next);
           }}
         >
-          <option value="">Furnishing</option>
-          <option value="FULLY">Fully</option>
-          <option value="SEMI">Semi</option>
-          <option value="UNFURNISHED">Unfurnished</option>
+          <option value="">{t("furnishing")}</option>
+          <option value="FULLY">{translateFurnishing("FULLY", language)}</option>
+          <option value="SEMI">{translateFurnishing("SEMI", language)}</option>
+          <option value="UNFURNISHED">{translateFurnishing("UNFURNISHED", language)}</option>
         </Select>
         <Select
           defaultValue={current.get("completionStatus") ?? ""}
@@ -347,12 +359,12 @@ export function FiltersPanel() {
             apply(next);
           }}
         >
-          <option value="">Completion</option>
-          <option value="OFF_PLAN">Off-plan</option>
-          <option value="READY">Ready</option>
+          <option value="">{t("completion")}</option>
+          <option value="OFF_PLAN">{translateCompletionStatus("OFF_PLAN", language)}</option>
+          <option value="READY">{translateCompletionStatus("READY", language)}</option>
         </Select>
         <div>
-          <p className="mb-1 text-sm font-semibold">Amenities</p>
+          <p className="mb-1 text-sm font-semibold">{t("amenities")}</p>
           <div className="flex flex-wrap gap-1">
             {AMENITIES.map((a) => {
               const active = amenities.includes(a);
@@ -369,7 +381,7 @@ export function FiltersPanel() {
                   }}
                   className={`rounded-full border px-2 py-1 text-xs ${active ? "border-brand-700 bg-brand-100 text-brand-700" : "border-slate-300"}`}
                 >
-                  {a}
+                  {translateAmenity(a, language)}
                 </button>
               );
             })}
@@ -383,7 +395,7 @@ export function FiltersPanel() {
           }}
           className="w-full"
         >
-          Reset
+          {t("reset")}
         </Button>
       </div>
     );
@@ -394,15 +406,15 @@ export function FiltersPanel() {
       <div className="hidden rounded-2xl border bg-white p-4 md:block md:sticky md:top-20">{content()}</div>
       <div className="fixed bottom-16 left-0 right-0 z-30 bg-white/95 p-2 md:hidden">
         <Button className="w-full" onClick={() => setOpenMobile(true)}>
-          Filters
+          {t("filters")}
         </Button>
       </div>
       {openMobile && (
         <div className="fixed inset-0 z-40 bg-slate-900/40 p-4 md:hidden">
           <div className="absolute bottom-0 left-0 right-0 max-h-[85vh] overflow-auto rounded-t-2xl bg-white p-4">
             <div className="mb-2 flex justify-between">
-              <h2 className="font-bold">Filters</h2>
-              <button onClick={() => setOpenMobile(false)}>Close</button>
+              <h2 className="font-bold">{t("filters")}</h2>
+              <button onClick={() => setOpenMobile(false)}>{t("close")}</button>
             </div>
             {content()}
           </div>

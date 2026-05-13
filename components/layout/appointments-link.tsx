@@ -46,7 +46,7 @@ export function AppointmentsLink() {
     <Link href="/appointments" className="relative inline-flex items-center hover:text-[var(--ink)]">
       <span>{t("appointments")}</span>
       {unread > 0 ? (
-        <span className="ml-2 inline-flex min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-center text-[10px] font-semibold leading-5 text-white">
+        <span className="ms-2 inline-flex min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-center text-[10px] font-semibold leading-5 text-white">
           {unread > 99 ? "99+" : unread}
         </span>
       ) : null}

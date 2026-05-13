@@ -2,6 +2,7 @@
 
 import { useState, type MouseEvent } from "react";
 import { LoginRequiredModal } from "@/components/auth/login-required-modal";
+import { useLanguage } from "@/components/layout/language-provider";
 
 function normalizePhoneDigits(phone?: string) {
   return String(phone ?? "").replace(/[^\d+]/g, "").trim();
@@ -18,6 +19,7 @@ function toWhatsAppNumber(phone?: string) {
 }
 
 export function ContactActions({ phone }: { phone?: string }) {
+  const { t } = useLanguage();
   const [showLoginRequired, setShowLoginRequired] = useState(false);
   const digits = normalizePhoneDigits(phone);
   const whatsappNumber = toWhatsAppNumber(phone);
@@ -60,12 +62,12 @@ export function ContactActions({ phone }: { phone?: string }) {
         <a
           href={whatsappHref}
           onClick={onWhatsAppClick}
-          className={`mr-3 ${disabled ? "pointer-events-none text-slate-400" : "text-brand-700"}`}
+          className={`me-3 ${disabled ? "pointer-events-none text-slate-400" : "text-brand-700"}`}
         >
-          WhatsApp
+          {t("whatsapp")}
         </a>
         <a href={callHref} onClick={onCallClick} className={disabled ? "pointer-events-none text-slate-400" : "text-brand-700"}>
-          Call
+          {t("call")}
         </a>
       </div>
       <LoginRequiredModal open={showLoginRequired} onClose={() => setShowLoginRequired(false)} />

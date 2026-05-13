@@ -1,7 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useLanguage } from "@/components/layout/language-provider";
 import { Button } from "@/components/ui/button";
+import {
+  translateFurnishing,
+  translateLocation,
+  translatePaymentType,
+  translatePropertyType
+} from "@/lib/i18n";
+import type { Furnishing, PaymentType, PropertyType } from "@/lib/types";
 import { formatPrice } from "@/lib/utils";
 
 type CompareItem = {
@@ -26,6 +34,7 @@ const KEY = "compare_properties";
 type CompareRow = [label: string, fn: (i: CompareItem) => string];
 
 export function CompareClient() {
+  const { language, t } = useLanguage();
   const [items, setItems] = useState<CompareItem[]>([]);
 
   async function load() {
@@ -51,27 +60,27 @@ export function CompareClient() {
     load();
   }
 
-  if (!items.length) return <p className="rounded-2xl border bg-white p-6 text-center text-slate-600">No compared properties yet.</p>;
+  if (!items.length) return <p className="rounded-2xl border bg-white p-6 text-center text-slate-600">{t("noComparedPropertiesYet")}</p>;
   const rows: CompareRow[] = [
-    ["Price", (i) => formatPrice(i.transaction === "RENT" ? i.rentPrice : i.price, i.currency)],
-    ["Location", (i) => `${i.city}, ${i.area}, ${i.district}`],
-    ["Type", (i) => i.type],
-    ["Beds/Baths", (i) => `${i.bedrooms}/${i.bathrooms}`],
-    ["Area", (i) => `${i.areaSqm} sqm`],
-    ["Payment", (i) => i.paymentType],
-    ["Furnishing", (i) => i.furnishing]
+    [t("priceLabel"), (i) => formatPrice(i.transaction === "RENT" ? i.rentPrice : i.price, i.currency, language)],
+    [t("location"), (i) => `${translateLocation(i.city, language)}, ${translateLocation(i.area, language)}, ${translateLocation(i.district, language)}`],
+    [t("typeLabel"), (i) => translatePropertyType(i.type as PropertyType, language)],
+    [t("bedsBaths"), (i) => `${i.bedrooms}/${i.bathrooms}`],
+    [t("areaLabel"), (i) => `${i.areaSqm} ${t("sqm")}`],
+    [t("paymentLabel"), (i) => translatePaymentType(i.paymentType as PaymentType, language)],
+    [t("furnishingLabel"), (i) => translateFurnishing(i.furnishing as Furnishing, language)]
   ];
 
   return (
     <div className="space-y-4">
       <Button variant="outline" onClick={clear}>
-        Clear Compare
+        {t("clearCompare")}
       </Button>
       <div className="overflow-auto rounded-2xl border bg-white">
         <table className="min-w-full text-sm">
           <thead className="bg-slate-50 text-left">
             <tr>
-              <th className="p-2">Field</th>
+              <th className="p-2">{t("field")}</th>
               {items.map((i) => (
                 <th key={i.id} className="p-2">
                   {i.title}

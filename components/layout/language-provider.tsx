@@ -1,32 +1,106 @@
 "use client";
 
-import { createContext, useContext, useMemo } from "react";
-import { commonDictionary, CommonTranslationKey, Language } from "@/lib/i18n";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import {
+  commonDictionary,
+  getLanguageDirection,
+  LANGUAGE_COOKIE,
+  LANGUAGE_STORAGE_KEY,
+  normalizeLanguage,
+  type CommonTranslationKey,
+  type Direction,
+  type Language
+} from "@/lib/i18n";
 
 type LanguageContextValue = {
   language: Language;
+  direction: Direction;
   setLanguage: (language: Language) => void;
   toggleLanguage: () => void;
-  t: (key: CommonTranslationKey) => string;
+  t: (key: CommonTranslationKey, params?: Record<string, string | number>) => string;
 };
 
 const LanguageContext = createContext<LanguageContextValue | null>(null);
 
-export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const language: Language = "en";
-  const setLanguage = () => undefined;
+function resolveNavigatorLanguage(): Language {
+  if (typeof window === "undefined") return "en";
+  const browserLanguage = window.navigator.language?.toLowerCase() ?? "";
+  return browserLanguage.startsWith("ar") ? "ar" : "en";
+}
+
+function applyLanguage(language: Language) {
+  document.documentElement.lang = language;
+  document.documentElement.dir = getLanguageDirection(language);
+  document.documentElement.dataset.language = language;
+}
+
+type LanguageProviderProps = {
+  children: React.ReactNode;
+  initialLanguage: Language;
+};
+
+export function LanguageProvider({ children, initialLanguage }: LanguageProviderProps) {
+  const [language, setLanguageState] = useState<Language>(initialLanguage);
+
+  useEffect(() => {
+    const stored = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
+    const nextLanguage = stored ? normalizeLanguage(stored) : initialLanguage || resolveNavigatorLanguage();
+    setLanguageState(nextLanguage);
+    applyLanguage(nextLanguage);
+  }, [initialLanguage]);
+
+  useEffect(() => {
+    applyLanguage(language);
+    window.localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
+    document.cookie = `${LANGUAGE_COOKIE}=${language}; path=/; max-age=31536000; samesite=lax`;
+  }, [language]);
 
   const value = useMemo(
     () => ({
       language,
-      setLanguage,
-      toggleLanguage: () => undefined,
-      t: (key: CommonTranslationKey) => commonDictionary[key][language]
+      direction: getLanguageDirection(language),
+      setLanguage: setLanguageState,
+      toggleLanguage: () => setLanguageState((current) => (current === "ar" ? "en" : "ar")),
+      t: (key: CommonTranslationKey, params?: Record<string, string | number>) => {
+        const template = commonDictionary[key]?.[language] ?? commonDictionary[key]?.en ?? String(key);
+        if (!params) return template;
+
+        return Object.entries(params).reduce(
+          (result, [paramKey, paramValue]) => result.replaceAll(`{${paramKey}}`, String(paramValue)),
+          template
+        );
+      }
     }),
     [language]
   );
 
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
+}
+
+export function LanguageScript() {
+  const script = `
+    (function () {
+      try {
+        var stored = window.localStorage.getItem("${LANGUAGE_STORAGE_KEY}");
+        var cookieMatch = document.cookie.match(/(?:^|; )${LANGUAGE_COOKIE}=([^;]+)/);
+        var cookieValue = cookieMatch ? decodeURIComponent(cookieMatch[1]) : "";
+        var language = stored === "ar" || stored === "en"
+          ? stored
+          : (cookieValue === "ar" || cookieValue === "en"
+            ? cookieValue
+            : (navigator.language && navigator.language.toLowerCase().startsWith("ar") ? "ar" : "en"));
+        document.documentElement.lang = language;
+        document.documentElement.dir = language === "ar" ? "rtl" : "ltr";
+        document.documentElement.dataset.language = language;
+      } catch (error) {
+        document.documentElement.lang = "en";
+        document.documentElement.dir = "ltr";
+        document.documentElement.dataset.language = "en";
+      }
+    })();
+  `;
+
+  return <script dangerouslySetInnerHTML={{ __html: script }} />;
 }
 
 export function useLanguage() {

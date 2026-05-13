@@ -1,17 +1,18 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { Language, t, translateLocation, translatePaymentType } from "@/lib/i18n";
+import { getLocalizedPropertyTitle, Language, t, translateLocation, translatePaymentType } from "@/lib/i18n";
 import { PublicPropertyCard } from "@/lib/types";
 import { formatPrice } from "@/lib/utils";
 
 export function PropertyCard({ property, language = "en" }: { property: PublicPropertyCard; language?: Language }) {
   const price = property.transaction === "RENT" ? property.rentPrice : property.price;
+  const title = getLocalizedPropertyTitle(property, language);
   return (
-    <Link href={`/p/${property.id}`} className="block" aria-label={`Open listing: ${property.title}`}>
+    <Link href={`/p/${property.id}`} className="block" aria-label={`Open listing: ${title}`}>
       <Card className="overflow-hidden p-0 transition hover:shadow-md">
         <div className="relative h-52">
-          <img src={property.images[0]} alt={property.title} className="h-full w-full object-cover" loading="lazy" />
+          <img src={property.images[0]} alt={title} className="h-full w-full object-cover" loading="lazy" />
         </div>
         <div className="space-y-2 p-4">
           <div className="flex flex-wrap gap-2">
@@ -20,7 +21,7 @@ export function PropertyCard({ property, language = "en" }: { property: PublicPr
             {property.goodDeal && <Badge className="bg-[var(--cheque)] text-[var(--cheque-ink)]">{t(language, "goodDeal")}</Badge>}
           </div>
           <p className="text-lg font-bold">{formatPrice(price, property.currency, language)}</p>
-          <h3 className="line-clamp-1 font-semibold">{property.title}</h3>
+          <h3 className="line-clamp-1 font-semibold">{title}</h3>
           <p className="text-muted text-sm">
             {property.areaSqm} {t(language, "sqm")} | {property.bedrooms} {t(language, "beds")} | {property.bathrooms} {t(language, "baths")}
           </p>

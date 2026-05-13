@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useLanguage } from "@/components/layout/language-provider";
+import { LanguageToggle } from "@/components/layout/language-toggle";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { cn } from "@/lib/utils";
 
@@ -124,7 +125,7 @@ export function MobileNav() {
         : baseTabs;
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 border-t theme-divider bg-[var(--surface-elevated)] backdrop-blur md:hidden">
+  <nav className="fixed bottom-0 left-0 right-0 z-40 border-t theme-divider bg-[var(--surface-elevated)] backdrop-blur md:hidden">
       <ul className="grid" style={{ gridTemplateColumns: `repeat(${tabs.length + 1}, minmax(0, 1fr))` }}>
         {tabs.map((tab) => (
           <li key={tab.href}>
@@ -169,7 +170,8 @@ export function MobileNav() {
           )}
         </li>
       </ul>
-      <div className="flex justify-center border-t theme-divider px-4 py-2">
+      <div className="flex items-center justify-center gap-2 border-t theme-divider px-4 py-2">
+        <LanguageToggle compact />
         <ThemeToggle compact />
       </div>
     </nav>
