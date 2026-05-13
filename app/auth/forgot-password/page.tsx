@@ -5,8 +5,10 @@ import { useState, type FormEvent, type SVGProps } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useLanguage } from "@/components/layout/language-provider";
 
 export default function ForgotPasswordPage() {
+  const { direction, t } = useLanguage();
   const router = useRouter();
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [email, setEmail] = useState("");
@@ -19,6 +21,9 @@ export default function ForgotPasswordPage() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+
+  const iconInsetClass = direction === "rtl" ? "left-2" : "right-2";
+  const inputPaddingClass = direction === "rtl" ? "pl-10" : "pr-10";
 
   function EyeIcon(props: SVGProps<SVGSVGElement>) {
     return (
@@ -53,10 +58,10 @@ export default function ForgotPasswordPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(String(data.error ?? "Failed to send OTP."));
+        setError(String(data.error ?? t("failedToSendOtp")));
         return;
       }
-      setMessage(String(data.message ?? "OTP sent successfully."));
+      setMessage(String(data.message ?? t("otpSentSuccessfully")));
       setStep(2);
     } finally {
       setBusy(false);
@@ -76,11 +81,11 @@ export default function ForgotPasswordPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(String(data.error ?? "Failed to verify OTP."));
+        setError(String(data.error ?? t("failedToVerifyOtp")));
         return;
       }
       setResetToken(String(data.resetToken ?? ""));
-      setMessage("OTP verified. You can now set a new password.");
+      setMessage(t("otpVerifiedReady"));
       setStep(3);
     } finally {
       setBusy(false);
@@ -90,7 +95,7 @@ export default function ForgotPasswordPage() {
   async function reset(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (newPassword !== confirmPassword) {
-      setError("Password and confirmation must match.");
+      setError(t("passwordConfirmationMismatch"));
       return;
     }
     setBusy(true);
@@ -104,7 +109,7 @@ export default function ForgotPasswordPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(String(data.error ?? "Failed to reset password."));
+        setError(String(data.error ?? t("failedToResetPassword")));
         return;
       }
       router.push(String(data.redirectTo ?? "/auth"));
@@ -116,14 +121,14 @@ export default function ForgotPasswordPage() {
 
   return (
     <div className="mx-auto max-w-md rounded-2xl border bg-white p-6">
-      <h1 className="text-2xl font-bold">Forgot Password</h1>
-      <p className="mt-1 text-sm text-slate-600">Reset your password using OTP sent to your email.</p>
+      <h1 className="text-2xl font-bold">{t("forgotPasswordTitle")}</h1>
+      <p className="mt-1 text-sm text-slate-600">{t("forgotPasswordHint")}</p>
 
       {step === 1 ? (
         <form className="mt-4 space-y-3" onSubmit={sendOtp}>
-          <Input type="email" placeholder="Account email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          <Input type="email" placeholder={t("accountEmail")} value={email} onChange={(e) => setEmail(e.target.value)} required />
           <Button className="w-full" type="submit" disabled={busy}>
-            {busy ? "Sending..." : "Send OTP"}
+            {busy ? t("sendingOtp") : t("sendOtp")}
           </Button>
         </form>
       ) : null}
@@ -131,9 +136,9 @@ export default function ForgotPasswordPage() {
       {step === 2 ? (
         <form className="mt-4 space-y-3" onSubmit={verifyOtp}>
           <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-          <Input placeholder="Enter OTP code" value={otp} onChange={(e) => setOtp(e.target.value)} required />
+          <Input placeholder={t("enterOtpCode")} value={otp} onChange={(e) => setOtp(e.target.value)} required />
           <Button className="w-full" type="submit" disabled={busy}>
-            {busy ? "Verifying..." : "Verify OTP"}
+            {busy ? t("verifyingOtp") : t("verifyOtp")}
           </Button>
         </form>
       ) : null}
@@ -143,18 +148,18 @@ export default function ForgotPasswordPage() {
           <div className="relative">
             <Input
               type={showNewPassword ? "text" : "password"}
-              placeholder="New password"
+              placeholder={t("newPassword")}
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               minLength={6}
               autoComplete="new-password"
-              className="pr-10"
+              className={inputPaddingClass}
               required
             />
             <button
               type="button"
-              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-500 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300"
-              aria-label={showNewPassword ? "Hide password" : "Show password"}
+              className={`absolute top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-500 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300 ${iconInsetClass}`}
+              aria-label={showNewPassword ? t("hidePassword") : t("showPassword")}
               aria-pressed={showNewPassword}
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => setShowNewPassword((v) => !v)}
@@ -166,18 +171,18 @@ export default function ForgotPasswordPage() {
           <div className="relative">
             <Input
               type={showConfirmPassword ? "text" : "password"}
-              placeholder="Confirm new password"
+              placeholder={t("confirmNewPassword")}
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               minLength={6}
               autoComplete="new-password"
-              className="pr-10"
+              className={inputPaddingClass}
               required
             />
             <button
               type="button"
-              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-500 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300"
-              aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+              className={`absolute top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-500 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300 ${iconInsetClass}`}
+              aria-label={showConfirmPassword ? t("hidePassword") : t("showPassword")}
               aria-pressed={showConfirmPassword}
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => setShowConfirmPassword((v) => !v)}
@@ -186,7 +191,7 @@ export default function ForgotPasswordPage() {
             </button>
           </div>
           <Button className="w-full" type="submit" disabled={busy}>
-            {busy ? "Updating..." : "Reset Password"}
+            {busy ? t("updating") : t("resetPassword")}
           </Button>
         </form>
       ) : null}
@@ -196,7 +201,7 @@ export default function ForgotPasswordPage() {
 
       <p className="mt-4 text-center text-sm">
         <Link href="/auth" className="text-brand-700 hover:text-brand-800">
-          Back to login
+          {t("backToLogin")}
         </Link>
       </p>
     </div>

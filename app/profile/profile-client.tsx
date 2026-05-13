@@ -7,6 +7,7 @@ import { deleteUploadedPath, uploadFiles } from "@/lib/client/uploads";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useLanguage } from "@/components/layout/language-provider";
 
 type ProfileUser = {
   id: string;
@@ -31,6 +32,7 @@ type SellerListingItem = {
 };
 
 export function ProfileClient({ user, sellerListings }: { user: ProfileUser; sellerListings?: SellerListingItem[] }) {
+  const { t } = useLanguage();
   const router = useRouter();
   const [profile, setProfile] = useState<ProfileUser>(user);
   const [isEditing, setIsEditing] = useState(false);
@@ -44,8 +46,17 @@ export function ProfileClient({ user, sellerListings }: { user: ProfileUser; sel
   const [avatarLoading, setAvatarLoading] = useState(false);
   const [myListings, setMyListings] = useState<SellerListingItem[]>(sellerListings ?? []);
   const [deleteListingId, setDeleteListingId] = useState<string | null>(null);
-  const roleLabel = profile.role === "SELLER" && profile.isCompanyAccount ? "Developer" : profile.role === "SELLER" ? "Seller" : profile.role;
-  const title = roleLabel === "Seller" ? "Seller Profile" : roleLabel === "Developer" ? "Developer Profile" : roleLabel === "ADMIN" ? "Admin Profile" : "User Profile";
+
+  const roleLabel =
+    profile.role === "SELLER" && profile.isCompanyAccount ? t("developer") : profile.role === "SELLER" ? t("seller") : profile.role;
+  const title =
+    profile.role === "SELLER" && profile.isCompanyAccount
+      ? t("developerProfile")
+      : profile.role === "SELLER"
+        ? t("sellerProfile")
+        : profile.role === "ADMIN"
+          ? t("adminProfile")
+          : t("userProfile");
 
   async function onPickImage(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -65,7 +76,7 @@ export function ProfileClient({ user, sellerListings }: { user: ProfileUser; sel
       const data = await res.json().catch(() => null);
       if (!res.ok) {
         await deleteUploadedPath(uploaded.path).catch(() => undefined);
-        setSaveError(String(data?.error ?? "Failed to update avatar."));
+        setSaveError(String(data?.error ?? t("failedToUpdateAvatar")));
         return;
       }
       const next = data?.user as ProfileUser | undefined;
@@ -75,10 +86,10 @@ export function ProfileClient({ user, sellerListings }: { user: ProfileUser; sel
       } else {
         setAvatarUrl(uploaded.path);
       }
-      setSaveInfo("Profile picture updated.");
+      setSaveInfo(t("profilePictureUpdated"));
       router.refresh();
     } catch (uploadError) {
-      setSaveError(uploadError instanceof Error ? uploadError.message : "Failed to upload avatar.");
+      setSaveError(uploadError instanceof Error ? uploadError.message : t("failedToUploadAvatar"));
     } finally {
       setAvatarLoading(false);
       e.target.value = "";
@@ -97,7 +108,7 @@ export function ProfileClient({ user, sellerListings }: { user: ProfileUser; sel
       });
       const data = await res.json().catch(() => null);
       if (!res.ok) {
-        setSaveError(String(data?.error ?? "Failed to remove avatar."));
+        setSaveError(String(data?.error ?? t("failedToRemoveAvatar")));
         return;
       }
       const next = data?.user as ProfileUser | undefined;
@@ -105,7 +116,7 @@ export function ProfileClient({ user, sellerListings }: { user: ProfileUser; sel
       if (next) {
         setProfile((prev) => ({ ...prev, ...next, avatarUrl: null }));
       }
-      setSaveInfo("Profile picture removed.");
+      setSaveInfo(t("profilePictureRemoved"));
       router.refresh();
     } finally {
       setAvatarLoading(false);
@@ -113,13 +124,13 @@ export function ProfileClient({ user, sellerListings }: { user: ProfileUser; sel
   }
 
   async function deleteListing(listingId: string) {
-    if (!confirm("Delete this listing? This will remove it from the platform.")) return;
+    if (!confirm(t("deleteListingConfirm"))) return;
     setDeleteListingId(listingId);
     try {
       const res = await fetch(`/api/seller/listings/${listingId}`, { method: "DELETE" });
       const data = await res.json().catch(() => null);
       if (!res.ok) {
-        alert(String(data?.error ?? "Failed to delete listing."));
+        alert(String(data?.error ?? t("failedToDeleteListing")));
         return;
       }
       setMyListings((prev) => prev.filter((x) => x.listingId !== listingId));
@@ -141,7 +152,7 @@ export function ProfileClient({ user, sellerListings }: { user: ProfileUser; sel
       });
       const data = await res.json().catch(() => null);
       if (!res.ok) {
-        setSaveError(String(data?.error ?? "Failed to update profile."));
+        setSaveError(String(data?.error ?? t("failedToUpdateProfile")));
         return;
       }
       const next = data?.user as ProfileUser | undefined;
@@ -152,7 +163,7 @@ export function ProfileClient({ user, sellerListings }: { user: ProfileUser; sel
         setPhone(next.phone ?? "");
       }
       setIsEditing(false);
-      setSaveInfo("Profile updated.");
+      setSaveInfo(t("profileUpdated"));
     } finally {
       setSaving(false);
     }
@@ -165,23 +176,23 @@ export function ProfileClient({ user, sellerListings }: { user: ProfileUser; sel
         <div className="flex items-center gap-4">
           <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border border-slate-300 bg-slate-100">
             {avatarUrl ? (
-              <img src={avatarUrl} alt={`${profile.name} profile`} className="h-full w-full object-cover" />
+              <img src={avatarUrl} alt={t("profileImageAlt", { name: profile.name })} className="h-full w-full object-cover" />
             ) : (
               <span className="text-2xl font-bold text-brand-800">{(profile.name.trim().charAt(0) || "U").toUpperCase()}</span>
             )}
           </div>
           <div className="flex flex-wrap gap-2">
             <label className="inline-flex cursor-pointer items-center rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50">
-              {avatarLoading ? "Uploading..." : "Add Profile Picture"}
+              {avatarLoading ? t("uploading") : t("addProfilePicture")}
               <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={onPickImage} disabled={avatarLoading} />
             </label>
             {avatarUrl ? (
               <Button type="button" variant="outline" onClick={removeImage} disabled={avatarLoading}>
-                Remove Picture
+                {t("removePicture")}
               </Button>
             ) : null}
             <Button type="button" variant="outline" onClick={() => setIsEditing((v) => !v)}>
-              {isEditing ? "Cancel Edit" : "Edit Profile"}
+              {isEditing ? t("cancelEdit") : t("editProfile")}
             </Button>
           </div>
         </div>
@@ -189,56 +200,56 @@ export function ProfileClient({ user, sellerListings }: { user: ProfileUser; sel
         {isEditing ? (
           <form className="space-y-3" onSubmit={saveProfile}>
             <div>
-              <p className="text-xs font-semibold uppercase text-slate-500">Name</p>
+              <p className="text-xs font-semibold uppercase text-slate-500">{t("name")}</p>
               <Input value={name} onChange={(e) => setName(e.target.value)} required />
             </div>
             <div>
-              <p className="text-xs font-semibold uppercase text-slate-500">Email</p>
+              <p className="text-xs font-semibold uppercase text-slate-500">{t("email")}</p>
               <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
             </div>
             <div>
-              <p className="text-xs font-semibold uppercase text-slate-500">Phone</p>
+              <p className="text-xs font-semibold uppercase text-slate-500">{t("phoneNumber")}</p>
               <Input
                 type="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="01XXXXXXXXX"
                 pattern="^$|01[0-9]{9}"
-                title="Phone number must be 11 digits and start with 01"
+                title={t("phoneValidation")}
               />
             </div>
             <div className="flex gap-2">
               <Button type="submit" disabled={saving}>
-                {saving ? "Saving..." : "Save Changes"}
+                {saving ? t("saving") : t("saveChanges")}
               </Button>
               <Button type="button" variant="outline" onClick={() => setIsEditing(false)}>
-                Cancel
+                {t("cancel")}
               </Button>
             </div>
           </form>
         ) : (
           <>
             <div>
-              <p className="text-xs font-semibold uppercase text-slate-500">Name</p>
+              <p className="text-xs font-semibold uppercase text-slate-500">{t("name")}</p>
               <p className="text-base font-semibold text-slate-900">{profile.name}</p>
             </div>
             <div>
-              <p className="text-xs font-semibold uppercase text-slate-500">Email</p>
+              <p className="text-xs font-semibold uppercase text-slate-500">{t("email")}</p>
               <p className="text-base text-slate-800">{profile.email}</p>
             </div>
             <div>
-              <p className="text-xs font-semibold uppercase text-slate-500">Phone</p>
-              <p className="text-base text-slate-800">{profile.phone ?? "No phone added"}</p>
+              <p className="text-xs font-semibold uppercase text-slate-500">{t("phoneNumber")}</p>
+              <p className="text-base text-slate-800">{profile.phone ?? t("noPhoneAdded")}</p>
             </div>
           </>
         )}
         <div>
-          <p className="text-xs font-semibold uppercase text-slate-500">Role</p>
+          <p className="text-xs font-semibold uppercase text-slate-500">{t("role")}</p>
           <p className="text-base text-slate-800">{roleLabel}</p>
         </div>
         {profile.companyName ? (
           <div>
-            <p className="text-xs font-semibold uppercase text-slate-500">Company</p>
+            <p className="text-xs font-semibold uppercase text-slate-500">{t("company")}</p>
             <p className="text-base text-slate-800">{profile.companyName}</p>
           </div>
         ) : null}
@@ -249,47 +260,40 @@ export function ProfileClient({ user, sellerListings }: { user: ProfileUser; sel
       {profile.role === "SELLER" ? (
         <Card className="space-y-3">
           <div className="flex items-center justify-between gap-2">
-            <h2 className="text-lg font-bold">Your Property Posts</h2>
+            <h2 className="text-lg font-bold">{t("yourPropertyPosts")}</h2>
             <Link href="/seller/new" className="rounded-xl bg-brand-700 px-3 py-2 text-sm font-semibold text-white">
-              New Listing
+              {t("newListing")}
             </Link>
           </div>
           {myListings.length === 0 ? (
-            <p className="text-sm text-slate-600">No listings yet.</p>
+            <p className="text-sm text-slate-600">{t("noListingsYet")}</p>
           ) : (
             <ul className="space-y-3">
               {myListings.map((item) => (
                 <li key={item.listingId} className="rounded-xl border p-3">
                   <div className="flex flex-col gap-3 sm:flex-row">
-                    {item.imageUrl ? (
-                      <img
-                        src={item.imageUrl}
-                        alt={item.title}
-                        className="h-28 w-full rounded-xl border object-cover sm:w-40"
-                      />
-                    ) : null}
+                    {item.imageUrl ? <img src={item.imageUrl} alt={item.title} className="h-28 w-full rounded-xl border object-cover sm:w-40" /> : null}
                     <div className="min-w-0 flex-1 space-y-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700">{item.status}</span>
-                        <span className="text-xs text-slate-500">Updated: {new Date(item.updatedAt).toLocaleString()}</span>
+                        <span className="text-xs text-slate-500">{t("updatedAtLabel", { value: new Date(item.updatedAt).toLocaleString() })}</span>
                       </div>
                       <p className="truncate text-base font-semibold text-slate-900">{item.title}</p>
                       <p className="line-clamp-2 text-sm text-slate-600">{item.description}</p>
                       <p className="text-xs text-slate-600">
-                        Created by: {item.createdByName}
-                        {item.isCompanyUser ? " (Company User)" : ""}
+                        {t("createdByLabel", { name: item.createdByName })} {item.isCompanyUser ? t("companyUserSuffix") : ""}
                       </p>
-                      <div className="pt-1 flex flex-wrap gap-3">
+                      <div className="flex flex-wrap gap-3 pt-1">
                         <Link href={`/seller/listings/${item.listingId}/edit`} className="text-sm font-semibold text-brand-700">
-                          Edit
+                          {t("editListing")}
                         </Link>
                         <button
                           type="button"
-                          onClick={() => deleteListing(item.listingId)}
+                          onClick={() => void deleteListing(item.listingId)}
                           disabled={deleteListingId === item.listingId}
                           className="text-sm font-semibold text-red-600 disabled:opacity-60"
                         >
-                          {deleteListingId === item.listingId ? "Deleting..." : "Delete"}
+                          {deleteListingId === item.listingId ? t("deleting") : t("deleteListing")}
                         </button>
                       </div>
                     </div>

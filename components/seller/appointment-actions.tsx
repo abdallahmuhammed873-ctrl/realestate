@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useLanguage } from "@/components/layout/language-provider";
 
 type Props = {
   appointmentId: string;
@@ -12,15 +13,12 @@ type Props = {
 };
 
 export function AppointmentActions({ appointmentId, currentDatetime, status }: Props) {
+  const { t } = useLanguage();
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [rescheduleOpen, setRescheduleOpen] = useState(false);
-  const [slots, setSlots] = useState<string[]>([
-    currentDatetime.slice(0, 16),
-    "",
-    ""
-  ]);
+  const [slots, setSlots] = useState<string[]>([currentDatetime.slice(0, 16), "", ""]);
   const [error, setError] = useState("");
 
   async function submit(action: "APPROVE" | "DENY" | "RESCHEDULE") {
@@ -41,7 +39,7 @@ export function AppointmentActions({ appointmentId, currentDatetime, status }: P
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        throw new Error(String(body.error ?? "Failed to update appointment"));
+        throw new Error(String(body.error ?? t("failedToUpdateAppointment")));
       }
       setEditOpen(false);
       setRescheduleOpen(false);
@@ -49,7 +47,7 @@ export function AppointmentActions({ appointmentId, currentDatetime, status }: P
       window.dispatchEvent(new Event("notifications:changed"));
       router.refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to update appointment");
+      setError(e instanceof Error ? e.message : t("failedToUpdateAppointment"));
     } finally {
       setSaving(false);
     }
@@ -59,11 +57,11 @@ export function AppointmentActions({ appointmentId, currentDatetime, status }: P
     <div className="space-y-2">
       {status === "PENDING" ? (
         <div className="flex flex-wrap gap-2">
-          <Button onClick={() => submit("APPROVE")} disabled={saving}>
-            Approve
+          <Button onClick={() => void submit("APPROVE")} disabled={saving}>
+            {t("approve")}
           </Button>
-          <Button variant="outline" onClick={() => submit("DENY")} disabled={saving}>
-            Cancel request
+          <Button variant="outline" onClick={() => void submit("DENY")} disabled={saving}>
+            {t("cancelRequest")}
           </Button>
           <Button
             variant="outline"
@@ -73,37 +71,33 @@ export function AppointmentActions({ appointmentId, currentDatetime, status }: P
             }}
             disabled={saving}
           >
-            Reschedule
+            {t("reschedule")}
           </Button>
         </div>
       ) : (
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={() => setEditOpen((x) => !x)} disabled={saving}>
-            {editOpen ? "Close Edit" : "Edit"}
+            {editOpen ? t("closeEdit") : t("edit")}
           </Button>
         </div>
       )}
 
       {editOpen && status !== "PENDING" && (
         <div className="flex flex-wrap gap-2">
-          <Button onClick={() => submit("APPROVE")} disabled={saving}>
-            Approve
+          <Button onClick={() => void submit("APPROVE")} disabled={saving}>
+            {t("approve")}
           </Button>
-          <Button variant="outline" onClick={() => submit("DENY")} disabled={saving}>
-            Cancel request
+          <Button variant="outline" onClick={() => void submit("DENY")} disabled={saving}>
+            {t("cancelRequest")}
           </Button>
-          <Button
-            variant="outline"
-            onClick={() => setRescheduleOpen((x) => !x)}
-            disabled={saving}
-          >
-            Reschedule
+          <Button variant="outline" onClick={() => setRescheduleOpen((x) => !x)} disabled={saving}>
+            {t("reschedule")}
           </Button>
         </div>
       )}
       {rescheduleOpen && (
         <div className="space-y-2 rounded-xl border p-3">
-          <p className="text-xs text-slate-600">Suggest up to 3 slots for buyer to choose.</p>
+          <p className="text-xs text-slate-600">{t("suggestSlotsHint")}</p>
           <div className="grid gap-2 md:grid-cols-3">
             {slots.map((slot, idx) => (
               <Input
@@ -120,8 +114,8 @@ export function AppointmentActions({ appointmentId, currentDatetime, status }: P
               />
             ))}
           </div>
-          <Button onClick={() => submit("RESCHEDULE")} disabled={saving || slots.every((slot) => !slot.trim())}>
-            Send Suggested Slots
+          <Button onClick={() => void submit("RESCHEDULE")} disabled={saving || slots.every((slot) => !slot.trim())}>
+            {t("sendSuggestedSlots")}
           </Button>
         </div>
       )}

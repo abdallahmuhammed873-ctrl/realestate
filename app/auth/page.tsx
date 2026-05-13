@@ -6,8 +6,10 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { useLanguage } from "@/components/layout/language-provider";
 
 export default function AuthPage() {
+  const { direction, t } = useLanguage();
   const router = useRouter();
   const [identifier, setIdentifier] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
@@ -26,6 +28,8 @@ export default function AuthPage() {
   const [showSignUpConfirmPassword, setShowSignUpConfirmPassword] = useState(false);
   const [signUpError, setSignUpError] = useState("");
 
+  const iconInsetClass = direction === "rtl" ? "left-2" : "right-2";
+  const inputPaddingClass = direction === "rtl" ? "pl-10" : "pr-10";
 
   async function login(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -49,14 +53,14 @@ export default function AuthPage() {
       return;
     }
     const data = await res.json().catch(() => null);
-    setLoginError(String(data?.error ?? "Login failed."));
+    setLoginError(String(data?.error ?? t("loginFailed")));
   }
 
   async function signUp(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setSignUpError("");
     if (signUpPassword !== confirmPassword) {
-      setSignUpError("Password and confirmation must match.");
+      setSignUpError(t("passwordConfirmationMismatch"));
       return;
     }
 
@@ -81,132 +85,132 @@ export default function AuthPage() {
       router.refresh();
     } else {
       const data = await res.json().catch(() => null);
-      setSignUpError(String(data?.error ?? "Signup failed. Please try again."));
+      setSignUpError(String(data?.error ?? t("signupFailed")));
     }
   }
 
   return (
     <>
       <div className="mx-auto max-w-md rounded-2xl border bg-white p-6">
-        <h1 className="text-2xl font-bold">Login / Register</h1>
-        <p className="mt-1 text-sm text-slate-600">Login with your email/phone or reset your password using OTP.</p>
+        <h1 className="text-2xl font-bold">{t("loginRegister")}</h1>
+        <p className="mt-1 text-sm text-slate-600">{t("loginOrResetHint")}</p>
         <form className="mt-4 space-y-3" onSubmit={login}>
-          <Input placeholder="Email or phone" value={identifier} onChange={(e) => setIdentifier(e.target.value)} required />
+          <Input placeholder={t("emailOrPhone")} value={identifier} onChange={(e) => setIdentifier(e.target.value)} required />
           <div className="relative">
             <Input
               type={showLoginPassword ? "text" : "password"}
-              placeholder="Password"
+              placeholder={t("password")}
               value={loginPassword}
               onChange={(e) => setLoginPassword(e.target.value)}
               minLength={6}
-              className="pr-10"
+              className={inputPaddingClass}
               required
             />
             <button
               type="button"
               onClick={() => setShowLoginPassword((v) => !v)}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-sm text-slate-600"
-              aria-label={showLoginPassword ? "Hide password" : "Show password"}
+              className={`absolute top-1/2 -translate-y-1/2 text-sm text-slate-600 ${iconInsetClass}`}
+              aria-label={showLoginPassword ? t("hidePassword") : t("showPassword")}
             >
-              {"👁"}
+              {"ðŸ‘"}
             </button>
           </div>
           <Button className="w-full" type="submit">
-            Continue
+            {t("continueButton")}
           </Button>
           <Button className="w-full" type="button" variant="outline" onClick={() => setShowSignUp(true)}>
-            Sign Up
+            {t("signUp")}
           </Button>
           <Link href="/auth/forgot-password" className="block text-center text-sm font-medium text-brand-700 hover:text-brand-800">
-            Forgot password?
+            {t("forgotPassword")}
           </Link>
           {loginError ? <p className="text-xs text-red-600">{loginError}</p> : null}
         </form>
-        <p className="mt-3 text-xs text-slate-500">Use buyer@example.com or seller@example.com. Default demo password: 123456</p>
+        <p className="mt-3 text-xs text-slate-500">{t("demoCredentialsHint")}</p>
       </div>
 
       {showSignUp ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 px-4">
           <div className="w-full max-w-md rounded-2xl border bg-white p-6 shadow-xl">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold">Sign Up</h2>
+              <h2 className="text-xl font-bold">{t("signUp")}</h2>
               <button
                 type="button"
                 onClick={() => setShowSignUp(false)}
                 className="rounded-md border px-2 py-1 text-sm font-semibold text-slate-600 hover:bg-slate-100"
-                aria-label="Close sign up"
+                aria-label={t("closeSignUp")}
               >
                 X
               </button>
             </div>
-            <p className="mt-1 text-sm text-slate-600">Create your account to continue.</p>
+            <p className="mt-1 text-sm text-slate-600">{t("createAccountContinue")}</p>
             <form className="mt-4 space-y-3" onSubmit={signUp}>
-              <Input placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} required />
-              <Input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+              <Input placeholder={t("name")} value={name} onChange={(e) => setName(e.target.value)} required />
+              <Input type="email" placeholder={t("email")} value={email} onChange={(e) => setEmail(e.target.value)} required />
               <Input
                 type="tel"
-                placeholder="Phone number"
+                placeholder={t("phoneNumber")}
                 value={phoneNumber}
                 onChange={(e) => setPhoneNumber(e.target.value)}
                 pattern="01[0-9]{9}"
                 minLength={11}
                 maxLength={11}
-                title="Phone number must be 11 digits and start with 01"
+                title={t("phoneValidation")}
                 required
               />
               <div className="relative">
                 <Input
                   type={showSignUpPassword ? "text" : "password"}
-                  placeholder="Password"
+                  placeholder={t("password")}
                   value={signUpPassword}
                   onChange={(e) => setSignUpPassword(e.target.value)}
                   minLength={6}
-                  className="pr-10"
+                  className={inputPaddingClass}
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowSignUpPassword((v) => !v)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-sm text-slate-600"
-                  aria-label={showSignUpPassword ? "Hide password" : "Show password"}
+                  className={`absolute top-1/2 -translate-y-1/2 text-sm text-slate-600 ${iconInsetClass}`}
+                  aria-label={showSignUpPassword ? t("hidePassword") : t("showPassword")}
                 >
-                  {"👁"}
+                  {"ðŸ‘"}
                 </button>
               </div>
               <div className="relative">
                 <Input
                   type={showSignUpConfirmPassword ? "text" : "password"}
-                  placeholder="Confirm password"
+                  placeholder={t("confirmPassword")}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   minLength={6}
-                  className="pr-10"
+                  className={inputPaddingClass}
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowSignUpConfirmPassword((v) => !v)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-sm text-slate-600"
-                  aria-label={showSignUpConfirmPassword ? "Hide confirm password" : "Show confirm password"}
+                  className={`absolute top-1/2 -translate-y-1/2 text-sm text-slate-600 ${iconInsetClass}`}
+                  aria-label={showSignUpConfirmPassword ? t("hideConfirmPassword") : t("showConfirmPassword")}
                 >
-                  {"👁"}
+                  {"ðŸ‘"}
                 </button>
               </div>
               <Select value={accountType} onChange={(e) => setAccountType(e.target.value)} required>
-                <option value="BUYER">Buyer</option>
-                <option value="SELLER">Seller</option>
-                <option value="DEVELOPER">Developer</option>
+                <option value="BUYER">{t("buyerOption")}</option>
+                <option value="SELLER">{t("sellerOption")}</option>
+                <option value="DEVELOPER">{t("developerOption")}</option>
               </Select>
               {accountType === "DEVELOPER" ? (
                 <Input
-                  placeholder="Company name"
+                  placeholder={t("companyName")}
                   value={companyName}
                   onChange={(e) => setCompanyName(e.target.value)}
                   required
                 />
               ) : null}
               <Button className="w-full" type="submit">
-                Create account
+                {t("createAccount")}
               </Button>
               {signUpError ? <p className="text-xs text-red-600">{signUpError}</p> : null}
             </form>
@@ -216,4 +220,3 @@ export default function AuthPage() {
     </>
   );
 }
-

@@ -8,9 +8,10 @@ import { Input } from "@/components/ui/input";
 type Message = { role: "user" | "assistant"; content: string };
 
 export function ChatbotDrawer() {
-  const { language, t } = useLanguage();
+  const { direction, language, t } = useLanguage();
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
+  const [sending, setSending] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
@@ -26,26 +27,40 @@ export function ChatbotDrawer() {
   }, [t]);
 
   async function sendMessage() {
-    if (!input.trim()) return;
+    if (!input.trim() || sending) return;
     const userMessage = input.trim();
     setMessages((prev) => [...prev, { role: "user", content: userMessage }]);
     setInput("");
-    const res = await fetch("/api/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: userMessage, language: language === "ar" ? "AR" : "EN" })
-    });
-    const data = await res.json();
-    setMessages((prev) => [...prev, { role: "assistant", content: data.reply }]);
+    setSending(true);
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: userMessage, language: language === "ar" ? "AR" : "EN" })
+      });
+      const data = await res.json().catch(() => null);
+      const reply = typeof data?.reply === "string" && data.reply.trim().length > 0 ? data.reply : t("assistantError");
+      setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
+    } catch {
+      setMessages((prev) => [...prev, { role: "assistant", content: t("assistantError") }]);
+    } finally {
+      setSending(false);
+    }
   }
+
+  const edgeClass = direction === "rtl" ? "left-4" : "right-4";
 
   return (
     <>
-      <Button className="fixed bottom-20 right-4 z-50 md:bottom-6" onClick={() => setOpen((v) => !v)}>
+      <Button
+        className={`fixed bottom-20 z-50 md:bottom-6 ${edgeClass}`}
+        onClick={() => setOpen((v) => !v)}
+        aria-label={open ? t("closeAssistant") : t("openAssistant")}
+      >
         {t("aiAssistant")}
       </Button>
       {open && (
-        <aside className="surface-panel fixed bottom-32 right-4 z-50 w-[min(92vw,360px)] rounded-2xl p-3">
+        <aside className={`surface-panel fixed bottom-32 z-50 w-[min(92vw,360px)] rounded-2xl p-3 ${edgeClass}`}>
           <div className="mb-2 flex items-center justify-between">
             <p className="font-semibold">{t("assistant")}</p>
           </div>
@@ -62,8 +77,20 @@ export function ChatbotDrawer() {
             ))}
           </div>
           <div className="flex gap-2">
-            <Input value={input} onChange={(e) => setInput(e.target.value)} placeholder={t("typeYourQuestion")} />
-            <Button onClick={sendMessage}>{t("send")}</Button>
+            <Input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder={t("typeYourQuestion")}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  void sendMessage();
+                }
+              }}
+            />
+            <Button onClick={() => void sendMessage()} disabled={sending}>
+              {sending ? t("sending") : t("send")}
+            </Button>
           </div>
         </aside>
       )}

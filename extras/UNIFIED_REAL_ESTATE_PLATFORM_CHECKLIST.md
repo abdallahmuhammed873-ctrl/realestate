@@ -280,7 +280,7 @@
 - [x] Drive `<html lang>` and `<html dir>` from the selected language.
 - [x] Store the selected language in cookie/local storage and hydrate it correctly.
 - [x] Move translations into a structured dictionary layout by feature area.
-- [ ] Translate all static UI labels across:
+- [x] Translate all static UI labels across:
   - public pages
   - seller pages
   - admin pages

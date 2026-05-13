@@ -2,6 +2,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { formatPrice } from "@/lib/utils";
+import { getRequestLanguage } from "@/lib/i18n-server";
+import { t, translatePaymentType, translateTransaction } from "@/lib/i18n";
 
 type ApprovedItem = {
   listing: {
@@ -43,9 +45,10 @@ type ApprovedItem = {
   } | null;
 };
 
-export function ApprovedListings({ items }: { items: ApprovedItem[] }) {
+export async function ApprovedListings({ items }: { items: ApprovedItem[] }) {
+  const language = await getRequestLanguage();
   if (items.length === 0) {
-    return <p className="surface-card rounded-2xl p-6">No approved listings.</p>;
+    return <p className="surface-card rounded-2xl p-6">{t(language, "noApprovedListings")}</p>;
   }
 
   return (
@@ -60,35 +63,29 @@ export function ApprovedListings({ items }: { items: ApprovedItem[] }) {
               </div>
               <div className="space-y-2">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="status-positive rounded-full px-2 py-1 text-xs font-semibold">Approved</span>
-                  <span className="status-brand rounded-full px-2 py-1 text-xs font-semibold">{property.transaction}</span>
-                  <span className="status-neutral rounded-full px-2 py-1 text-xs font-semibold">{property.paymentType}</span>
-                  <span
-                    className={`rounded-full px-2 py-1 text-xs font-semibold ${
-                      listing.feesPaid ? "status-positive" : "status-danger"
-                    }`}
-                  >
-                    {listing.feesPaid ? "Fees Paid" : "Fees Unpaid"}
+                  <span className="status-positive rounded-full px-2 py-1 text-xs font-semibold">{t(language, "approvedStatus")}</span>
+                  <span className="status-brand rounded-full px-2 py-1 text-xs font-semibold">{translateTransaction(property.transaction, language)}</span>
+                  <span className="status-neutral rounded-full px-2 py-1 text-xs font-semibold">{translatePaymentType(property.paymentType, language)}</span>
+                  <span className={`rounded-full px-2 py-1 text-xs font-semibold ${listing.feesPaid ? "status-positive" : "status-danger"}`}>
+                    {listing.feesPaid ? t(language, "feesPaid") : t(language, "feesUnpaid")}
                   </span>
                 </div>
                 <p className="text-base font-semibold">{property.title}</p>
                 <p className="text-muted line-clamp-2 text-sm">{property.description}</p>
-                <p className="text-sm font-semibold text-[var(--brand)]">{formatPrice(price, property.currency)}</p>
+                <p className="text-sm font-semibold text-[var(--brand)]">{formatPrice(price, property.currency, language)}</p>
                 <p className="text-muted text-xs">
                   {property.city} | {property.area} | {property.district}
                 </p>
                 <p className="text-muted text-xs">
-                  {property.areaSqm} sqm | {property.bedrooms} beds | {property.bathrooms} baths
+                  {property.areaSqm} {t(language, "sqm")} | {property.bedrooms} {t(language, "beds")} | {property.bathrooms} {t(language, "baths")}
                 </p>
-                <p className="text-muted text-xs">
-                  Seller: {seller?.name ?? listing.userId} ({seller?.email ?? "unknown"})
-                </p>
-                {company ? <p className="text-muted text-xs">Company: {company.name}</p> : null}
-                <p className="text-soft text-xs">Reviewed: {new Date(listing.reviewedAt ?? listing.updatedAt).toLocaleString()}</p>
-                {listing.adminNotes ? <p className="text-muted text-xs">Notes: {listing.adminNotes}</p> : null}
+                <p className="text-muted text-xs">{t(language, "sellerLabel", { name: seller?.name ?? listing.userId, email: seller?.email ?? "unknown" })}</p>
+                {company ? <p className="text-muted text-xs">{t(language, "companyLabel", { name: company.name })}</p> : null}
+                <p className="text-soft text-xs">{t(language, "reviewedAt", { value: new Date(listing.reviewedAt ?? listing.updatedAt).toLocaleString() })}</p>
+                {listing.adminNotes ? <p className="text-muted text-xs">{t(language, "notesLabel", { value: listing.adminNotes })}</p> : null}
                 <div className="pt-1">
                   <Link href={`/admin/listings/${listing.id}`} className="link-accent text-sm font-semibold">
-                    View listing
+                    {t(language, "viewListing")}
                   </Link>
                 </div>
               </div>

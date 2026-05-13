@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { isValidPhoneNumber } from "@/lib/utils";
+import { useLanguage } from "@/components/layout/language-provider";
 
 type BuyerItem = {
   buyer: {
@@ -23,6 +24,7 @@ type BuyerItem = {
 };
 
 export function BuyersManager({ initialItems }: { initialItems: BuyerItem[] }) {
+  const { t } = useLanguage();
   const router = useRouter();
   const [items, setItems] = useState(initialItems);
   const [searchName, setSearchName] = useState("");
@@ -35,10 +37,7 @@ export function BuyersManager({ initialItems }: { initialItems: BuyerItem[] }) {
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const normalizedSearchName = searchName.trim().toLowerCase();
-  const visibleItems =
-    normalizedSearchName.length === 0
-      ? items
-      : items.filter(({ buyer }) => buyer.name.toLowerCase().includes(normalizedSearchName));
+  const visibleItems = normalizedSearchName.length === 0 ? items : items.filter(({ buyer }) => buyer.name.toLowerCase().includes(normalizedSearchName));
 
   async function refreshItems() {
     const res = await fetch("/api/admin/buyers");
@@ -51,15 +50,15 @@ export function BuyersManager({ initialItems }: { initialItems: BuyerItem[] }) {
   async function addBuyer() {
     setError("");
     if (!name.trim() || !email.trim()) {
-      setError("Name and email are required.");
+      setError(t("addBuyerValidation"));
       return;
     }
     if (password.length < 6) {
-      setError("Password must be at least 6 characters.");
+      setError(t("passwordMinValidation"));
       return;
     }
     if (phone.trim() && !isValidPhoneNumber(phone)) {
-      setError("Phone number must be 11 digits and start with 01.");
+      setError(t("phoneValidation"));
       return;
     }
 
@@ -72,7 +71,7 @@ export function BuyersManager({ initialItems }: { initialItems: BuyerItem[] }) {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data.error ?? "Failed to add buyer.");
+        setError(data.error ?? t("addBuyerFailed"));
         return;
       }
       setName("");
@@ -96,7 +95,7 @@ export function BuyersManager({ initialItems }: { initialItems: BuyerItem[] }) {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data.error ?? "Failed to update buyer.");
+        setError(data.error ?? t("updateBuyerFailed"));
         return;
       }
       await refreshItems();
@@ -112,7 +111,7 @@ export function BuyersManager({ initialItems }: { initialItems: BuyerItem[] }) {
       const res = await fetch(`/api/admin/buyers/${id}`, { method: "DELETE" });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data.error ?? "Failed to remove buyer.");
+        setError(data.error ?? t("removeBuyerFailed"));
         return;
       }
       await refreshItems();
@@ -124,40 +123,27 @@ export function BuyersManager({ initialItems }: { initialItems: BuyerItem[] }) {
   return (
     <div className="space-y-4">
       <Card>
-        <h2 className="text-lg font-bold">Add Buyer</h2>
-        <p className="mt-1 text-sm text-slate-600">Create a buyer account manually.</p>
+        <h2 className="text-lg font-bold">{t("addBuyer")}</h2>
+        <p className="mt-1 text-sm text-slate-600">{t("createBuyerManually")}</p>
         <div className="mt-3 grid gap-2 md:grid-cols-4">
-          <Input placeholder="Buyer name" value={name} onChange={(e) => setName(e.target.value)} />
-          <Input
-            type="email"
-            placeholder="Buyer email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            autoComplete="username"
-          />
+          <Input placeholder={t("buyerName")} value={name} onChange={(e) => setName(e.target.value)} />
+          <Input type="email" placeholder={t("buyerEmail")} value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="username" />
           <Input
             type="tel"
-            placeholder="Buyer phone (optional)"
+            placeholder={t("buyerPhoneOptional")}
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             autoComplete="off"
             pattern="01[0-9]{9}"
             minLength={11}
             maxLength={11}
-            title="Phone number must be 11 digits and start with 01"
+            title={t("phoneValidation")}
           />
-          <Input
-            type="text"
-            placeholder="Buyer password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            autoComplete="off"
-            minLength={6}
-          />
+          <Input type="text" placeholder={t("buyerPassword")} value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="off" minLength={6} />
         </div>
         <div className="mt-3">
           <Button onClick={addBuyer} disabled={saving}>
-            {saving ? "Saving..." : "Add Buyer"}
+            {saving ? t("saving") : t("addBuyer")}
           </Button>
         </div>
         {error ? <p className="mt-2 text-sm text-red-600">{error}</p> : null}
@@ -165,35 +151,29 @@ export function BuyersManager({ initialItems }: { initialItems: BuyerItem[] }) {
 
       {items.length === 0 ? (
         <Card>
-          <p className="text-sm text-slate-600">No buyer profiles found.</p>
+          <p className="text-sm text-slate-600">{t("noBuyerProfiles")}</p>
         </Card>
       ) : (
         <>
           <Card>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0">
-                <h2 className="text-lg font-bold">Search</h2>
-                <p className="mt-1 text-sm text-slate-600">Search buyers by name.</p>
+                <h2 className="text-lg font-bold">{t("searchTitle")}</h2>
+                <p className="mt-1 text-sm text-slate-600">{t("searchBuyersByName")}</p>
               </div>
               <div className="flex w-full gap-2 sm:w-[420px]">
-                <Input
-                  placeholder="Search buyer name..."
-                  value={searchName}
-                  onChange={(e) => setSearchName(e.target.value)}
-                />
+                <Input placeholder={t("searchBuyerName")} value={searchName} onChange={(e) => setSearchName(e.target.value)} />
                 <Button variant="outline" onClick={() => setSearchName("")} disabled={!searchName.trim()}>
-                  Clear
+                  {t("clearSearch")}
                 </Button>
               </div>
             </div>
-            <p className="mt-2 text-sm text-slate-600">
-              Showing {visibleItems.length} of {items.length}
-            </p>
+            <p className="mt-2 text-sm text-slate-600">{t("showingResults", { visible: visibleItems.length, total: items.length })}</p>
           </Card>
 
           {visibleItems.length === 0 ? (
             <Card>
-              <p className="text-sm text-slate-600">No buyers match “{searchName.trim()}”.</p>
+              <p className="text-sm text-slate-600">{t("noBuyersMatch", { value: searchName.trim() })}</p>
             </Card>
           ) : (
             visibleItems.map(({ buyer, stats }) => (
@@ -202,34 +182,28 @@ export function BuyersManager({ initialItems }: { initialItems: BuyerItem[] }) {
                   <div className="space-y-1">
                     <p className="text-lg font-bold">{buyer.name}</p>
                     <p className="text-sm text-slate-600">{buyer.email}</p>
-                    <p className="text-sm text-slate-600">{buyer.phone ?? "No phone provided"}</p>
-                    <p className={`text-xs font-semibold ${buyer.blocked ? "text-red-600" : "text-emerald-600"}`}>
-                      {buyer.blocked ? "Blocked" : "Active"}
-                    </p>
+                    <p className="text-sm text-slate-600">{buyer.phone ?? t("noPhoneProvided")}</p>
+                    <p className={`text-xs font-semibold ${buyer.blocked ? "text-red-600" : "text-emerald-600"}`}>{buyer.blocked ? t("blocked") : t("active")}</p>
                   </div>
                   <div className="flex gap-2">
                     {buyer.blocked ? (
-                      <Button
-                        variant="outline"
-                        onClick={() => setBlocked(buyer.id, "UNBLOCK")}
-                        disabled={busyId === buyer.id}
-                      >
-                        Unblock
+                      <Button variant="outline" onClick={() => void setBlocked(buyer.id, "UNBLOCK")} disabled={busyId === buyer.id}>
+                        {t("unblock")}
                       </Button>
                     ) : (
-                      <Button variant="outline" onClick={() => setBlocked(buyer.id, "BLOCK")} disabled={busyId === buyer.id}>
-                        Block
+                      <Button variant="outline" onClick={() => void setBlocked(buyer.id, "BLOCK")} disabled={busyId === buyer.id}>
+                        {t("block")}
                       </Button>
                     )}
-                    <Button variant="danger" onClick={() => removeBuyer(buyer.id)} disabled={busyId === buyer.id}>
-                      Remove
+                    <Button variant="danger" onClick={() => void removeBuyer(buyer.id)} disabled={busyId === buyer.id}>
+                      {t("remove")}
                     </Button>
                   </div>
                 </div>
                 <div className="mt-3 grid grid-cols-1 gap-2 text-sm md:grid-cols-3">
-                  <p className="rounded-lg bg-slate-50 px-3 py-2">Favorites: {stats.favorites}</p>
-                  <p className="rounded-lg bg-slate-50 px-3 py-2">Appointments: {stats.appointments}</p>
-                  <p className="rounded-lg bg-slate-50 px-3 py-2">Saved searches: {stats.savedSearches}</p>
+                  <p className="rounded-lg bg-slate-50 px-3 py-2">{t("favoritesStat", { count: stats.favorites })}</p>
+                  <p className="rounded-lg bg-slate-50 px-3 py-2">{t("appointmentsStat", { count: stats.appointments })}</p>
+                  <p className="rounded-lg bg-slate-50 px-3 py-2">{t("savedSearchesStat", { count: stats.savedSearches })}</p>
                 </div>
               </Card>
             ))

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { isValidPhoneNumber } from "@/lib/utils";
+import { useLanguage } from "@/components/layout/language-provider";
 
 type SellerItem = {
   seller: {
@@ -25,6 +26,7 @@ type SellerItem = {
 };
 
 export function SellersManager({ initialItems }: { initialItems: SellerItem[] }) {
+  const { t } = useLanguage();
   const router = useRouter();
   const [items, setItems] = useState(initialItems);
   const [searchName, setSearchName] = useState("");
@@ -37,10 +39,7 @@ export function SellersManager({ initialItems }: { initialItems: SellerItem[] })
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const normalizedSearchName = searchName.trim().toLowerCase();
-  const visibleItems =
-    normalizedSearchName.length === 0
-      ? items
-      : items.filter(({ seller }) => seller.name.toLowerCase().includes(normalizedSearchName));
+  const visibleItems = normalizedSearchName.length === 0 ? items : items.filter(({ seller }) => seller.name.toLowerCase().includes(normalizedSearchName));
 
   async function refreshItems() {
     const res = await fetch("/api/admin/sellers");
@@ -53,15 +52,15 @@ export function SellersManager({ initialItems }: { initialItems: SellerItem[] })
   async function addSeller() {
     setError("");
     if (!name.trim() || !email.trim()) {
-      setError("Name and email are required.");
+      setError(t("addBuyerValidation"));
       return;
     }
     if (password.length < 6) {
-      setError("Password must be at least 6 characters.");
+      setError(t("passwordMinValidation"));
       return;
     }
     if (phone.trim() && !isValidPhoneNumber(phone)) {
-      setError("Phone number must be 11 digits and start with 01.");
+      setError(t("phoneValidation"));
       return;
     }
 
@@ -74,7 +73,7 @@ export function SellersManager({ initialItems }: { initialItems: SellerItem[] })
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data.error ?? "Failed to add seller.");
+        setError(data.error ?? t("addUserFailed"));
         return;
       }
       setName("");
@@ -98,7 +97,7 @@ export function SellersManager({ initialItems }: { initialItems: SellerItem[] })
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data.error ?? "Failed to update seller.");
+        setError(data.error ?? t("updateUserFailed"));
         return;
       }
       await refreshItems();
@@ -114,7 +113,7 @@ export function SellersManager({ initialItems }: { initialItems: SellerItem[] })
       const res = await fetch(`/api/admin/sellers/${id}`, { method: "DELETE" });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data.error ?? "Failed to remove seller.");
+        setError(data.error ?? t("failedToDeleteListing"));
         return;
       }
       await refreshItems();
@@ -126,40 +125,27 @@ export function SellersManager({ initialItems }: { initialItems: SellerItem[] })
   return (
     <div className="space-y-4">
       <Card>
-        <h2 className="text-lg font-bold">Add User</h2>
-        <p className="mt-1 text-sm text-slate-600">Create a seller user manually.</p>
+        <h2 className="text-lg font-bold">{t("addUserTitle")}</h2>
+        <p className="mt-1 text-sm text-slate-600">{t("createSellerManually")}</p>
         <div className="mt-3 grid gap-2 md:grid-cols-4">
-          <Input placeholder="User name" value={name} onChange={(e) => setName(e.target.value)} />
-          <Input
-            type="email"
-            placeholder="User email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            autoComplete="username"
-          />
+          <Input placeholder={t("userName")} value={name} onChange={(e) => setName(e.target.value)} />
+          <Input type="email" placeholder={t("userEmailLabel")} value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="username" />
           <Input
             type="tel"
-            placeholder="User phone (optional)"
+            placeholder={t("userPhoneOptional")}
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             autoComplete="off"
             pattern="01[0-9]{9}"
             minLength={11}
             maxLength={11}
-            title="Phone number must be 11 digits and start with 01"
+            title={t("phoneValidation")}
           />
-          <Input
-            type="text"
-            placeholder="User password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            autoComplete="off"
-            minLength={6}
-          />
+          <Input type="text" placeholder={t("userPasswordLabel")} value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="off" minLength={6} />
         </div>
         <div className="mt-3">
           <Button onClick={addSeller} disabled={saving}>
-            {saving ? "Saving..." : "Add User"}
+            {saving ? t("saving") : t("addUser")}
           </Button>
         </div>
         {error ? <p className="mt-2 text-sm text-red-600">{error}</p> : null}
@@ -167,35 +153,29 @@ export function SellersManager({ initialItems }: { initialItems: SellerItem[] })
 
       {items.length === 0 ? (
         <Card>
-          <p className="text-sm text-slate-600">No seller profiles found.</p>
+          <p className="text-sm text-slate-600">{t("noSellerProfiles")}</p>
         </Card>
       ) : (
         <>
           <Card>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0">
-                <h2 className="text-lg font-bold">Search</h2>
-                <p className="mt-1 text-sm text-slate-600">Search sellers by name.</p>
+                <h2 className="text-lg font-bold">{t("searchTitle")}</h2>
+                <p className="mt-1 text-sm text-slate-600">{t("searchSellersByName")}</p>
               </div>
               <div className="flex w-full gap-2 sm:w-[420px]">
-                <Input
-                  placeholder="Search seller name..."
-                  value={searchName}
-                  onChange={(e) => setSearchName(e.target.value)}
-                />
+                <Input placeholder={t("searchSellerName")} value={searchName} onChange={(e) => setSearchName(e.target.value)} />
                 <Button variant="outline" onClick={() => setSearchName("")} disabled={!searchName.trim()}>
-                  Clear
+                  {t("clearSearch")}
                 </Button>
               </div>
             </div>
-            <p className="mt-2 text-sm text-slate-600">
-              Showing {visibleItems.length} of {items.length}
-            </p>
+            <p className="mt-2 text-sm text-slate-600">{t("showingResults", { visible: visibleItems.length, total: items.length })}</p>
           </Card>
 
           {visibleItems.length === 0 ? (
             <Card>
-              <p className="text-sm text-slate-600">No sellers match “{searchName.trim()}”.</p>
+              <p className="text-sm text-slate-600">{t("noSellersMatch", { value: searchName.trim() })}</p>
             </Card>
           ) : (
             visibleItems.map(({ seller, stats }) => (
@@ -204,41 +184,32 @@ export function SellersManager({ initialItems }: { initialItems: SellerItem[] })
                   <div className="space-y-1">
                     <p className="text-lg font-bold">{seller.name}</p>
                     <p className="text-sm text-slate-600">{seller.email}</p>
-                    <p className="text-sm text-slate-600">{seller.phone ?? "No phone provided"}</p>
-                    <p className={`text-xs font-semibold ${seller.blocked ? "text-red-600" : "text-emerald-600"}`}>
-                      {seller.blocked ? "Blocked" : "Active"}
-                    </p>
+                    <p className="text-sm text-slate-600">{seller.phone ?? t("noPhoneProvided")}</p>
+                    <p className={`text-xs font-semibold ${seller.blocked ? "text-red-600" : "text-emerald-600"}`}>{seller.blocked ? t("blocked") : t("active")}</p>
                   </div>
                   <div className="flex gap-2">
-                    <Link
-                      href={`/admin/sellers/${seller.id}`}
-                      className="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800"
-                    >
-                      Open Profile
+                    <Link href={`/admin/sellers/${seller.id}`} className="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800">
+                      {t("openProfile")}
                     </Link>
                     {seller.blocked ? (
-                      <Button
-                        variant="outline"
-                        onClick={() => setBlocked(seller.id, "UNBLOCK")}
-                        disabled={busyId === seller.id}
-                      >
-                        Unblock
+                      <Button variant="outline" onClick={() => void setBlocked(seller.id, "UNBLOCK")} disabled={busyId === seller.id}>
+                        {t("unblock")}
                       </Button>
                     ) : (
-                      <Button variant="outline" onClick={() => setBlocked(seller.id, "BLOCK")} disabled={busyId === seller.id}>
-                        Block
+                      <Button variant="outline" onClick={() => void setBlocked(seller.id, "BLOCK")} disabled={busyId === seller.id}>
+                        {t("block")}
                       </Button>
                     )}
-                    <Button variant="danger" onClick={() => removeSeller(seller.id)} disabled={busyId === seller.id}>
-                      Remove
+                    <Button variant="danger" onClick={() => void removeSeller(seller.id)} disabled={busyId === seller.id}>
+                      {t("remove")}
                     </Button>
                   </div>
                 </div>
                 <div className="mt-3 grid grid-cols-2 gap-2 text-sm md:grid-cols-4">
-                  <p className="rounded-lg bg-slate-50 px-3 py-2">Total: {stats.total}</p>
-                  <p className="rounded-lg bg-slate-50 px-3 py-2">Approved: {stats.approved}</p>
-                  <p className="rounded-lg bg-slate-50 px-3 py-2">Pending: {stats.pending}</p>
-                  <p className="rounded-lg bg-slate-50 px-3 py-2">Rejected: {stats.rejected}</p>
+                  <p className="rounded-lg bg-slate-50 px-3 py-2">{t("totalStat", { count: stats.total })}</p>
+                  <p className="rounded-lg bg-slate-50 px-3 py-2">{t("approvedStat", { count: stats.approved })}</p>
+                  <p className="rounded-lg bg-slate-50 px-3 py-2">{t("pendingStat", { count: stats.pending })}</p>
+                  <p className="rounded-lg bg-slate-50 px-3 py-2">{t("rejectedStat", { count: stats.rejected })}</p>
                 </div>
               </Card>
             ))

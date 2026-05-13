@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { isValidPhoneNumber } from "@/lib/utils";
+import { useLanguage } from "@/components/layout/language-provider";
 
 type DeveloperItem = {
   developer: {
@@ -25,6 +26,7 @@ type DeveloperItem = {
 };
 
 export function DevelopersManager({ initialItems }: { initialItems: DeveloperItem[] }) {
+  const { t } = useLanguage();
   const router = useRouter();
   const [items, setItems] = useState(initialItems);
   const [searchName, setSearchName] = useState("");
@@ -37,10 +39,7 @@ export function DevelopersManager({ initialItems }: { initialItems: DeveloperIte
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const normalizedSearchName = searchName.trim().toLowerCase();
-  const visibleItems =
-    normalizedSearchName.length === 0
-      ? items
-      : items.filter(({ developer }) => developer.name.toLowerCase().includes(normalizedSearchName));
+  const visibleItems = normalizedSearchName.length === 0 ? items : items.filter(({ developer }) => developer.name.toLowerCase().includes(normalizedSearchName));
 
   async function refreshItems() {
     const res = await fetch("/api/admin/developers");
@@ -53,15 +52,15 @@ export function DevelopersManager({ initialItems }: { initialItems: DeveloperIte
   async function addDeveloper() {
     setError("");
     if (!name.trim() || !email.trim()) {
-      setError("Name and email are required.");
+      setError(t("addBuyerValidation"));
       return;
     }
     if (password.length < 6) {
-      setError("Password must be at least 6 characters.");
+      setError(t("passwordMinValidation"));
       return;
     }
     if (phone.trim() && !isValidPhoneNumber(phone)) {
-      setError("Phone number must be 11 digits and start with 01.");
+      setError(t("phoneValidation"));
       return;
     }
 
@@ -74,7 +73,7 @@ export function DevelopersManager({ initialItems }: { initialItems: DeveloperIte
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data.error ?? "Failed to add developer.");
+        setError(data.error ?? t("addDeveloperFailed"));
         return;
       }
       setName("");
@@ -98,7 +97,7 @@ export function DevelopersManager({ initialItems }: { initialItems: DeveloperIte
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data.error ?? "Failed to update developer.");
+        setError(data.error ?? t("updateDeveloperFailed"));
         return;
       }
       await refreshItems();
@@ -114,7 +113,7 @@ export function DevelopersManager({ initialItems }: { initialItems: DeveloperIte
       const res = await fetch(`/api/admin/developers/${id}`, { method: "DELETE" });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data.error ?? "Failed to remove developer.");
+        setError(data.error ?? t("removeDeveloperFailed"));
         return;
       }
       await refreshItems();
@@ -126,40 +125,27 @@ export function DevelopersManager({ initialItems }: { initialItems: DeveloperIte
   return (
     <div className="space-y-4">
       <Card>
-        <h2 className="text-lg font-bold">Add Developer</h2>
-        <p className="mt-1 text-sm text-slate-600">Create a developer account manually.</p>
+        <h2 className="text-lg font-bold">{t("addDeveloper")}</h2>
+        <p className="mt-1 text-sm text-slate-600">{t("createDeveloperManually")}</p>
         <div className="mt-3 grid gap-2 md:grid-cols-4">
-          <Input placeholder="Developer name" value={name} onChange={(e) => setName(e.target.value)} />
-          <Input
-            type="email"
-            placeholder="Developer email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            autoComplete="username"
-          />
+          <Input placeholder={t("developerName")} value={name} onChange={(e) => setName(e.target.value)} />
+          <Input type="email" placeholder={t("developerEmail")} value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="username" />
           <Input
             type="tel"
-            placeholder="Developer phone (optional)"
+            placeholder={t("developerPhoneOptional")}
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             autoComplete="off"
             pattern="01[0-9]{9}"
             minLength={11}
             maxLength={11}
-            title="Phone number must be 11 digits and start with 01"
+            title={t("phoneValidation")}
           />
-          <Input
-            type="text"
-            placeholder="Developer password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            autoComplete="off"
-            minLength={6}
-          />
+          <Input type="text" placeholder={t("developerPassword")} value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="off" minLength={6} />
         </div>
         <div className="mt-3">
           <Button onClick={addDeveloper} disabled={saving}>
-            {saving ? "Saving..." : "Add Developer"}
+            {saving ? t("saving") : t("addDeveloper")}
           </Button>
         </div>
         {error ? <p className="mt-2 text-sm text-red-600">{error}</p> : null}
@@ -167,35 +153,29 @@ export function DevelopersManager({ initialItems }: { initialItems: DeveloperIte
 
       {items.length === 0 ? (
         <Card>
-          <p className="text-sm text-slate-600">No developer profiles found.</p>
+          <p className="text-sm text-slate-600">{t("noDeveloperProfiles")}</p>
         </Card>
       ) : (
         <>
           <Card>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0">
-                <h2 className="text-lg font-bold">Search</h2>
-                <p className="mt-1 text-sm text-slate-600">Search developers by name.</p>
+                <h2 className="text-lg font-bold">{t("searchTitle")}</h2>
+                <p className="mt-1 text-sm text-slate-600">{t("searchDevelopersByName")}</p>
               </div>
               <div className="flex w-full gap-2 sm:w-[420px]">
-                <Input
-                  placeholder="Search developer name..."
-                  value={searchName}
-                  onChange={(e) => setSearchName(e.target.value)}
-                />
+                <Input placeholder={t("searchDeveloperName")} value={searchName} onChange={(e) => setSearchName(e.target.value)} />
                 <Button variant="outline" onClick={() => setSearchName("")} disabled={!searchName.trim()}>
-                  Clear
+                  {t("clearSearch")}
                 </Button>
               </div>
             </div>
-            <p className="mt-2 text-sm text-slate-600">
-              Showing {visibleItems.length} of {items.length}
-            </p>
+            <p className="mt-2 text-sm text-slate-600">{t("showingResults", { visible: visibleItems.length, total: items.length })}</p>
           </Card>
 
           {visibleItems.length === 0 ? (
             <Card>
-              <p className="text-sm text-slate-600">No developers match “{searchName.trim()}”.</p>
+              <p className="text-sm text-slate-600">{t("noDevelopersMatch", { value: searchName.trim() })}</p>
             </Card>
           ) : (
             visibleItems.map(({ developer, stats }) => (
@@ -204,45 +184,32 @@ export function DevelopersManager({ initialItems }: { initialItems: DeveloperIte
                   <div className="space-y-1">
                     <p className="text-lg font-bold">{developer.name}</p>
                     <p className="text-sm text-slate-600">{developer.email}</p>
-                    <p className="text-sm text-slate-600">{developer.phone ?? "No phone provided"}</p>
-                    <p className={`text-xs font-semibold ${developer.blocked ? "text-red-600" : "text-emerald-600"}`}>
-                      {developer.blocked ? "Blocked" : "Active"}
-                    </p>
+                    <p className="text-sm text-slate-600">{developer.phone ?? t("noPhoneProvided")}</p>
+                    <p className={`text-xs font-semibold ${developer.blocked ? "text-red-600" : "text-emerald-600"}`}>{developer.blocked ? t("blocked") : t("active")}</p>
                   </div>
                   <div className="flex gap-2">
-                    <Link
-                      href={`/admin/developers/${developer.id}`}
-                      className="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800"
-                    >
-                      Open Profile
+                    <Link href={`/admin/developers/${developer.id}`} className="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800">
+                      {t("openProfile")}
                     </Link>
                     {developer.blocked ? (
-                      <Button
-                        variant="outline"
-                        onClick={() => setBlocked(developer.id, "UNBLOCK")}
-                        disabled={busyId === developer.id}
-                      >
-                        Unblock
+                      <Button variant="outline" onClick={() => void setBlocked(developer.id, "UNBLOCK")} disabled={busyId === developer.id}>
+                        {t("unblock")}
                       </Button>
                     ) : (
-                      <Button
-                        variant="outline"
-                        onClick={() => setBlocked(developer.id, "BLOCK")}
-                        disabled={busyId === developer.id}
-                      >
-                        Block
+                      <Button variant="outline" onClick={() => void setBlocked(developer.id, "BLOCK")} disabled={busyId === developer.id}>
+                        {t("block")}
                       </Button>
                     )}
-                    <Button variant="danger" onClick={() => removeDeveloper(developer.id)} disabled={busyId === developer.id}>
-                      Remove
+                    <Button variant="danger" onClick={() => void removeDeveloper(developer.id)} disabled={busyId === developer.id}>
+                      {t("remove")}
                     </Button>
                   </div>
                 </div>
                 <div className="mt-3 grid grid-cols-2 gap-2 text-sm md:grid-cols-4">
-                  <p className="rounded-lg bg-slate-50 px-3 py-2">Total: {stats.total}</p>
-                  <p className="rounded-lg bg-slate-50 px-3 py-2">Approved: {stats.approved}</p>
-                  <p className="rounded-lg bg-slate-50 px-3 py-2">Pending: {stats.pending}</p>
-                  <p className="rounded-lg bg-slate-50 px-3 py-2">Rejected: {stats.rejected}</p>
+                  <p className="rounded-lg bg-slate-50 px-3 py-2">{t("totalStat", { count: stats.total })}</p>
+                  <p className="rounded-lg bg-slate-50 px-3 py-2">{t("approvedStat", { count: stats.approved })}</p>
+                  <p className="rounded-lg bg-slate-50 px-3 py-2">{t("pendingStat", { count: stats.pending })}</p>
+                  <p className="rounded-lg bg-slate-50 px-3 py-2">{t("rejectedStat", { count: stats.rejected })}</p>
                 </div>
               </Card>
             ))

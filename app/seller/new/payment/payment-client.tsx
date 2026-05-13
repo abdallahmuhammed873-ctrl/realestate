@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { useLanguage } from "@/components/layout/language-provider";
 
 type ListingDraft = {
   listingId?: string;
@@ -25,6 +26,7 @@ function digitsOnly(value: string) {
 }
 
 export function ListingPaymentClient() {
+  const { t } = useLanguage();
   const router = useRouter();
   const [draft, setDraft] = useState<ListingDraft | null>(null);
   const [cardholder, setCardholder] = useState("");
@@ -51,11 +53,11 @@ export function ListingPaymentClient() {
       setCardholder(saved.cardholder ?? "");
       setCardNumber(saved.cardNumber ?? "");
       setExpiry(saved.expiry ?? "");
-      setInfo(saved.cardNumber ? `Using saved card ending ${saved.cardNumber.slice(-4)}.` : "");
+      setInfo(saved.cardNumber ? t("usingSavedCard", { digits: saved.cardNumber.slice(-4) }) : "");
     } catch {
       localStorage.removeItem(CARD_KEY);
     }
-  }, []);
+  }, [t]);
 
   function normalizeCardNumber(input: string) {
     return digitsOnly(input).slice(0, 16);
@@ -74,20 +76,20 @@ export function ListingPaymentClient() {
     const normalizedCvv = digitsOnly(cvv).slice(0, 3);
 
     if (!trimmedName || !normalizedNumber || !normalizedExpiry || !normalizedCvv) {
-      return "All payment fields are required.";
+      return t("allPaymentFieldsRequired");
     }
     if (normalizedNumber.length !== 16) {
-      return "Card number must be exactly 16 digits.";
+      return t("cardNumberExact");
     }
     if (!/^\d{2}\/\d{2}$/.test(normalizedExpiry)) {
-      return "Expiry must be in MM/YY format.";
+      return t("expiryFormat");
     }
     const month = Number(normalizedExpiry.slice(0, 2));
     if (month < 1 || month > 12) {
-      return "Expiry month must be between 01 and 12.";
+      return t("expiryMonthRange");
     }
     if (normalizedCvv.length !== 3) {
-      return "CVV must be exactly 3 digits.";
+      return t("cvvExact");
     }
     return null;
   }
@@ -98,7 +100,7 @@ export function ListingPaymentClient() {
     setInfo("");
 
     if (!draft?.property) {
-      setError("No listing draft found. Please return to listing details and click Next again.");
+      setError(t("noListingDraftFound"));
       return;
     }
 
@@ -118,7 +120,6 @@ export function ListingPaymentClient() {
 
     setPaying(true);
     try {
-      // Demo save-card behavior for future listing payments.
       localStorage.setItem(
         CARD_KEY,
         JSON.stringify({
@@ -135,12 +136,12 @@ export function ListingPaymentClient() {
       });
       const data = await res.json().catch(() => null);
       if (!res.ok) {
-        setError(String(data?.error ?? "Payment accepted, but listing submission failed."));
+        setError(String(data?.error ?? t("paymentAcceptedListingFailed")));
         return;
       }
 
       sessionStorage.removeItem(DRAFT_KEY);
-      setInfo("Payment successful. Listing submitted for admin approval.");
+      setInfo(t("paymentSuccessfulListingSubmitted"));
       router.push("/seller/new/thank-you");
       router.refresh();
     } finally {
@@ -151,26 +152,19 @@ export function ListingPaymentClient() {
   return (
     <Card className="space-y-4">
       <div>
-        <h2 className="text-lg font-semibold">Pay to Publish Listing</h2>
-        <p className="text-sm text-slate-600">Your listing will be submitted for admin approval after successful payment.</p>
-        <p className="mt-1 text-sm font-medium text-slate-700">In order to submit your listing, you have to pay listing fees of 500 EGP.</p>
+        <h2 className="text-lg font-semibold">{t("payToPublishListing")}</h2>
+        <p className="text-sm text-slate-600">{t("paymentAfterSuccess")}</p>
+        <p className="mt-1 text-sm font-medium text-slate-700">{t("listingFeeNotice")}</p>
       </div>
 
       {!draft?.property ? (
-        <p className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
-          No listing details found for payment. Please go back and click Next again.
-        </p>
+        <p className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">{t("noListingDraftForPayment")}</p>
       ) : null}
 
       <form className="space-y-3" onSubmit={payAndSubmit}>
+        <Input placeholder={t("cardholderName")} value={cardholder} onChange={(e) => setCardholder(e.target.value)} required />
         <Input
-          placeholder="Cardholder Name"
-          value={cardholder}
-          onChange={(e) => setCardholder(e.target.value)}
-          required
-        />
-        <Input
-          placeholder="Card Number (16 digits)"
+          placeholder={t("cardNumberLabel")}
           inputMode="numeric"
           pattern="\d{16}"
           maxLength={16}
@@ -180,7 +174,7 @@ export function ListingPaymentClient() {
         />
         <div className="grid grid-cols-2 gap-2">
           <Input
-            placeholder="MM/YY"
+            placeholder={t("expiryLabel")}
             inputMode="numeric"
             pattern="\d{2}/\d{2}"
             maxLength={5}
@@ -189,7 +183,7 @@ export function ListingPaymentClient() {
             required
           />
           <Input
-            placeholder="CVV (3 digits)"
+            placeholder={t("cvvLabel")}
             inputMode="numeric"
             pattern="\d{3}"
             maxLength={3}
@@ -201,10 +195,10 @@ export function ListingPaymentClient() {
 
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <Button type="submit" disabled={paying || !draft?.property} className="w-full">
-            {paying ? "Processing Payment..." : "Pay & Submit for Approval"}
+            {paying ? t("processingPayment") : t("payAndSubmitForApproval")}
           </Button>
           <Button type="button" variant="outline" className="w-full" onClick={() => router.push("/")}>
-            Cancel
+            {t("cancel")}
           </Button>
         </div>
       </form>

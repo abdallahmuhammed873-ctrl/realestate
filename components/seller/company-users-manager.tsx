@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { isValidPhoneNumber } from "@/lib/utils";
+import { useLanguage } from "@/components/layout/language-provider";
 
 type CompanyUser = {
   id: string;
@@ -16,6 +17,7 @@ type CompanyUser = {
 };
 
 export function CompanyUsersManager({ initialItems }: { initialItems: CompanyUser[] }) {
+  const { t } = useLanguage();
   const router = useRouter();
   const [items, setItems] = useState(initialItems);
   const [name, setName] = useState("");
@@ -37,15 +39,15 @@ export function CompanyUsersManager({ initialItems }: { initialItems: CompanyUse
   async function addUser() {
     setError("");
     if (!name.trim() || !email.trim() || !password) {
-      setError("Name, email, and password are required.");
+      setError(t("nameEmailPasswordRequired"));
       return;
     }
     if (password.length < 6) {
-      setError("Password must be at least 6 characters.");
+      setError(t("passwordMinValidation"));
       return;
     }
     if (phone.trim() && !isValidPhoneNumber(phone)) {
-      setError("Phone number must be 11 digits and start with 01.");
+      setError(t("phoneValidation"));
       return;
     }
 
@@ -58,7 +60,7 @@ export function CompanyUsersManager({ initialItems }: { initialItems: CompanyUse
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data.error ?? "Failed to add user.");
+        setError(data.error ?? t("addUserFailed"));
         return;
       }
       setName("");
@@ -82,7 +84,7 @@ export function CompanyUsersManager({ initialItems }: { initialItems: CompanyUse
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data.error ?? "Failed to update user.");
+        setError(data.error ?? t("updateUserFailed"));
         return;
       }
       await refreshItems();
@@ -94,32 +96,26 @@ export function CompanyUsersManager({ initialItems }: { initialItems: CompanyUse
   return (
     <div className="space-y-4">
       <Card>
-        <h2 className="text-lg font-bold">Add Company User</h2>
-        <p className="text-muted mt-1 text-sm">Create users under your company account.</p>
+        <h2 className="text-lg font-bold">{t("addCompanyUser")}</h2>
+        <p className="text-muted mt-1 text-sm">{t("createUsersUnderCompany")}</p>
         <div className="mt-3 grid gap-2 md:grid-cols-2">
-          <Input placeholder="User name" value={name} onChange={(e) => setName(e.target.value)} />
-          <Input placeholder="User email" value={email} onChange={(e) => setEmail(e.target.value)} />
-          <Input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            minLength={6}
-          />
+          <Input placeholder={t("userName")} value={name} onChange={(e) => setName(e.target.value)} />
+          <Input placeholder={t("userEmail")} value={email} onChange={(e) => setEmail(e.target.value)} />
+          <Input type="password" placeholder={t("password")} value={password} onChange={(e) => setPassword(e.target.value)} minLength={6} />
           <Input
             type="tel"
-            placeholder="User phone (optional)"
+            placeholder={t("userPhoneOptional")}
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             pattern="01[0-9]{9}"
             minLength={11}
             maxLength={11}
-            title="Phone number must be 11 digits and start with 01"
+            title={t("phoneValidation")}
           />
         </div>
         <div className="mt-3">
           <Button onClick={addUser} disabled={saving}>
-            {saving ? "Saving..." : "Add User"}
+            {saving ? t("saving") : t("addUser")}
           </Button>
         </div>
         {error ? <p className="mt-2 text-sm text-red-600">{error}</p> : null}
@@ -127,7 +123,7 @@ export function CompanyUsersManager({ initialItems }: { initialItems: CompanyUse
 
       {items.length === 0 ? (
         <Card>
-          <p className="text-muted text-sm">No company users found.</p>
+          <p className="text-muted text-sm">{t("noCompanyUsersFound")}</p>
         </Card>
       ) : (
         items.map((user) => (
@@ -136,19 +132,19 @@ export function CompanyUsersManager({ initialItems }: { initialItems: CompanyUse
               <div className="space-y-1">
                 <p className="text-lg font-bold">{user.name}</p>
                 <p className="text-muted text-sm">{user.email}</p>
-                <p className="text-muted text-sm">{user.phone ?? "No phone provided"}</p>
+                <p className="text-muted text-sm">{user.phone ?? t("noPhoneProvided")}</p>
                 <p className={`text-xs font-semibold ${user.blocked ? "text-red-600" : "text-emerald-600"}`}>
-                  {user.blocked ? "Deactivated" : "Active"}
+                  {user.blocked ? t("deactivated") : t("active")}
                 </p>
               </div>
               <div className="flex gap-2">
                 {user.blocked ? (
-                  <Button variant="outline" onClick={() => setBlocked(user.id, "UNBLOCK")} disabled={busyId === user.id}>
-                    Reactivate
+                  <Button variant="outline" onClick={() => void setBlocked(user.id, "UNBLOCK")} disabled={busyId === user.id}>
+                    {t("reactivate")}
                   </Button>
                 ) : (
-                  <Button variant="outline" onClick={() => setBlocked(user.id, "BLOCK")} disabled={busyId === user.id}>
-                    Deactivate
+                  <Button variant="outline" onClick={() => void setBlocked(user.id, "BLOCK")} disabled={busyId === user.id}>
+                    {t("deactivate")}
                   </Button>
                 )}
               </div>
