@@ -8,7 +8,7 @@ export function QuickSearch({ language }: { language: Language }) {
   return (
     <form
       action="/search"
-      className="grid gap-3 rounded-2xl bg-white/80 p-4 shadow-soft backdrop-blur md:grid-cols-5"
+      className="surface-panel grid gap-3 rounded-2xl p-4 backdrop-blur md:grid-cols-5"
     >
       <Select name="transaction" defaultValue="BUY">
         <option value="BUY">{translateTransaction("BUY", language)}</option>

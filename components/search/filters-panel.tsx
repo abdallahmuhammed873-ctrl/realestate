@@ -164,7 +164,7 @@ export function FiltersPanel() {
             <button
               type="button"
               key={chip.label}
-              className="rounded-full border border-slate-300 px-2 py-1 text-xs"
+              className="theme-divider rounded-full border px-2 py-1 text-xs"
               onClick={() => {
                 const next = new URLSearchParams(params);
                 setParam(next, "minPrice", chip.min);
@@ -265,7 +265,7 @@ export function FiltersPanel() {
           />
         </div>
         <div className="space-y-1">
-          <label className="text-xs text-slate-600">{t("distanceKm")}</label>
+          <label className="text-soft text-xs">{t("distanceKm")}</label>
           <input
             type="range"
             min={1}
@@ -379,7 +379,7 @@ export function FiltersPanel() {
                     setParam(next, "amenities", updated.join(","));
                     apply(next);
                   }}
-                  className={`rounded-full border px-2 py-1 text-xs ${active ? "border-brand-700 bg-brand-100 text-brand-700" : "border-slate-300"}`}
+                  className={`rounded-full border px-2 py-1 text-xs ${active ? "border-brand-700 bg-brand-100 text-brand-700" : "theme-divider"}`}
                 >
                   {translateAmenity(a, language)}
                 </button>
@@ -403,15 +403,15 @@ export function FiltersPanel() {
 
   return (
     <>
-      <div className="hidden rounded-2xl border bg-white p-4 md:block md:sticky md:top-20">{content()}</div>
-      <div className="fixed bottom-16 left-0 right-0 z-30 bg-white/95 p-2 md:hidden">
+      <div className="surface-card hidden rounded-2xl p-4 md:block md:sticky md:top-20">{content()}</div>
+      <div className="surface-panel fixed bottom-16 left-0 right-0 z-30 p-2 md:hidden">
         <Button className="w-full" onClick={() => setOpenMobile(true)}>
           {t("filters")}
         </Button>
       </div>
       {openMobile && (
-        <div className="fixed inset-0 z-40 bg-slate-900/40 p-4 md:hidden">
-          <div className="absolute bottom-0 left-0 right-0 max-h-[85vh] overflow-auto rounded-t-2xl bg-white p-4">
+        <div className="overlay-backdrop fixed inset-0 z-40 p-4 md:hidden">
+          <div className="surface-card absolute bottom-0 left-0 right-0 max-h-[85vh] overflow-auto rounded-t-2xl p-4">
             <div className="mb-2 flex justify-between">
               <h2 className="font-bold">{t("filters")}</h2>
               <button onClick={() => setOpenMobile(false)}>{t("close")}</button>

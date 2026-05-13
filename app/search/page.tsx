@@ -23,7 +23,7 @@ export default async function SearchPage({
       <section>
         <ResultsToolbar total={result.total} />
         {result.items.length === 0 ? (
-          <div className="rounded-2xl border bg-white p-8 text-center text-slate-600">{t(language, "noResultsMatched")}</div>
+          <div className="surface-card text-muted rounded-2xl p-8 text-center">{t(language, "noResultsMatched")}</div>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {result.items.map((property) => (

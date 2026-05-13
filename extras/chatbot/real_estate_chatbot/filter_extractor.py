@@ -89,7 +89,7 @@ def _detect_range(question: str, patterns: Iterable[tuple[str, str]]) -> dict[st
 def extract_filters(message: str) -> ExtractFiltersResponse:
     normalized = " ".join(message.strip().split())
     question = normalized.lower()
-    payload: dict[str, object] = {"q": normalized, "page": 1, "pageSize": 10}
+    payload: dict[str, object] = {"page": 1, "pageSize": 10}
     warnings: list[str] = []
 
     if "rent" in question or "rental" in question:
@@ -171,6 +171,12 @@ def extract_filters(message: str) -> ExtractFiltersResponse:
         payload["installmentYearsMax"] = float(installment_years.group(1))
 
     payload["sort"] = _detect_sort(question) or "FEATURED"
+
+    structured_keys = set(payload.keys()) - {"page", "pageSize", "sort"}
+    if not structured_keys:
+        payload["q"] = normalized
+    elif "unitCode" in structured_keys and "q" in payload:
+        payload.pop("q", None)
 
     if len(payload) <= 3:
         warnings.append("No strong structured filters were detected, so broad search text will be used.")

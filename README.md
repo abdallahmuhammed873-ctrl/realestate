@@ -140,6 +140,10 @@ Use `/auth` and choose role:
    - open `http://<laptop-ip>:3000/api/health` from the phone browser to verify backend, DB, and AI reachability
    - call `POST http://<laptop-ip>:3000/api/v1/auth/login` first, then send `Authorization: Bearer <token>` to authenticated `/api/v1/*` routes
    - see `docs/local-network-deployment.md` for the full runbook
+9. Run acceptance verification:
+   - offline shared-data verification: `npm run test:acceptance`
+   - live backend/API verification: set `$env:PHASE14_BASE_URL="http://127.0.0.1:3000"` first, then run `npm run test:acceptance`
+   - see `docs/acceptance-verification.md` for the full Phase 14 checklist runbook
 
 ## Notes
 
@@ -150,3 +154,4 @@ Use `/auth` and choose role:
 - Mobile and browser clients should talk to the Next.js backend only. PostgreSQL is intended to stay backend-only on the laptop for the graduation demo.
 - Web auth still uses the current session-cookie flow, while mobile-ready `/api/v1/*` routes now use a signed bearer token issued by `POST /api/v1/auth/login`.
 - `GET /api/health` is the main laptop-demo readiness endpoint for backend, database, and AI checks.
+- `npm run test:acceptance` is the canonical Phase 14 verification entrypoint for shared-data acceptance checks.

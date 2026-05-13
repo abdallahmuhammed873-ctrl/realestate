@@ -315,20 +315,21 @@
 
 ## Phase 14 - Verification Scenarios
 
-- [ ] Seller creates a listing with local photos and one 360 panorama.
-- [ ] Admin approves the listing.
-- [ ] The property appears in website search using the DB-backed search service.
-- [ ] The same property appears from the mobile `/api/v1/properties` endpoint.
-- [ ] The AI assistant can answer about that property without touching CSV files.
-- [ ] Changing a price in the main DB is reflected in web, mobile, and AI without manual re-export.
-- [ ] Arabic and English both work for UI text and assistant replies.
-- [ ] Dark and light mode both render correctly on the homepage, search page, property page, seller wizard, and chatbot drawer.
-- [ ] Login works with the current auth logic on web and mobile-compatible API flows.
-- [ ] The app reads and writes correctly through the single PostgreSQL path.
-- [ ] The AI service answers correctly from the same shared PostgreSQL-backed platform data.
+- [x] Seller creates a listing with local photos and one 360 panorama.
+- [x] Admin approves the listing.
+- [x] The property appears in website search using the DB-backed search service.
+- [x] The same property appears from the mobile `/api/v1/properties` endpoint.
+- [x] The AI assistant can answer about that property without touching CSV files.
+- [x] Changing a price in the main DB is reflected in web, mobile, and AI without manual re-export.
+- [x] Arabic and English both work for UI text and assistant replies.
+- [x] Dark and light mode both render correctly on the homepage, search page, property page, seller wizard, and chatbot drawer.
+- [x] Login works with the current auth logic on web and mobile-compatible API flows.
+- [x] The app reads and writes correctly through the single PostgreSQL path.
+- [x] The AI service answers correctly from the same shared PostgreSQL-backed platform data.
 - [ ] The mobile app can reach the backend from the phone using the laptop local IP on the same network.
-- [ ] The backend can reach PostgreSQL and the AI service locally on the laptop.
+- [x] The backend can reach PostgreSQL and the AI service locally on the laptop.
 - [ ] Media URLs returned to the phone load correctly from the laptop server on the same network.
+- [x] Add a repeatable acceptance verification entrypoint for offline/shared-data checks and optional live backend checks.
 
 ## MVP Cut Line If Time Gets Tight
 

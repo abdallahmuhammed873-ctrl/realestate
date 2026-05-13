@@ -15,8 +15,8 @@ export function ResultsToolbar({ total }: { total: number }) {
   const sort = params.get("sort") ?? "FEATURED";
 
   return (
-    <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl border bg-white p-3">
-      <p className="text-sm text-slate-600">
+    <div className="surface-card mb-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl p-3">
+      <p className="text-muted text-sm">
         {total} {t("listingsFound")}
       </p>
       <div className="flex items-center gap-2">
