@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from "react";
+import { useState, type ChangeEvent, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
+import { deleteUploadedPath, uploadFiles } from "@/lib/client/uploads";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,8 +19,6 @@ type ProfileUser = {
   companyName?: string;
 };
 
-const AVATAR_EVENT = "profile:avatar-changed";
-
 type SellerListingItem = {
   listingId: string;
   status: "DRAFT" | "PENDING" | "APPROVED" | "REJECTED";
@@ -31,6 +31,7 @@ type SellerListingItem = {
 };
 
 export function ProfileClient({ user, sellerListings }: { user: ProfileUser; sellerListings?: SellerListingItem[] }) {
+  const router = useRouter();
   const [profile, setProfile] = useState<ProfileUser>(user);
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(user.name);
@@ -39,51 +40,76 @@ export function ProfileClient({ user, sellerListings }: { user: ProfileUser; sel
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [saveInfo, setSaveInfo] = useState("");
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(user.avatarUrl ?? null);
+  const [avatarLoading, setAvatarLoading] = useState(false);
   const [myListings, setMyListings] = useState<SellerListingItem[]>(sellerListings ?? []);
   const [deleteListingId, setDeleteListingId] = useState<string | null>(null);
-  const storageKey = useMemo(() => `profile_avatar_${profile.id}`, [profile.id]);
   const roleLabel = profile.role === "SELLER" && profile.isCompanyAccount ? "Developer" : profile.role === "SELLER" ? "Seller" : profile.role;
   const title = roleLabel === "Seller" ? "Seller Profile" : roleLabel === "Developer" ? "Developer Profile" : roleLabel === "ADMIN" ? "Admin Profile" : "User Profile";
 
-  useEffect(() => {
-    const existing = localStorage.getItem(storageKey);
-    setAvatarUrl(existing || null);
-  }, [storageKey]);
-
-  function broadcastAvatarChanged() {
-    window.dispatchEvent(new CustomEvent(AVATAR_EVENT, { detail: { userId: profile.id } }));
-  }
-
-  function onPickImage(e: ChangeEvent<HTMLInputElement>) {
+  async function onPickImage(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith("image/")) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const next = typeof reader.result === "string" ? reader.result : null;
-      if (!next) return;
-      localStorage.setItem(storageKey, next);
-      setAvatarUrl(next);
-      broadcastAvatarChanged();
-      fetch("/api/me", {
+    setAvatarLoading(true);
+    setSaveError("");
+    setSaveInfo("");
+    try {
+      const [uploaded] = await uploadFiles("avatar", [file]);
+      if (!uploaded) return;
+      const res = await fetch("/api/me", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, phone, avatarUrl: next })
-      }).catch(() => null);
-    };
-    reader.readAsDataURL(file);
+        body: JSON.stringify({ name, email, phone, avatarPath: uploaded.path })
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        await deleteUploadedPath(uploaded.path).catch(() => undefined);
+        setSaveError(String(data?.error ?? "Failed to update avatar."));
+        return;
+      }
+      const next = data?.user as ProfileUser | undefined;
+      if (next) {
+        setProfile((prev) => ({ ...prev, ...next }));
+        setAvatarUrl(next.avatarUrl ?? uploaded.path);
+      } else {
+        setAvatarUrl(uploaded.path);
+      }
+      setSaveInfo("Profile picture updated.");
+      router.refresh();
+    } catch (uploadError) {
+      setSaveError(uploadError instanceof Error ? uploadError.message : "Failed to upload avatar.");
+    } finally {
+      setAvatarLoading(false);
+      e.target.value = "";
+    }
   }
 
-  function removeImage() {
-    localStorage.removeItem(storageKey);
-    setAvatarUrl(null);
-    broadcastAvatarChanged();
-    fetch("/api/me", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, phone, avatarUrl: null })
-    }).catch(() => null);
+  async function removeImage() {
+    setAvatarLoading(true);
+    setSaveError("");
+    setSaveInfo("");
+    try {
+      const res = await fetch("/api/me", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, phone, avatarPath: null })
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        setSaveError(String(data?.error ?? "Failed to remove avatar."));
+        return;
+      }
+      const next = data?.user as ProfileUser | undefined;
+      setAvatarUrl(null);
+      if (next) {
+        setProfile((prev) => ({ ...prev, ...next, avatarUrl: null }));
+      }
+      setSaveInfo("Profile picture removed.");
+      router.refresh();
+    } finally {
+      setAvatarLoading(false);
+    }
   }
 
   async function deleteListing(listingId: string) {
@@ -146,11 +172,11 @@ export function ProfileClient({ user, sellerListings }: { user: ProfileUser; sel
           </div>
           <div className="flex flex-wrap gap-2">
             <label className="inline-flex cursor-pointer items-center rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50">
-              Add Profile Picture
-              <input type="file" accept="image/*" className="hidden" onChange={onPickImage} />
+              {avatarLoading ? "Uploading..." : "Add Profile Picture"}
+              <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={onPickImage} disabled={avatarLoading} />
             </label>
             {avatarUrl ? (
-              <Button type="button" variant="outline" onClick={removeImage}>
+              <Button type="button" variant="outline" onClick={removeImage} disabled={avatarLoading}>
                 Remove Picture
               </Button>
             ) : null}

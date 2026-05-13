@@ -10,6 +10,7 @@ import {
   mapUser,
   newId
 } from "../server/repository-helpers.ts";
+import { isLocalUploadPath, isTempUploadPath, promoteCommunityImage } from "../server/local-media.ts";
 import { prisma } from "../server/prisma.ts";
 
 async function canInteract(userId: string) {
@@ -28,17 +29,20 @@ export async function listCommunityListings(viewerId?: string | null) {
   return listCommunityListingViews(viewerId);
 }
 
-export async function createCommunityPost(userId: string, input: { text: string; imageUrl?: string }) {
+export async function createCommunityPost(userId: string, input: { text: string; imagePath?: string }) {
   const user = await canInteract(userId);
   if (!user) return { ok: false as const, error: "You are not allowed to post." };
   if (user.role !== "SELLER") return { ok: false as const, error: "Only sellers and developers can create posts." };
 
   const text = input.text.trim();
-  const imageUrl = (input.imageUrl ?? "").trim();
+  const imagePath = (input.imagePath ?? "").trim();
   if (!text) return { ok: false as const, error: "Post text is required." };
   if (text.length > 1000) return { ok: false as const, error: "Post text must be 1000 characters or less." };
-  if (imageUrl && !/^https?:\/\//i.test(imageUrl)) {
-    return { ok: false as const, error: "Image URL must start with http:// or https://." };
+  if (imagePath && !isLocalUploadPath(imagePath)) {
+    return { ok: false as const, error: "Post image must be uploaded through the platform." };
+  }
+  if (imagePath && isTempUploadPath(imagePath) && !imagePath.startsWith(`/uploads/tmp/community/${userId}/`)) {
+    return { ok: false as const, error: "You cannot attach this image." };
   }
 
   const post = await prisma.communityPost.create({
@@ -46,9 +50,21 @@ export async function createCommunityPost(userId: string, input: { text: string;
       id: newId(),
       userId,
       text,
-      imagePath: imageUrl || null
+      imagePath: imagePath || null
     }
   });
+
+  if (imagePath) {
+    const promotedPath = await promoteCommunityImage(post.id, imagePath);
+    if (promotedPath !== imagePath) {
+      await prisma.communityPost.update({
+        where: { id: post.id },
+        data: {
+          imagePath: promotedPath
+        }
+      });
+    }
+  }
 
   return { ok: true as const, post: (await getCommunityPostView(post.id, userId))! };
 }

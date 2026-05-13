@@ -12,6 +12,7 @@ type TopNavUser = {
   name: string;
   email: string;
   phone?: string;
+  avatarUrl?: string | null;
   role: "BUYER" | "SELLER" | "ADMIN";
   isCompanyAccount?: boolean;
 };

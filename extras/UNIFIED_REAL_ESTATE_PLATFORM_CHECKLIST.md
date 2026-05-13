@@ -224,20 +224,20 @@
 
 ## Phase 9 - Local Media Storage
 
-- [ ] Replace base64 image submission with multipart upload.
-- [ ] Save local files under a predictable structure such as:
+- [x] Replace base64 image submission with multipart upload.
+- [x] Save local files under a predictable structure such as:
   - `public/uploads/properties/{propertyId}/...`
   - `public/uploads/avatars/{userId}/...`
   - `public/uploads/community/{postId}/...`
-- [ ] Save only relative paths in PostgreSQL.
-- [ ] Add upload validation:
+- [x] Save only relative paths in PostgreSQL.
+- [x] Add upload validation:
   - max file size
   - allowed image MIME types
   - file count limit
-- [ ] Generate safe filenames to avoid collisions.
-- [ ] Add delete/replace cleanup logic so old local files do not accumulate forever.
-- [ ] Update seller listing creation/edit flow to upload files to backend before final save.
-- [ ] Update profile and community image flows to use the same local upload path if those features remain.
+- [x] Generate safe filenames to avoid collisions.
+- [x] Add delete/replace cleanup logic so old local files do not accumulate forever.
+- [x] Update seller listing creation/edit flow to upload files to backend before final save.
+- [x] Update profile and community image flows to use the same local upload path if those features remain.
 
 ## Phase 10 - 360 Media Support
 
@@ -368,7 +368,7 @@
 - [x] Phase 6: solidify PostgreSQL data layer
 - [x] Phase 7: local network deployment model
 - [x] Phase 8: versioned mobile API
-- [ ] Phase 9: local media upload
+- [x] Phase 9: local media upload
 - [ ] Phase 10: 360 panorama support
 - [ ] Phase 11: dark/light theme
 - [ ] Phase 12: AR/EN support

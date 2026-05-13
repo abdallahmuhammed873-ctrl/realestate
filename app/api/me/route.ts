@@ -17,8 +17,15 @@ export async function PATCH(req: Request) {
   const name = String(body.name ?? "");
   const email = String(body.email ?? "");
   const phone = String(body.phone ?? "");
-  const avatarUrl = body.avatarUrl ? String(body.avatarUrl) : null;
-  const result = await updateUserProfile(userId, { name, email, phone, avatarUrl });
+  const avatarPath =
+    Object.prototype.hasOwnProperty.call(body, "avatarPath") || Object.prototype.hasOwnProperty.call(body, "avatarUrl")
+      ? body.avatarPath
+        ? String(body.avatarPath)
+        : body.avatarUrl
+          ? String(body.avatarUrl)
+          : null
+      : undefined;
+  const result = await updateUserProfile(userId, { name, email, phone, avatarPath });
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 });
   return NextResponse.json({ ok: true, user: toProfileUser(result.user) });
 }

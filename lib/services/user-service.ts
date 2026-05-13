@@ -10,6 +10,7 @@ import {
   mapUser,
   validateProfileInput
 } from "../server/repository-helpers.ts";
+import { deleteUploadedFile, isLocalUploadPath } from "../server/local-media.ts";
 import { prisma } from "../server/prisma.ts";
 
 export async function getUserById(id?: string | null) {
@@ -219,7 +220,7 @@ export async function createUserProfile(input: {
 
 export async function updateUserProfile(
   userId: string,
-  input: { name: string; email: string; phone?: string; avatarUrl?: string | null }
+  input: { name: string; email: string; phone?: string; avatarPath?: string | null }
 ) {
   const user = await prisma.user.findUnique({
     where: { id: userId }
@@ -228,15 +229,11 @@ export async function updateUserProfile(
 
   const validation = await validateProfileInput(input);
   if (!validation.ok) return validation;
-  const avatarUrl = input.avatarUrl ? String(input.avatarUrl).trim() : null;
+  const avatarPath =
+    input.avatarPath === undefined ? undefined : input.avatarPath ? String(input.avatarPath).trim() : null;
 
-  if (avatarUrl) {
-    if (!avatarUrl.startsWith("data:image/")) {
-      return { ok: false as const, error: "Avatar must be an image." };
-    }
-    if (avatarUrl.length > 1_000_000) {
-      return { ok: false as const, error: "Avatar is too large." };
-    }
+  if (avatarPath && !isLocalUploadPath(avatarPath)) {
+    return { ok: false as const, error: "Avatar must be uploaded through the platform." };
   }
 
   const emailTaken = await prisma.user.findFirst({
@@ -264,9 +261,13 @@ export async function updateUserProfile(
       name: validation.name,
       email: validation.email,
       phone: validation.phone ?? null,
-      avatarPath: avatarUrl
+      ...(avatarPath !== undefined ? { avatarPath } : {})
     }
   });
+
+  if (avatarPath !== undefined && user.avatarPath && user.avatarPath !== avatarPath && isLocalUploadPath(user.avatarPath)) {
+    await deleteUploadedFile(user.avatarPath);
+  }
 
   return { ok: true as const, user: mapUser(updated)! };
 }

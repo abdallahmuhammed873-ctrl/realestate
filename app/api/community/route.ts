@@ -19,8 +19,8 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json().catch(() => ({}));
   const text = String(body.text ?? "");
-  const imageUrl = String(body.imageUrl ?? "");
-  const result = await createCommunityPost(userId, { text, imageUrl });
+  const imagePath = String(body.imagePath ?? body.imageUrl ?? "");
+  const result = await createCommunityPost(userId, { text, imagePath });
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 });
   return NextResponse.json({ ok: true, post: result.post });
 }

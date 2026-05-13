@@ -9,6 +9,9 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json();
   if (!body.property?.title || !body.property?.city) return NextResponse.json({ error: "Invalid property payload" }, { status: 400 });
+  if (Array.isArray(body.property?.images) && body.property.images.some((image: unknown) => String(image ?? "").startsWith("data:"))) {
+    return NextResponse.json({ error: "Property images must be uploaded through the backend before saving." }, { status: 400 });
+  }
 
   const result = await createOrUpdateSellerListing({
     listingId: body.listingId ? String(body.listingId) : undefined,

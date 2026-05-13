@@ -2,6 +2,7 @@
 
 import { useState, type ChangeEvent, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { deleteUploadedPath, uploadFiles } from "@/lib/client/uploads";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -11,6 +12,7 @@ import { OSMMapPicker } from "@/components/maps/osm-map";
 export function ListingWizard({ listingId, initial }: { listingId?: string; initial?: Record<string, unknown> }) {
   const router = useRouter();
   const [error, setError] = useState("");
+  const [uploading, setUploading] = useState(false);
   const initialImages = Array.isArray(initial?.images)
     ? (initial?.images as string[])
     : String(initial?.images ?? "")
@@ -50,30 +52,29 @@ export function ListingWizard({ listingId, initial }: { listingId?: string; init
     const files = Array.from(e.target.files ?? []);
     if (files.length === 0) return;
     const imageFiles = files.filter((f) => f.type.startsWith("image/"));
-    const toDataUrl = (file: File) =>
-      new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-          const result = typeof reader.result === "string" ? reader.result : "";
-          if (!result) reject(new Error("Could not read file"));
-          else resolve(result);
-        };
-        reader.onerror = () => reject(reader.error ?? new Error("Could not read file"));
-        reader.readAsDataURL(file);
-      });
     try {
-      const uploaded = await Promise.all(imageFiles.map((f) => toDataUrl(f)));
-      setImages((prev) => [...prev, ...uploaded]);
+      setUploading(true);
+      const uploaded = await uploadFiles("property", imageFiles);
+      setImages((prev) => [...prev, ...uploaded.map((item) => item.path)]);
       setError("");
-    } catch {
-      setError("Could not upload one or more images. Please try again.");
+    } catch (uploadError) {
+      setError(uploadError instanceof Error ? uploadError.message : "Could not upload one or more images. Please try again.");
     } finally {
+      setUploading(false);
       e.target.value = "";
     }
   }
 
-  function removeImage(index: number) {
+  async function removeImage(index: number) {
+    const targetPath = images[index];
     setImages((prev) => prev.filter((_, i) => i !== index));
+    if (targetPath.startsWith("/uploads/tmp/")) {
+      try {
+        await deleteUploadedPath(targetPath);
+      } catch {
+        setError("Image removed locally, but the temporary upload could not be cleaned up.");
+      }
+    }
   }
 
   function buildPayload() {
@@ -119,6 +120,10 @@ export function ListingWizard({ listingId, initial }: { listingId?: string; init
     }
     if (images.length === 0) {
       setError("Please upload at least one image.");
+      return null;
+    }
+    if (uploading) {
+      setError("Please wait for image uploads to finish.");
       return null;
     }
 
@@ -271,6 +276,7 @@ export function ListingWizard({ listingId, initial }: { listingId?: string; init
         <div className="space-y-2">
           <label className="block text-sm font-semibold text-slate-800">Property Photos</label>
           <Input type="file" accept="image/*" multiple onChange={onPickImages} />
+          <p className="text-xs text-slate-500">Upload up to 12 JPG, PNG, or WebP images. Each image must be 6MB or smaller.</p>
           {images.length > 0 ? (
             <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
               {images.map((src, idx) => (
@@ -285,13 +291,14 @@ export function ListingWizard({ listingId, initial }: { listingId?: string; init
           ) : (
             <p className="text-xs text-slate-500">Upload one or more photos from your device.</p>
           )}
+          {uploading ? <p className="text-xs text-brand-700">Uploading images...</p> : null}
         </div>
       </div>
       <div className="mt-4 space-y-2">
         {listingId ? (
-          <Button type="submit">Submit for Approval</Button>
+          <Button type="submit" disabled={uploading}>Submit for Approval</Button>
         ) : (
-          <Button type="button" onClick={goToPayment}>
+          <Button type="button" onClick={goToPayment} disabled={uploading}>
             Proceed to Pay
           </Button>
         )}

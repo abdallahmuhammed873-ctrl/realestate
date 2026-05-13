@@ -9,6 +9,7 @@ type ProfileMenuUser = {
   name: string;
   email: string;
   phone?: string;
+  avatarUrl?: string | null;
   role: "BUYER" | "SELLER" | "ADMIN";
   isCompanyAccount?: boolean;
 };
@@ -16,10 +17,8 @@ type ProfileMenuUser = {
 export function ProfileMenu({ user }: { user: ProfileMenuUser }) {
   const { t } = useLanguage();
   const [open, setOpen] = useState(false);
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const initial = (user.name.trim().charAt(0) || "U").toUpperCase();
-  const avatarKey = `profile_avatar_${user.id}`;
   const roleLabel =
     user.role === "SELLER" && user.isCompanyAccount
       ? t("developer")
@@ -38,22 +37,6 @@ export function ProfileMenu({ user }: { user: ProfileMenuUser }) {
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, []);
 
-  useEffect(() => {
-    const loadAvatar = () => setAvatarUrl(localStorage.getItem(avatarKey));
-    const onAvatarChanged = (e: Event) => {
-      const custom = e as CustomEvent<{ userId?: string }>;
-      if (custom.detail?.userId && custom.detail.userId !== user.id) return;
-      loadAvatar();
-    };
-    loadAvatar();
-    window.addEventListener("storage", loadAvatar);
-    window.addEventListener("profile:avatar-changed", onAvatarChanged as EventListener);
-    return () => {
-      window.removeEventListener("storage", loadAvatar);
-      window.removeEventListener("profile:avatar-changed", onAvatarChanged as EventListener);
-    };
-  }, [avatarKey, user.id]);
-
   return (
     <div className="relative" ref={rootRef}>
       <button
@@ -62,7 +45,7 @@ export function ProfileMenu({ user }: { user: ProfileMenuUser }) {
         className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-slate-300 bg-white text-sm font-bold text-brand-800"
         aria-label={t("openProfileMenu")}
       >
-        {avatarUrl ? <img src={avatarUrl} alt={`${user.name} avatar`} className="h-full w-full object-cover" /> : initial}
+        {user.avatarUrl ? <img src={user.avatarUrl} alt={`${user.name} avatar`} className="h-full w-full object-cover" /> : initial}
       </button>
 
       {open ? (

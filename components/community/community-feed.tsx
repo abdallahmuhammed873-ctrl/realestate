@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
+import { deleteUploadedPath, uploadFiles } from "@/lib/client/uploads";
 import { LoginRequiredModal } from "@/components/auth/login-required-modal";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -98,9 +99,10 @@ export function CommunityFeed({
   const [posts, setPosts] = useState<PostView[]>(initialPosts);
   const [listingItems, setListingItems] = useState<ListingView[]>(listings);
   const [postText, setPostText] = useState("");
-  const [postImageUrl, setPostImageUrl] = useState("");
+  const [postImagePath, setPostImagePath] = useState("");
   const [postError, setPostError] = useState("");
   const [postLoading, setPostLoading] = useState(false);
+  const [postImageLoading, setPostImageLoading] = useState(false);
   const [likeLoadingId, setLikeLoadingId] = useState<string | null>(null);
   const [commentLoadingId, setCommentLoadingId] = useState<string | null>(null);
   const [commentByPostId, setCommentByPostId] = useState<Record<string, string>>({});
@@ -279,6 +281,34 @@ export function CommunityFeed({
     });
   }
 
+  async function onPickPostImage(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPostError("");
+    setPostImageLoading(true);
+    try {
+      const [uploaded] = await uploadFiles("community", [file]);
+      if (!uploaded) return;
+      if (postImagePath.startsWith("/uploads/tmp/")) {
+        await deleteUploadedPath(postImagePath).catch(() => undefined);
+      }
+      setPostImagePath(uploaded.path);
+    } catch (uploadError) {
+      setPostError(uploadError instanceof Error ? uploadError.message : "Could not upload image.");
+    } finally {
+      setPostImageLoading(false);
+      e.target.value = "";
+    }
+  }
+
+  async function removePostImage() {
+    const previousPath = postImagePath;
+    setPostImagePath("");
+    if (previousPath.startsWith("/uploads/tmp/")) {
+      await deleteUploadedPath(previousPath).catch(() => undefined);
+    }
+  }
+
   async function createPost() {
     if (!viewer?.canCreatePost) {
       setShowLoginRequired(true);
@@ -290,7 +320,7 @@ export function CommunityFeed({
       const res = await fetch("/api/community", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: postText, imageUrl: postImageUrl })
+        body: JSON.stringify({ text: postText, imagePath: postImagePath })
       });
       const data = await res.json().catch(() => null);
       if (!res.ok) {
@@ -299,7 +329,7 @@ export function CommunityFeed({
       }
       upsertPost(data.post);
       setPostText("");
-      setPostImageUrl("");
+      setPostImagePath("");
     } finally {
       setPostLoading(false);
     }
@@ -814,12 +844,20 @@ export function CommunityFeed({
               onChange={(e) => setPostText(e.target.value)}
               maxLength={1000}
             />
-            <Input
-              placeholder="Image URL (optional)"
-              value={postImageUrl}
-              onChange={(e) => setPostImageUrl(e.target.value)}
-            />
-            <Button type="button" onClick={createPost} disabled={postLoading}>
+            <div className="space-y-2">
+              <Input type="file" accept="image/png,image/jpeg,image/webp" onChange={onPickPostImage} disabled={postImageLoading} />
+              <p className="text-xs text-slate-500">Optional image. JPG, PNG, or WebP only, up to 6MB.</p>
+              {postImagePath ? (
+                <div className="space-y-2">
+                  <img src={postImagePath} alt="Post upload preview" className="max-h-64 w-full rounded-xl border border-slate-200 object-cover" />
+                  <Button type="button" variant="outline" onClick={removePostImage} disabled={postImageLoading}>
+                    Remove Image
+                  </Button>
+                </div>
+              ) : null}
+              {postImageLoading ? <p className="text-xs text-brand-700">Uploading image...</p> : null}
+            </div>
+            <Button type="button" onClick={createPost} disabled={postLoading || postImageLoading}>
               {postLoading ? "Posting..." : "Post to Community"}
             </Button>
             {postError ? <p className="text-xs text-red-600">{postError}</p> : null}

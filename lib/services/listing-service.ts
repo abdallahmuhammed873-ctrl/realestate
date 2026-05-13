@@ -7,6 +7,7 @@ import {
   mapUser,
   toPublicPropertyCard
 } from "../server/repository-helpers.ts";
+import { deleteUploadedFile, isLocalUploadPath, promotePropertyImages } from "../server/local-media.ts";
 import { prisma } from "../server/prisma.ts";
 
 export async function listSellerListingsForAdmin(sellerId: string) {
@@ -182,7 +183,7 @@ function toPropertyCreateData(input: SellerListingInput["property"]) {
     paymentType: input.paymentType,
     completionStatus: input.completionStatus,
     amenities: input.amenities,
-    images: input.images,
+    images: [],
     installmentDownPayment: input.installmentDownPayment ?? null,
     installmentYears: input.installmentYears ?? null,
     installmentMonthly: input.installmentMonthly ?? null,
@@ -190,6 +191,35 @@ function toPropertyCreateData(input: SellerListingInput["property"]) {
     sourceFile: input.sourceFile ?? null,
     sourceSheet: input.sourceSheet ?? null
   };
+}
+
+async function syncPropertyImages(propertyId: string, nextPaths: string[], previousPaths: string[]) {
+  const normalized = await promotePropertyImages(propertyId, nextPaths, previousPaths);
+
+  await prisma.$transaction([
+    prisma.property.update({
+      where: { id: propertyId },
+      data: {
+        images: normalized.images
+      }
+    }),
+    prisma.propertyMedia.deleteMany({
+      where: { propertyId, kind: "IMAGE" }
+    }),
+    ...(normalized.media.length > 0
+      ? [
+          prisma.propertyMedia.createMany({
+            data: normalized.media.map((item) => ({
+              propertyId,
+              kind: item.kind,
+              path: item.path,
+              sortOrder: item.sortOrder,
+              mimeType: item.mimeType
+            }))
+          })
+        ]
+      : [])
+  ]);
 }
 
 export async function createOrUpdateSellerListing(input: SellerListingInput) {
@@ -225,10 +255,29 @@ export async function createOrUpdateSellerListing(input: SellerListingInput) {
         }
       }
     });
+    if (!updated.property) return null;
+
+    await syncPropertyImages(
+      updated.property.id,
+      input.property.images,
+      Array.from(new Set([...(listing.property.images ?? []), ...listing.property.media.map((item) => item.path)]))
+    );
+
+    const refreshed = await prisma.listing.findUnique({
+      where: { id: updated.id },
+      include: {
+        property: {
+          include: {
+            media: { orderBy: { sortOrder: "asc" } }
+          }
+        }
+      }
+    });
+    if (!refreshed?.property) return null;
 
     return {
-      listing: mapListing(updated)!,
-      property: mapProperty(updated.property)!
+      listing: mapListing(refreshed)!,
+      property: mapProperty(refreshed.property)!
     };
   }
 
@@ -249,24 +298,51 @@ export async function createOrUpdateSellerListing(input: SellerListingInput) {
       }
     }
   });
+  if (!created.property) return null;
+
+  await syncPropertyImages(created.property.id, input.property.images, []);
+
+  const refreshed = await prisma.listing.findUnique({
+    where: { id: created.id },
+    include: {
+      property: {
+        include: {
+          media: { orderBy: { sortOrder: "asc" } }
+        }
+      }
+    }
+  });
+  if (!refreshed?.property) return null;
 
   return {
-    listing: mapListing(created)!,
-    property: mapProperty(created.property)!
+    listing: mapListing(refreshed)!,
+    property: mapProperty(refreshed.property)!
   };
 }
 
 export async function deleteSellerListing(listingId: string, sellerId: string) {
   const listing = await prisma.listing.findUnique({
-    where: { id: listingId }
+    where: { id: listingId },
+    include: {
+      property: {
+        include: {
+          media: true
+        }
+      }
+    }
   });
   if (!listing) return { ok: false as const, error: "Listing not found." };
   const canAccess = await canSellerAccessListing(sellerId, listing.userId);
   if (!canAccess) return { ok: false as const, error: "Listing not found." };
 
+  const pathsToDelete = listing.property
+    ? Array.from(new Set([...(listing.property.images ?? []), ...listing.property.media.map((item) => item.path)])).filter(isLocalUploadPath)
+    : [];
+
   await prisma.listing.delete({
     where: { id: listing.id }
   });
+  await Promise.all(pathsToDelete.map((filePath) => deleteUploadedFile(filePath)));
   return { ok: true as const };
 }
 
