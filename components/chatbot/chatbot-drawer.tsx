@@ -45,13 +45,18 @@ export function ChatbotDrawer() {
         {t("aiAssistant")}
       </Button>
       {open && (
-        <aside className="fixed bottom-32 right-4 z-50 w-[min(92vw,360px)] rounded-2xl border bg-white p-3 shadow-soft">
+        <aside className="surface-panel fixed bottom-32 right-4 z-50 w-[min(92vw,360px)] rounded-2xl p-3">
           <div className="mb-2 flex items-center justify-between">
             <p className="font-semibold">{t("assistant")}</p>
           </div>
-          <div className="mb-2 h-64 space-y-2 overflow-auto rounded-xl bg-slate-50 p-2">
+          <div className="surface-subtle mb-2 h-64 space-y-2 overflow-auto rounded-xl p-2">
             {messages.map((m, i) => (
-              <p key={i} className={`rounded-lg px-2 py-1 text-sm ${m.role === "assistant" ? "bg-white" : "bg-brand-100"}`}>
+              <p
+                key={i}
+                className={`rounded-lg px-2 py-1 text-sm ${
+                  m.role === "assistant" ? "bg-[var(--surface)] text-[var(--ink)]" : "bg-[var(--brand-soft)] text-[var(--ink)]"
+                }`}
+              >
                 {m.content}
               </p>
             ))}

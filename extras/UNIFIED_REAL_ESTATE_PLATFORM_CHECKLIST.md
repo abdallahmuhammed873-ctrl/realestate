@@ -23,7 +23,7 @@
 - [x] The Python AI project read from `real_estate_master.csv` and stored chat history in local JSON, so it had its own separate dataset.
 - [x] `/api/chat` in Next.js was a stub and is now proxied to the Python AI service.
 - [ ] The current i18n layer is only partial: the language provider is hard-coded to English and the root layout is fixed to `lang="en"` and `dir="ltr"`.
-- [ ] There is no real dark/light theme system yet.
+- [x] There is no real dark/light theme system yet.
 - [ ] Property images are currently remote URLs or base64 data URLs, not local uploaded files.
 
 ## Non-Negotiable Rules For The Final Build
@@ -260,11 +260,11 @@
 
 ## Phase 11 - Dark/Light Theme
 
-- [ ] Add a real theme provider with persisted user preference.
-- [ ] Respect system preference on first load.
-- [ ] Add a theme toggle in both desktop and mobile navigation.
-- [ ] Convert color usage to semantic design tokens instead of hard-coded white/slate classes everywhere.
-- [ ] Audit the following components first because they currently rely on light styling:
+- [x] Add a real theme provider with persisted user preference.
+- [x] Respect system preference on first load.
+- [x] Add a theme toggle in both desktop and mobile navigation.
+- [x] Convert color usage to semantic design tokens instead of hard-coded white/slate classes everywhere.
+- [x] Audit the following components first because they currently rely on light styling:
   - top navigation
   - cards
   - modals
@@ -272,7 +272,7 @@
   - seller listing wizard
   - admin tables/lists
   - property detail page
-- [ ] Make map areas, overlays, borders, badges, and shadows readable in both themes.
+- [x] Make map areas, overlays, borders, badges, and shadows readable in both themes.
 
 ## Phase 12 - Arabic/English Support
 
@@ -370,6 +370,6 @@
 - [x] Phase 8: versioned mobile API
 - [x] Phase 9: local media upload
 - [x] Phase 10: 360 panorama support
-- [ ] Phase 11: dark/light theme
+- [x] Phase 11: dark/light theme
 - [ ] Phase 12: AR/EN support
 - [ ] Phase 13: acceptance verification and cleanup

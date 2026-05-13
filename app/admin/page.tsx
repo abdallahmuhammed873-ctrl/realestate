@@ -14,26 +14,26 @@ export default async function AdminOverviewPage() {
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">Admin Overview</h1>
       <Card>
-        <p className="text-sm text-slate-500">Pending approvals</p>
+        <p className="text-soft text-sm">Pending approvals</p>
         <p className="text-3xl font-bold">{pending.length}</p>
       </Card>
       <div className="flex flex-wrap gap-2">
         <Link href="/admin/pending" className="inline-block rounded-xl bg-brand-700 px-4 py-2 text-white">
           Open Pending Queue
         </Link>
-        <Link href="/admin/sellers" className="inline-block rounded-xl border border-slate-300 bg-white px-4 py-2 text-slate-800">
+        <Link href="/admin/sellers" className="inline-block rounded-xl border theme-divider bg-[var(--surface)] px-4 py-2 text-[var(--ink)] hover:bg-[var(--surface-soft)]">
           View Seller Profiles
         </Link>
-        <Link href="/admin/developers" className="inline-block rounded-xl border border-slate-300 bg-white px-4 py-2 text-slate-800">
+        <Link href="/admin/developers" className="inline-block rounded-xl border theme-divider bg-[var(--surface)] px-4 py-2 text-[var(--ink)] hover:bg-[var(--surface-soft)]">
           View Developer Profiles
         </Link>
-        <Link href="/admin/buyers" className="inline-block rounded-xl border border-slate-300 bg-white px-4 py-2 text-slate-800">
+        <Link href="/admin/buyers" className="inline-block rounded-xl border theme-divider bg-[var(--surface)] px-4 py-2 text-[var(--ink)] hover:bg-[var(--surface-soft)]">
           View Buyer Profiles
         </Link>
-        <Link href="/admin/approved" className="inline-block rounded-xl border border-slate-300 bg-white px-4 py-2 text-slate-800">
+        <Link href="/admin/approved" className="inline-block rounded-xl border theme-divider bg-[var(--surface)] px-4 py-2 text-[var(--ink)] hover:bg-[var(--surface-soft)]">
           Open Approved Queue
         </Link>
-        <Link href="/admin/rejected" className="inline-block rounded-xl border border-slate-300 bg-white px-4 py-2 text-slate-800">
+        <Link href="/admin/rejected" className="inline-block rounded-xl border theme-divider bg-[var(--surface)] px-4 py-2 text-[var(--ink)] hover:bg-[var(--surface-soft)]">
           Open Rejected Queue
         </Link>
       </div>

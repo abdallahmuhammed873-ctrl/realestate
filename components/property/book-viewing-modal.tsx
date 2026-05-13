@@ -65,12 +65,12 @@ export function BookViewingModal({ propertyId }: { propertyId: string }) {
 
   return (
     <>
-      <div className="fixed inset-0 z-50 grid place-items-center bg-slate-900/40 p-4">
-        <div className="w-full max-w-md rounded-2xl bg-white p-4">
+      <div className="overlay-backdrop fixed inset-0 z-50 grid place-items-center p-4">
+        <div className="surface-panel w-full max-w-md rounded-2xl p-4">
           {submitted ? (
             <div className="space-y-3 text-center">
               <h3 className="text-lg font-bold">Appointment Requested</h3>
-              <p className="text-sm text-slate-600">We sent your request to the seller. You will receive a notification update soon.</p>
+              <p className="text-muted text-sm">We sent your request to the seller. You will receive a notification update soon.</p>
               <Button onClick={() => setOpen(false)}>Close</Button>
             </div>
           ) : (

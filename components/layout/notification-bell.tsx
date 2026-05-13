@@ -47,7 +47,7 @@ export function NotificationBell() {
   return (
     <Link
       href="/notifications"
-      className="relative inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-700"
+      className="relative inline-flex h-9 w-9 items-center justify-center rounded-full border theme-divider text-[var(--muted)] hover:bg-[var(--surface-soft)] hover:text-[var(--ink)]"
       aria-label={t("notifications")}
     >
       <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

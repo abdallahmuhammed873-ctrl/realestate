@@ -260,15 +260,15 @@ export function ListingWizard({ listingId, initial }: { listingId?: string; init
   function renderMediaSection(kind: ListingMediaDraft["kind"], title: string, helperText: string, items: ListingMediaDraft[]) {
     return (
       <div className="space-y-2">
-        <label className="block text-sm font-semibold text-slate-800">{title}</label>
+        <label className="block text-sm font-semibold text-[var(--ink)]">{title}</label>
         <Input type="file" accept="image/*" multiple onChange={(e) => void onPickMedia(kind, e)} />
-        <p className="text-xs text-slate-500">{helperText}</p>
+        <p className="text-soft text-xs">{helperText}</p>
         {items.length > 0 ? (
           <div className="grid gap-3 sm:grid-cols-2">
             {media.map((item, index) => {
               if (item.kind !== kind) return null;
               return (
-                <div key={`${item.kind}-${item.path}`} className="space-y-2 rounded-xl border border-slate-200 p-3">
+                <div key={`${item.kind}-${item.path}`} className="surface-subtle space-y-2 rounded-xl p-3">
                   <img
                     src={item.path}
                     alt={item.altText || item.label}
@@ -292,7 +292,7 @@ export function ListingWizard({ listingId, initial }: { listingId?: string; init
             })}
           </div>
         ) : (
-          <p className="text-xs text-slate-500">
+          <p className="text-soft text-xs">
             {kind === "PANORAMA_360"
               ? "Optional. Add one or more wide equirectangular images for the 360 viewer."
               : "Upload one or more standard listing photos from your device."}
@@ -303,7 +303,7 @@ export function ListingWizard({ listingId, initial }: { listingId?: string; init
   }
 
   return (
-    <form className="rounded-2xl border bg-white p-4" onSubmit={submit}>
+    <form className="surface-card rounded-2xl p-4" onSubmit={submit}>
       <div className="grid gap-3">
         <Input placeholder="Title" value={String(form.title ?? "")} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} required />
         <Textarea placeholder="Description" value={String(form.description ?? "")} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} required />
@@ -334,7 +334,7 @@ export function ListingWizard({ listingId, initial }: { listingId?: string; init
           <Input type="number" placeholder="Lng" value={String(form.lng ?? "")} onChange={(e) => setForm((f) => ({ ...f, lng: e.target.value }))} required />
         </div>
         <div className="space-y-1">
-          <p className="text-sm font-semibold text-slate-800">Pick Location on Map</p>
+          <p className="text-sm font-semibold text-[var(--ink)]">Pick Location on Map</p>
           <OSMMapPicker
             lat={Number(form.lat ?? 30.02)}
             lng={Number(form.lng ?? 31.49)}
@@ -346,7 +346,7 @@ export function ListingWizard({ listingId, initial }: { listingId?: string; init
               }))
             }
           />
-          <p className="text-xs text-slate-500">Click on map or drag marker to set exact property location.</p>
+          <p className="text-soft text-xs">Click on map or drag marker to set exact property location.</p>
         </div>
         <div className="grid grid-cols-2 gap-2">
           <Input
@@ -410,7 +410,7 @@ export function ListingWizard({ listingId, initial }: { listingId?: string; init
         <Input placeholder="Amenities comma separated" value={String(form.amenities ?? "")} onChange={(e) => setForm((f) => ({ ...f, amenities: e.target.value }))} required />
         {renderMediaSection("IMAGE", "Property Photos", "Upload up to 12 JPG, PNG, or WebP images. Each file must be 6MB or smaller.", photos)}
         {renderMediaSection("PANORAMA_360", "360 Panorama Files", "Upload up to 6 panorama images. Wide equirectangular JPG, PNG, or WebP files work best.", panoramas)}
-        {uploading ? <p className="text-xs text-brand-700">Uploading media...</p> : null}
+        {uploading ? <p className="text-xs text-[var(--brand)]">Uploading media...</p> : null}
       </div>
       <div className="mt-4 space-y-2">
         {listingId ? (

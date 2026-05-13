@@ -23,9 +23,9 @@ export default async function HomePage() {
           <div className="relative h-[320px] w-full overflow-hidden rounded-3xl md:h-[420px]">
             <HeroListingsMarquee images={heroImages} />
             <div className="pointer-events-none absolute inset-0 flex items-start">
-              <div className="m-6 max-w-4xl rounded-3xl bg-white/45 p-5 text-slate-900 shadow-soft backdrop-blur-[4px] md:m-10 md:p-7">
+              <div className="m-6 max-w-4xl rounded-3xl bg-[var(--surface-elevated)] p-5 text-[var(--ink)] shadow-soft backdrop-blur-[6px] md:m-10 md:p-7">
                 <h1 className="text-3xl font-extrabold md:text-5xl">{t(language, "heroTitle")}</h1>
-                <p className="mt-3 max-w-3xl text-slate-700">{t(language, "heroDescription")}</p>
+                <p className="text-muted mt-3 max-w-3xl">{t(language, "heroDescription")}</p>
               </div>
             </div>
           </div>
@@ -37,12 +37,12 @@ export default async function HomePage() {
       </section>
 
       {user && (
-        <section className="rounded-2xl border bg-white p-5">
+        <section className="surface-card rounded-2xl p-5">
           <h2 className="mb-2 text-xl font-bold">{t(language, "notifications")}</h2>
           {notifications.length === 0 ? (
-            <p className="text-sm text-slate-500">{t(language, "noUpdatesYet")}</p>
+            <p className="text-soft text-sm">{t(language, "noUpdatesYet")}</p>
           ) : (
-            <ul className="space-y-1 text-sm text-slate-700">
+            <ul className="text-muted space-y-1 text-sm">
               {notifications.map((n) => (
                 <li key={n.id}>{n.text}</li>
               ))}
@@ -55,9 +55,9 @@ export default async function HomePage() {
         <h2 className="mb-4 text-2xl font-bold">{t(language, "featuredAreas")}</h2>
         <div className="grid gap-3 md:grid-cols-3">
           {["New Cairo", "Heliopolis", "Maadi"].map((area) => (
-            <Link key={area} href={`/search?area=${encodeURIComponent(area)}`} className="rounded-2xl border bg-white p-5">
+            <Link key={area} href={`/search?area=${encodeURIComponent(area)}`} className="surface-card rounded-2xl p-5">
               <p className="font-semibold">{translateLocation(area, language)}</p>
-              <p className="text-sm text-slate-500">{t(language, "verifiedInstallments")}</p>
+              <p className="text-soft text-sm">{t(language, "verifiedInstallments")}</p>
             </Link>
           ))}
         </div>
@@ -71,7 +71,7 @@ export default async function HomePage() {
             { label: "Rent", href: "/search?transaction=RENT" },
             { label: "Vacation", href: "/search?transaction=VACATION" }
           ].map((c) => (
-            <Link key={c.label} href={c.href} className="rounded-2xl border bg-white p-5 text-lg font-semibold shadow-soft">
+            <Link key={c.label} href={c.href} className="surface-card rounded-2xl p-5 text-lg font-semibold">
               {translateTransaction(c.label.toUpperCase() as "BUY" | "RENT" | "VACATION", language)}
             </Link>
           ))}

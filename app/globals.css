@@ -5,16 +5,182 @@
 :root {
   --bg: #f7fafc;
   --surface: #ffffff;
+  --surface-elevated: rgba(255, 255, 255, 0.82);
+  --surface-soft: #eef4f7;
+  --surface-strong: #dde7ee;
   --ink: #1f2a37;
   --muted: #5b687a;
+  --muted-soft: #7a8898;
+  --border: rgba(122, 136, 152, 0.26);
+  --border-strong: rgba(91, 104, 122, 0.4);
+  --overlay: rgba(15, 23, 42, 0.48);
+  --shadow-color: 22 34 51;
   --brand: #2e6f7f;
+  --brand-strong: #264c56;
+  --brand-soft: rgba(46, 111, 127, 0.12);
+  --brand-contrast: #f7fbfd;
   --cheque: #d4b06a;
+  --cheque-ink: #2b2415;
+  --badge-neutral-bg: #eef4f7;
+  --badge-neutral-text: #49596b;
+  --badge-positive-bg: rgba(5, 150, 105, 0.14);
+  --badge-positive-text: #047857;
+  --badge-warning-bg: rgba(217, 119, 6, 0.16);
+  --badge-warning-text: #b45309;
+  --badge-danger-bg: rgba(225, 29, 72, 0.14);
+  --badge-danger-text: #be123c;
+}
+
+[data-theme="dark"] {
+  --bg: #0f1720;
+  --surface: #16212b;
+  --surface-elevated: rgba(22, 33, 43, 0.84);
+  --surface-soft: #1d2c38;
+  --surface-strong: #243746;
+  --ink: #e7f0f5;
+  --muted: #b5c2cb;
+  --muted-soft: #90a1ae;
+  --border: rgba(144, 161, 174, 0.2);
+  --border-strong: rgba(181, 194, 203, 0.3);
+  --overlay: rgba(2, 8, 18, 0.72);
+  --shadow-color: 2 8 18;
+  --brand: #71c7d8;
+  --brand-strong: #9adcea;
+  --brand-soft: rgba(113, 199, 216, 0.18);
+  --brand-contrast: #091318;
+  --cheque: #e4c175;
+  --cheque-ink: #211b11;
+  --badge-neutral-bg: #243542;
+  --badge-neutral-text: #d3dfe8;
+  --badge-positive-bg: rgba(16, 185, 129, 0.2);
+  --badge-positive-text: #9cf2ce;
+  --badge-warning-bg: rgba(245, 158, 11, 0.2);
+  --badge-warning-text: #f7d48a;
+  --badge-danger-bg: rgba(244, 63, 94, 0.2);
+  --badge-danger-text: #f9b2c0;
+}
+
+html {
+  background: var(--bg);
+  color: var(--ink);
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
 }
 
 body {
-  background: radial-gradient(circle at top right, #e4f3f5, transparent 30%), var(--bg);
+  background:
+    radial-gradient(circle at top right, var(--brand-soft), transparent 28%),
+    radial-gradient(circle at bottom left, rgba(212, 176, 106, 0.09), transparent 26%),
+    var(--bg);
   color: var(--ink);
   font-family: "Manrope", "Segoe UI", sans-serif;
+}
+
+a,
+button,
+input,
+select,
+textarea {
+  transition:
+    color 160ms ease,
+    background-color 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    opacity 160ms ease;
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+}
+
+@layer components {
+  .surface-card {
+    border: 1px solid var(--border);
+    background: var(--surface);
+    box-shadow:
+      0 18px 45px -34px rgba(var(--shadow-color), 0.6),
+      0 10px 20px -18px rgba(var(--shadow-color), 0.35);
+  }
+
+  .surface-panel {
+    border: 1px solid var(--border);
+    background: var(--surface-elevated);
+    box-shadow:
+      0 18px 45px -34px rgba(var(--shadow-color), 0.55),
+      0 10px 20px -18px rgba(var(--shadow-color), 0.32);
+  }
+
+  .surface-subtle {
+    border: 1px solid var(--border);
+    background: var(--surface-soft);
+  }
+
+  .theme-divider {
+    border-color: var(--border);
+  }
+
+  .theme-divider-strong {
+    border-color: var(--border-strong);
+  }
+
+  .text-muted {
+    color: var(--muted);
+  }
+
+  .text-soft {
+    color: var(--muted-soft);
+  }
+
+  .link-accent {
+    color: var(--brand);
+  }
+
+  .link-accent:hover {
+    color: var(--brand-strong);
+  }
+
+  .overlay-backdrop {
+    background: var(--overlay);
+  }
+
+  .status-neutral {
+    background: var(--badge-neutral-bg);
+    color: var(--badge-neutral-text);
+  }
+
+  .status-brand {
+    background: var(--brand-soft);
+    color: var(--brand-strong);
+  }
+
+  .status-positive {
+    background: var(--badge-positive-bg);
+    color: var(--badge-positive-text);
+  }
+
+  .status-warning {
+    background: var(--badge-warning-bg);
+    color: var(--badge-warning-text);
+  }
+
+  .status-danger {
+    background: var(--badge-danger-bg);
+    color: var(--badge-danger-text);
+  }
+
+  .interactive-muted {
+    color: var(--muted);
+  }
+
+  .interactive-muted:hover {
+    background: var(--surface-soft);
+    color: var(--ink);
+  }
 }
 
 .hero-watermark {

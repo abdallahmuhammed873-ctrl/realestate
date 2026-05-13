@@ -27,7 +27,7 @@ export function PanoramaViewer({ src, alt }: PanoramaViewerProps) {
       <div
         role="img"
         aria-label={alt}
-        className="relative h-72 overflow-hidden rounded-2xl border border-slate-200 bg-slate-950"
+        className="relative h-72 overflow-hidden rounded-2xl border theme-divider bg-slate-950"
         style={{
           backgroundImage: `url(${src})`,
           backgroundRepeat: "repeat-x",
@@ -67,7 +67,7 @@ export function PanoramaViewer({ src, alt }: PanoramaViewerProps) {
           aria-label="Panorama horizontal position"
           className="w-full accent-brand-700"
         />
-        <p className="text-xs text-slate-500">Use drag or the slider to inspect the full 360 image.</p>
+        <p className="text-soft text-xs">Use drag or the slider to inspect the full 360 image.</p>
       </div>
     </div>
   );

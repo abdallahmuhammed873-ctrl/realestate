@@ -42,24 +42,24 @@ export function ProfileMenu({ user }: { user: ProfileMenuUser }) {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-slate-300 bg-white text-sm font-bold text-brand-800"
+        className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border theme-divider bg-[var(--surface)] text-sm font-bold text-[var(--brand)]"
         aria-label={t("openProfileMenu")}
       >
         {user.avatarUrl ? <img src={user.avatarUrl} alt={`${user.name} avatar`} className="h-full w-full object-cover" /> : initial}
       </button>
 
       {open ? (
-        <div className="absolute right-0 top-full z-50 mt-2 w-72 rounded-xl border border-slate-200 bg-white p-3 shadow-lg">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{roleLabel}</p>
+        <div className="surface-panel absolute right-0 top-full z-50 mt-2 w-72 rounded-xl p-3">
+          <p className="text-soft text-xs font-semibold uppercase tracking-wide">{roleLabel}</p>
           <div className="mt-2 space-y-1 text-sm">
-            <p className="font-semibold text-slate-900">{user.name}</p>
-            <p className="text-slate-700">{user.email}</p>
-            <p className="text-slate-700">{user.phone ?? t("noPhoneAdded")}</p>
+            <p className="font-semibold text-[var(--ink)]">{user.name}</p>
+            <p className="text-muted">{user.email}</p>
+            <p className="text-muted">{user.phone ?? t("noPhoneAdded")}</p>
           </div>
           <Link
             href="/profile"
             onClick={() => setOpen(false)}
-            className="mt-3 inline-flex w-full items-center justify-center rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+            className="mt-3 inline-flex w-full items-center justify-center rounded-lg border theme-divider px-3 py-2 text-sm font-semibold text-[var(--ink)] hover:bg-[var(--surface-soft)]"
           >
             {t("showProfile")}
           </Link>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useLanguage } from "@/components/layout/language-provider";
+import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { cn } from "@/lib/utils";
 
 export function MobileNav() {
@@ -123,7 +124,7 @@ export function MobileNav() {
         : baseTabs;
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200 bg-white md:hidden">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 border-t theme-divider bg-[var(--surface-elevated)] backdrop-blur md:hidden">
       <ul className="grid" style={{ gridTemplateColumns: `repeat(${tabs.length + 1}, minmax(0, 1fr))` }}>
         {tabs.map((tab) => (
           <li key={tab.href}>
@@ -131,7 +132,7 @@ export function MobileNav() {
               href={tab.href}
               className={cn(
                 "block px-2 py-3 text-center text-xs",
-                pathname === tab.href ? "font-bold text-brand-700" : "text-slate-500"
+                pathname === tab.href ? "font-bold text-[var(--brand)]" : "text-[var(--muted)]"
               )}
             >
               {tab.href === "/notifications" && unread > 0
@@ -150,7 +151,7 @@ export function MobileNav() {
               disabled={loggingOut}
               className={cn(
                 "block w-full px-2 py-3 text-center text-xs",
-                pathname === "/auth" ? "font-bold text-brand-700" : "text-slate-500"
+                pathname === "/auth" ? "font-bold text-[var(--brand)]" : "text-[var(--muted)]"
               )}
             >
               {loggingOut ? t("loggingOut") : t("logout")}
@@ -160,7 +161,7 @@ export function MobileNav() {
               href="/auth"
               className={cn(
                 "block px-2 py-3 text-center text-xs",
-                pathname === "/auth" ? "font-bold text-brand-700" : "text-slate-500"
+                pathname === "/auth" ? "font-bold text-[var(--brand)]" : "text-[var(--muted)]"
               )}
             >
               {t("login")}
@@ -168,6 +169,9 @@ export function MobileNav() {
           )}
         </li>
       </ul>
+      <div className="flex justify-center border-t theme-divider px-4 py-2">
+        <ThemeToggle compact />
+      </div>
     </nav>
   );
 }

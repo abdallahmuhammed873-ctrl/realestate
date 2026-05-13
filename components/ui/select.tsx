@@ -4,7 +4,10 @@ import { cn } from "@/lib/utils";
 export function Select({ className, children, ...props }: React.SelectHTMLAttributes<HTMLSelectElement>) {
   return (
     <select
-      className={cn("h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm outline-none ring-brand-300 focus:ring", className)}
+      className={cn(
+        "h-10 w-full rounded-xl border theme-divider bg-[var(--surface)] px-3 text-sm text-[var(--ink)] outline-none focus:ring focus:ring-brand-300",
+        className
+      )}
       {...props}
     >
       {children}

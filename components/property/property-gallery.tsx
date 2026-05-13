@@ -49,7 +49,7 @@ export function PropertyGallery({ images, title, media = [] }: PropertyGalleryPr
               <button
                 type="button"
                 onClick={goPrev}
-                className="absolute left-3 top-1/2 z-30 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200 bg-white text-2xl font-bold text-slate-900 shadow-lg ring-1 ring-slate-300 hover:bg-slate-50"
+                className="absolute left-3 top-1/2 z-30 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border theme-divider bg-[var(--surface)] text-2xl font-bold text-[var(--ink)] shadow-lg ring-1 ring-[var(--border-strong)] hover:bg-[var(--surface-soft)]"
                 aria-label="Previous photo"
               >
                 <span aria-hidden="true">&#x2039;</span>
@@ -57,7 +57,7 @@ export function PropertyGallery({ images, title, media = [] }: PropertyGalleryPr
               <button
                 type="button"
                 onClick={goNext}
-                className="absolute right-3 top-1/2 z-30 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200 bg-white text-2xl font-bold text-slate-900 shadow-lg ring-1 ring-slate-300 hover:bg-slate-50"
+                className="absolute right-3 top-1/2 z-30 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border theme-divider bg-[var(--surface)] text-2xl font-bold text-[var(--ink)] shadow-lg ring-1 ring-[var(--border-strong)] hover:bg-[var(--surface-soft)]"
                 aria-label="Next photo"
               >
                 <span aria-hidden="true">&#x203A;</span>
@@ -73,7 +73,7 @@ export function PropertyGallery({ images, title, media = [] }: PropertyGalleryPr
                 type="button"
                 onClick={() => setActiveImageIndex(index)}
                 className={`relative h-16 overflow-hidden rounded-lg border ${
-                  index === activeImageIndex ? "border-brand-700 ring-1 ring-brand-700" : "border-slate-300"
+                  index === activeImageIndex ? "border-brand-700 ring-1 ring-brand-700" : "theme-divider"
                 }`}
                 aria-label={`Show image ${index + 1}`}
               >
@@ -85,13 +85,13 @@ export function PropertyGallery({ images, title, media = [] }: PropertyGalleryPr
       </div>
 
       {activePanorama ? (
-        <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+        <div className="surface-subtle space-y-3 rounded-2xl p-3">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-sm font-semibold text-slate-900">360 Tour</p>
-              <p className="text-xs text-slate-500">Interactive panorama view for this property.</p>
+              <p className="text-sm font-semibold text-[var(--ink)]">360 Tour</p>
+              <p className="text-soft text-xs">Interactive panorama view for this property.</p>
             </div>
-            <span className="rounded-full bg-brand-100 px-3 py-1 text-xs font-semibold text-brand-700">
+            <span className="status-brand rounded-full px-3 py-1 text-xs font-semibold">
               {activePanoramaIndex + 1} / {panoramaMedia.length}
             </span>
           </div>
@@ -104,11 +104,11 @@ export function PropertyGallery({ images, title, media = [] }: PropertyGalleryPr
                   type="button"
                   onClick={() => setActivePanoramaIndex(index)}
                   className={`overflow-hidden rounded-xl border text-left ${
-                    index === activePanoramaIndex ? "border-brand-700 ring-1 ring-brand-700" : "border-slate-300"
+                    index === activePanoramaIndex ? "border-brand-700 ring-1 ring-brand-700" : "theme-divider"
                   }`}
                 >
                   <img src={item.path} alt={item.altText || item.label || `${title} 360 panorama ${index + 1}`} className="h-20 w-full object-cover" />
-                  <div className="px-3 py-2 text-xs text-slate-700">{item.label || `360 View ${index + 1}`}</div>
+                  <div className="px-3 py-2 text-xs text-[var(--muted)]">{item.label || `360 View ${index + 1}`}</div>
                 </button>
               ))}
             </div>

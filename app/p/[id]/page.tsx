@@ -28,16 +28,16 @@ export default async function PropertyDetailsPage({ params }: { params: Promise<
         <Card>
           <div className="space-y-2">
             <div className="flex gap-2">
-              {property.verified && <Badge className="bg-emerald-100 text-emerald-700">Verified by platform</Badge>}
-              <Badge className="bg-brand-100 text-brand-700">{property.paymentType}</Badge>
+              {property.verified && <Badge className="status-positive">Verified by platform</Badge>}
+              <Badge className="status-brand">{property.paymentType}</Badge>
             </div>
             <h1 className="text-2xl font-bold">{property.title}</h1>
             <p className="text-xl font-bold">{formatPrice(price, property.currency)}</p>
-            <p className="text-sm text-slate-600">{property.address}</p>
-            <p className="text-sm text-slate-600">
+            <p className="text-muted text-sm">{property.address}</p>
+            <p className="text-muted text-sm">
               {property.bedrooms} beds | {property.bathrooms} baths | {property.areaSqm} sqm
             </p>
-            <p className="text-sm text-slate-600">
+            <p className="text-muted text-sm">
               Listed by: {property.listedByName}
               {property.listedByCompanyName ? ` (${property.listedByCompanyName})` : ""}
             </p>
@@ -53,10 +53,10 @@ export default async function PropertyDetailsPage({ params }: { params: Promise<
 
       <Card>
         <h2 className="mb-2 text-lg font-bold">Details</h2>
-        <p className="text-sm text-slate-700">{property.description}</p>
+        <p className="text-muted text-sm">{property.description}</p>
         <div className="mt-3 flex flex-wrap gap-2">
           {property.amenities.map((a) => (
-            <Badge key={a} className="bg-slate-100 text-slate-700">
+            <Badge key={a} className="status-neutral">
               {a}
             </Badge>
           ))}
@@ -66,7 +66,7 @@ export default async function PropertyDetailsPage({ params }: { params: Promise<
       <Card>
         <h2 className="mb-2 text-lg font-bold">Map & Distance</h2>
         <OSMMapView lat={property.lat} lng={property.lng} />
-        <p className="mt-2 text-xs text-slate-500">Coordinates: {property.lat}, {property.lng}</p>
+        <p className="text-soft mt-2 text-xs">Coordinates: {property.lat}, {property.lng}</p>
         <GoogleMapsButton lat={property.lat} lng={property.lng} />
       </Card>
 

@@ -20,9 +20,8 @@ function SocialIcon({
   children: React.ReactNode;
 }) {
   const isPlaceholder = href === "#";
-
   const className =
-    "inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm hover:text-brand-700";
+    "inline-flex h-10 w-10 items-center justify-center rounded-xl border theme-divider bg-[var(--surface)] text-[var(--muted)] shadow-sm hover:text-[var(--brand)]";
 
   if (isPlaceholder) {
     return (
@@ -45,14 +44,14 @@ export function Footer() {
   const googlePlayComingSoon = GOOGLE_PLAY_URL === "#";
 
   return (
-    <footer className="border-t border-slate-200 bg-white/70 backdrop-blur">
+    <footer className="border-t theme-divider bg-[var(--surface-elevated)] backdrop-blur">
       <div className="mx-auto grid max-w-7xl gap-8 px-4 py-10 md:grid-cols-12 md:gap-10 md:px-6 md:py-12">
         <div className="md:col-span-5">
           <Link href="/" className="inline-flex items-center gap-2 text-lg font-extrabold text-brand-800">
-            <span className="rounded-lg bg-cheque px-2 py-1 text-slate-900">CK</span>
+            <span className="rounded-lg bg-[var(--cheque)] px-2 py-1 text-[var(--cheque-ink)]">CK</span>
             Cheque &amp; Key
           </Link>
-          <p className="mt-2 text-sm text-slate-600">
+          <p className="text-muted mt-2 text-sm">
             Verified properties with trusted payment and installment workflows.
           </p>
 
@@ -127,8 +126,8 @@ export function Footer() {
 
         <div className="grid grid-cols-2 gap-8 text-sm md:col-span-4 md:grid-cols-2">
           <div>
-            <p className="font-semibold text-slate-800">Explore</p>
-            <ul className="mt-3 space-y-2 text-slate-600">
+            <p className="font-semibold text-[var(--ink)]">Explore</p>
+            <ul className="text-muted mt-3 space-y-2">
               <li>
                 <Link className="hover:text-brand-700" href="/about">
                   About us
@@ -148,8 +147,8 @@ export function Footer() {
           </div>
 
           <div>
-            <p className="font-semibold text-slate-800">Account</p>
-            <ul className="mt-3 space-y-2 text-slate-600">
+            <p className="font-semibold text-[var(--ink)]">Account</p>
+            <ul className="text-muted mt-3 space-y-2">
               <li>
                 <Link className="hover:text-brand-700" href="/auth">
                   Login
@@ -170,7 +169,7 @@ export function Footer() {
         </div>
 
         <div className="md:col-span-3 md:text-right">
-          <p className="text-sm font-semibold text-slate-800">Follow us</p>
+          <p className="text-sm font-semibold text-[var(--ink)]">Follow us</p>
           <div className="mt-3 flex gap-3 md:justify-end">
             <SocialIcon label="Instagram" href={SOCIAL_LINKS.instagram}>
               <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5 fill-current">
@@ -194,12 +193,12 @@ export function Footer() {
             </SocialIcon>
           </div>
 
-          <p className="mt-6 text-sm text-slate-600">© {year} Cheque &amp; Key.</p>
+          <p className="text-muted mt-6 text-sm">&copy; {year} Cheque &amp; Key.</p>
         </div>
       </div>
 
-      <div className="border-t border-slate-200">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 pb-24 text-xs text-slate-500 md:px-6 md:pb-4">
+      <div className="border-t theme-divider">
+        <div className="text-soft mx-auto flex max-w-7xl items-center justify-between px-4 py-4 pb-24 text-xs md:px-6 md:pb-4">
           <p>Thank you for visiting.</p>
         </div>
       </div>

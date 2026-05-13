@@ -95,7 +95,7 @@ export function CompanyUsersManager({ initialItems }: { initialItems: CompanyUse
     <div className="space-y-4">
       <Card>
         <h2 className="text-lg font-bold">Add Company User</h2>
-        <p className="mt-1 text-sm text-slate-600">Create users under your company account.</p>
+        <p className="text-muted mt-1 text-sm">Create users under your company account.</p>
         <div className="mt-3 grid gap-2 md:grid-cols-2">
           <Input placeholder="User name" value={name} onChange={(e) => setName(e.target.value)} />
           <Input placeholder="User email" value={email} onChange={(e) => setEmail(e.target.value)} />
@@ -127,7 +127,7 @@ export function CompanyUsersManager({ initialItems }: { initialItems: CompanyUse
 
       {items.length === 0 ? (
         <Card>
-          <p className="text-sm text-slate-600">No company users found.</p>
+          <p className="text-muted text-sm">No company users found.</p>
         </Card>
       ) : (
         items.map((user) => (
@@ -135,8 +135,8 @@ export function CompanyUsersManager({ initialItems }: { initialItems: CompanyUse
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="space-y-1">
                 <p className="text-lg font-bold">{user.name}</p>
-                <p className="text-sm text-slate-600">{user.email}</p>
-                <p className="text-sm text-slate-600">{user.phone ?? "No phone provided"}</p>
+                <p className="text-muted text-sm">{user.email}</p>
+                <p className="text-muted text-sm">{user.phone ?? "No phone provided"}</p>
                 <p className={`text-xs font-semibold ${user.blocked ? "text-red-600" : "text-emerald-600"}`}>
                   {user.blocked ? "Deactivated" : "Active"}
                 </p>

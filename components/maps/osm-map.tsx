@@ -105,7 +105,7 @@ export function OSMMapPicker({
     mapRef.current.setView([lat, lng], mapRef.current.getZoom(), { animate: false });
   }, [lat, lng]);
 
-  return <div ref={mapRootRef} className="h-64 w-full overflow-hidden rounded-xl border" />;
+  return <div ref={mapRootRef} className="h-64 w-full overflow-hidden rounded-xl border theme-divider" />;
 }
 
 export function OSMMapView({ lat, lng }: { lat: number; lng: number }) {
@@ -147,5 +147,5 @@ export function OSMMapView({ lat, lng }: { lat: number; lng: number }) {
     mapRef.current.setView([lat, lng], mapRef.current.getZoom(), { animate: false });
   }, [lat, lng]);
 
-  return <div ref={mapRootRef} className="h-56 w-full overflow-hidden rounded-xl border" />;
+  return <div ref={mapRootRef} className="h-56 w-full overflow-hidden rounded-xl border theme-divider" />;
 }

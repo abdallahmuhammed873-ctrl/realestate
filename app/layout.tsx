@@ -6,6 +6,7 @@ import { ChatbotDrawer } from "@/components/chatbot/chatbot-drawer";
 import { RuntimeErrorGuard } from "@/components/layout/runtime-error-guard";
 import { LanguageProvider } from "@/components/layout/language-provider";
 import { Footer } from "@/components/layout/footer";
+import { ThemeProvider, ThemeScript } from "@/components/layout/theme-provider";
 
 export const metadata: Metadata = {
   title: "Cheque & Key",
@@ -16,14 +17,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" dir="ltr" suppressHydrationWarning>
       <body suppressHydrationWarning>
-        <LanguageProvider>
-          <RuntimeErrorGuard />
-          <TopNav />
-          <main className="mx-auto min-h-screen max-w-7xl px-4 pb-24 pt-6 md:px-6">{children}</main>
-          <Footer />
-          <ChatbotDrawer />
-          <MobileNav />
-        </LanguageProvider>
+        <ThemeScript />
+        <ThemeProvider>
+          <LanguageProvider>
+            <RuntimeErrorGuard />
+            <TopNav />
+            <main className="mx-auto min-h-screen max-w-7xl px-4 pb-24 pt-6 md:px-6">{children}</main>
+            <Footer />
+            <ChatbotDrawer />
+            <MobileNav />
+          </LanguageProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
