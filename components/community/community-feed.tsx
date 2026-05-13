@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
 import { deleteUploadedPath, uploadFiles } from "@/lib/client/uploads";
 import { LoginRequiredModal } from "@/components/auth/login-required-modal";
+import { useLanguage } from "@/components/layout/language-provider";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -72,6 +73,9 @@ export function CommunityFeed({
   viewer: Viewer;
   focus?: { kind: "post" | "listing"; id: string; commentId?: string } | null;
 }) {
+  const { direction } = useLanguage();
+  const threadIndentClass = direction === "rtl" ? "border-r-2 border-slate-200 pr-3" : "border-l-2 border-slate-200 pl-3";
+
   function initials(name: string) {
     const parts = name.trim().split(/\s+/).filter(Boolean);
     const a = parts[0]?.[0] ?? "U";
@@ -622,7 +626,7 @@ export function CommunityFeed({
         ) : null}
 
         {isExpanded && comment.replies?.length ? (
-          <div className="mt-2 space-y-2 border-l-2 border-slate-200 pl-3">
+          <div className={`mt-2 space-y-2 ${threadIndentClass}`}>
             {comment.replies.map((child) => renderPostComment(postId, child))}
           </div>
         ) : null}
@@ -715,7 +719,7 @@ export function CommunityFeed({
         ) : null}
 
         {isExpanded && comment.replies?.length ? (
-          <div className="mt-2 space-y-2 border-l-2 border-slate-200 pl-3">
+          <div className={`mt-2 space-y-2 ${threadIndentClass}`}>
             {comment.replies.map((child) => renderListingComment(listingId, child))}
           </div>
         ) : null}
@@ -874,7 +878,7 @@ export function CommunityFeed({
                     <div className="min-w-0">
                       <p className="truncate text-base font-semibold text-slate-900">
                         {post.user.name}
-                        <span className="ml-1 text-brand-700"> - Follow</span>
+                        <span className={`${direction === "rtl" ? "mr-1" : "ml-1"} text-brand-700`}> - Follow</span>
                       </p>
                       {post.user.companyName ? <p className="truncate text-xs text-slate-600">{post.user.companyName}</p> : null}
                       <p className="text-xs text-slate-500">{new Date(post.createdAt).toLocaleString()}</p>

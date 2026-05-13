@@ -15,7 +15,7 @@ type ProfileMenuUser = {
 };
 
 export function ProfileMenu({ user }: { user: ProfileMenuUser }) {
-  const { t } = useLanguage();
+  const { direction, t } = useLanguage();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const initial = (user.name.trim().charAt(0) || "U").toUpperCase();
@@ -49,7 +49,7 @@ export function ProfileMenu({ user }: { user: ProfileMenuUser }) {
       </button>
 
       {open ? (
-        <div className="surface-panel absolute right-0 top-full z-50 mt-2 w-72 rounded-xl p-3">
+        <div className={`surface-panel absolute top-full z-50 mt-2 w-72 rounded-xl p-3 ${direction === "rtl" ? "left-0" : "right-0"}`}>
           <p className="text-soft text-xs font-semibold uppercase tracking-wide">{roleLabel}</p>
           <div className="mt-2 space-y-1 text-sm">
             <p className="font-semibold text-[var(--ink)]">{user.name}</p>

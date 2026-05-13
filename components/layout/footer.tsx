@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getRequestLanguage } from "@/lib/i18n-server";
-import { t } from "@/lib/i18n";
+import { getLanguageDirection, t } from "@/lib/i18n";
 
 const APP_STORE_URL = "#";
 const GOOGLE_PLAY_URL = "#";
@@ -44,6 +44,7 @@ function SocialIcon({
 
 export async function Footer() {
   const language = await getRequestLanguage();
+  const direction = getLanguageDirection(language);
   const year = new Date().getFullYear();
   const appStoreComingSoon = APP_STORE_URL === "#";
   const googlePlayComingSoon = GOOGLE_PLAY_URL === "#";
@@ -63,7 +64,7 @@ export async function Footer() {
           <div className="mt-5 flex flex-wrap gap-3">
             {appStoreComingSoon ? (
               <span
-                className="inline-flex cursor-not-allowed items-center gap-3 rounded-xl bg-slate-900 px-4 py-3 text-left text-white opacity-60 shadow-sm"
+                className={`inline-flex cursor-not-allowed items-center gap-3 rounded-xl bg-slate-900 px-4 py-3 text-white opacity-60 shadow-sm ${direction === "rtl" ? "text-right" : "text-left"}`}
                 aria-label={t(language, "appStoreAria")}
                 title={t(language, "linkComingSoon", { label: appStoreLabel })}
               >
@@ -80,7 +81,7 @@ export async function Footer() {
                 href={APP_STORE_URL}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-3 rounded-xl bg-slate-900 px-4 py-3 text-left text-white shadow-sm hover:bg-slate-800"
+                className={`inline-flex items-center gap-3 rounded-xl bg-slate-900 px-4 py-3 text-white shadow-sm hover:bg-slate-800 ${direction === "rtl" ? "text-right" : "text-left"}`}
                 aria-label={t(language, "appStoreAria")}
                 title={t(language, "appStoreAria")}
               >
@@ -96,7 +97,7 @@ export async function Footer() {
 
             {googlePlayComingSoon ? (
               <span
-                className="inline-flex cursor-not-allowed items-center gap-3 rounded-xl bg-slate-900 px-4 py-3 text-left text-white opacity-60 shadow-sm"
+                className={`inline-flex cursor-not-allowed items-center gap-3 rounded-xl bg-slate-900 px-4 py-3 text-white opacity-60 shadow-sm ${direction === "rtl" ? "text-right" : "text-left"}`}
                 aria-label={t(language, "googlePlayAria")}
                 title={t(language, "linkComingSoon", { label: googlePlayLabel })}
               >
@@ -113,7 +114,7 @@ export async function Footer() {
                 href={GOOGLE_PLAY_URL}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-3 rounded-xl bg-slate-900 px-4 py-3 text-left text-white shadow-sm hover:bg-slate-800"
+                className={`inline-flex items-center gap-3 rounded-xl bg-slate-900 px-4 py-3 text-white shadow-sm hover:bg-slate-800 ${direction === "rtl" ? "text-right" : "text-left"}`}
                 aria-label={t(language, "googlePlayAria")}
                 title={t(language, "googlePlayAria")}
               >
@@ -173,9 +174,9 @@ export async function Footer() {
           </div>
         </div>
 
-        <div className="md:col-span-3 md:text-right">
+        <div className={`md:col-span-3 ${direction === "rtl" ? "md:text-left" : "md:text-right"}`}>
           <p className="text-sm font-semibold text-[var(--ink)]">{t(language, "followUs")}</p>
-          <div className="mt-3 flex gap-3 md:justify-end">
+          <div className={`mt-3 flex gap-3 ${direction === "rtl" ? "md:justify-start" : "md:justify-end"}`}>
             <SocialIcon label="Instagram" href={SOCIAL_LINKS.instagram} title="Instagram">
               <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5 fill-current">
                 <path d="M7.5 2h9A5.5 5.5 0 0 1 22 7.5v9A5.5 5.5 0 0 1 16.5 22h-9A5.5 5.5 0 0 1 2 16.5v-9A5.5 5.5 0 0 1 7.5 2Zm0 2A3.5 3.5 0 0 0 4 7.5v9A3.5 3.5 0 0 0 7.5 20h9A3.5 3.5 0 0 0 20 16.5v-9A3.5 3.5 0 0 0 16.5 4h-9Zm10 1.75a1.25 1.25 0 1 1 0 2.5 1.25 1.25 0 0 1 0-2.5ZM12 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10Zm0 2a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z" />

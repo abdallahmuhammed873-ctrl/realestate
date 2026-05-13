@@ -286,7 +286,7 @@
   - admin pages
   - chatbot UI
   - validation messages
-- [ ] Make all layouts RTL-safe when Arabic is selected.
+- [x] Make all layouts RTL-safe when Arabic is selected.
 - [x] Use canonical codes for controlled values and translate only at presentation time:
   - cities
   - areas
@@ -299,7 +299,7 @@
   - `titleAr`
   - `descriptionEn`
   - `descriptionAr`
-- [ ] If bilingual manual entry is too heavy, allow one source language plus optional assisted translation later, but keep stored fields explicit.
+- [x] If bilingual manual entry is too heavy, allow one source language plus optional assisted translation later, but keep stored fields explicit.
 - [x] Make AI responses language-aware and keep the answer language aligned with the UI/app request.
 
 ## Phase 13 - Update The Seller/Admin Flows To Match The New Architecture
@@ -371,5 +371,5 @@
 - [x] Phase 9: local media upload
 - [x] Phase 10: 360 panorama support
 - [x] Phase 11: dark/light theme
-- [ ] Phase 12: AR/EN support
+- [x] Phase 12: AR/EN support
 - [ ] Phase 13: acceptance verification and cleanup

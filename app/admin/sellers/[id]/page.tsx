@@ -2,6 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { requireRole } from "@/lib/auth";
+import { getLanguageDirection } from "@/lib/i18n";
+import { getRequestLanguage } from "@/lib/i18n-server";
 import { getUserById, listSellerCommunityPostsForAdmin, listSellerListingsForAdmin } from "@/lib/repository";
 
 function StatusBadge({ status }: { status: "DRAFT" | "PENDING" | "APPROVED" | "REJECTED" }) {
@@ -12,6 +14,8 @@ function StatusBadge({ status }: { status: "DRAFT" | "PENDING" | "APPROVED" | "R
 }
 
 export default async function AdminSellerProfilePage({ params }: { params: Promise<{ id: string }> }) {
+  const language = await getRequestLanguage();
+  const direction = getLanguageDirection(language);
   const user = await requireRole(["ADMIN"]);
   if (!user) redirect("/admin/login");
   const { id } = await params;
@@ -69,7 +73,7 @@ export default async function AdminSellerProfilePage({ params }: { params: Promi
           <div className="mt-3 overflow-x-auto">
             <table className="w-full min-w-[860px] border-separate border-spacing-y-2 text-sm">
               <thead>
-                <tr className="text-left text-xs text-slate-500">
+                <tr className={`${direction === "rtl" ? "text-right" : "text-left"} text-xs text-slate-500`}>
                   <th className="px-3">Status</th>
                   <th className="px-3">Title</th>
                   <th className="px-3">Uploaded By</th>

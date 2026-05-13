@@ -79,6 +79,11 @@ body {
   font-family: "Manrope", "Segoe UI", sans-serif;
 }
 
+[dir="rtl"] input[type="file"]::file-selector-button {
+  margin-left: 0.75rem;
+  margin-right: 0;
+}
+
 a,
 button,
 input,

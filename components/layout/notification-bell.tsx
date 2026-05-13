@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { useLanguage } from "@/components/layout/language-provider";
 
 export function NotificationBell() {
-  const { t } = useLanguage();
+  const { direction, t } = useLanguage();
   const [unread, setUnread] = useState(0);
 
   async function refreshUnread() {
@@ -55,7 +55,7 @@ export function NotificationBell() {
         <path d="M10 17a2 2 0 0 0 4 0" />
       </svg>
       {unread > 0 && (
-        <span className="absolute -right-1 -top-1 min-w-5 rounded-full bg-red-600 px-1 text-center text-[10px] font-semibold leading-5 text-white">
+        <span className={`absolute -top-1 min-w-5 rounded-full bg-red-600 px-1 text-center text-[10px] font-semibold leading-5 text-white ${direction === "rtl" ? "-left-1" : "-right-1"}`}>
           {unread > 99 ? "99+" : unread}
         </span>
       )}

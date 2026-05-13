@@ -12,7 +12,7 @@ type PropertyGalleryProps = {
 };
 
 export function PropertyGallery({ images, title, media = [] }: PropertyGalleryProps) {
-  const { t } = useLanguage();
+  const { direction, t } = useLanguage();
   const photoMedia = media
     .filter((item) => item.kind === "IMAGE")
     .sort((a, b) => a.sortOrder - b.sortOrder);
@@ -51,7 +51,7 @@ export function PropertyGallery({ images, title, media = [] }: PropertyGalleryPr
               <button
                 type="button"
                 onClick={goPrev}
-                className="absolute left-3 top-1/2 z-30 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border theme-divider bg-[var(--surface)] text-2xl font-bold text-[var(--ink)] shadow-lg ring-1 ring-[var(--border-strong)] hover:bg-[var(--surface-soft)]"
+                className={`absolute top-1/2 z-30 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border theme-divider bg-[var(--surface)] text-2xl font-bold text-[var(--ink)] shadow-lg ring-1 ring-[var(--border-strong)] hover:bg-[var(--surface-soft)] ${direction === "rtl" ? "right-3" : "left-3"}`}
                 aria-label={t("previousPhoto")}
               >
                 <span aria-hidden="true">&#x2039;</span>
@@ -59,7 +59,7 @@ export function PropertyGallery({ images, title, media = [] }: PropertyGalleryPr
               <button
                 type="button"
                 onClick={goNext}
-                className="absolute right-3 top-1/2 z-30 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border theme-divider bg-[var(--surface)] text-2xl font-bold text-[var(--ink)] shadow-lg ring-1 ring-[var(--border-strong)] hover:bg-[var(--surface-soft)]"
+                className={`absolute top-1/2 z-30 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border theme-divider bg-[var(--surface)] text-2xl font-bold text-[var(--ink)] shadow-lg ring-1 ring-[var(--border-strong)] hover:bg-[var(--surface-soft)] ${direction === "rtl" ? "left-3" : "right-3"}`}
                 aria-label={t("nextPhoto")}
               >
                 <span aria-hidden="true">&#x203A;</span>
@@ -105,7 +105,7 @@ export function PropertyGallery({ images, title, media = [] }: PropertyGalleryPr
                   key={item.id}
                   type="button"
                   onClick={() => setActivePanoramaIndex(index)}
-                  className={`overflow-hidden rounded-xl border text-left ${
+                  className={`overflow-hidden rounded-xl border ${direction === "rtl" ? "text-right" : "text-left"} ${
                     index === activePanoramaIndex ? "border-brand-700 ring-1 ring-brand-700" : "theme-divider"
                   }`}
                 >

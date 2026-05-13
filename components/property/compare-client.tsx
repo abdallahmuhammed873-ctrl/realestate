@@ -34,7 +34,7 @@ const KEY = "compare_properties";
 type CompareRow = [label: string, fn: (i: CompareItem) => string];
 
 export function CompareClient() {
-  const { language, t } = useLanguage();
+  const { direction, language, t } = useLanguage();
   const [items, setItems] = useState<CompareItem[]>([]);
 
   async function load() {
@@ -78,7 +78,7 @@ export function CompareClient() {
       </Button>
       <div className="overflow-auto rounded-2xl border bg-white">
         <table className="min-w-full text-sm">
-          <thead className="bg-slate-50 text-left">
+          <thead className={`bg-slate-50 ${direction === "rtl" ? "text-right" : "text-left"}`}>
             <tr>
               <th className="p-2">{t("field")}</th>
               {items.map((i) => (
