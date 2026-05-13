@@ -82,6 +82,8 @@ export function ListingWizard({ listingId, initial }: { listingId?: string; init
       description: "",
       descriptionEn: "",
       descriptionAr: "",
+      projectName: "",
+      unitCode: "",
       transaction: "BUY",
       type: "APARTMENT",
       city: "Cairo",
@@ -176,6 +178,8 @@ export function ListingWizard({ listingId, initial }: { listingId?: string; init
     const rawTitleAr = String(form.titleAr ?? "").trim();
     const rawDescriptionEn = String(form.descriptionEn ?? "").trim();
     const rawDescriptionAr = String(form.descriptionAr ?? "").trim();
+    const projectName = String(form.projectName ?? "").trim();
+    const unitCode = String(form.unitCode ?? "").trim();
     const titleEn = rawTitleEn || (normalizedLanguage === "en" ? rawTitle : "");
     const titleAr = rawTitleAr || (normalizedLanguage === "ar" ? rawTitle : "");
     const descriptionEn = rawDescriptionEn || (normalizedLanguage === "en" ? rawDescription : "");
@@ -248,6 +252,8 @@ export function ListingWizard({ listingId, initial }: { listingId?: string; init
         description: rawDescription,
         descriptionEn: descriptionEn || null,
         descriptionAr: descriptionAr || null,
+        projectName: projectName || null,
+        unitCode: unitCode || null,
         amenities: String(form.amenities ?? "")
           .split(",")
           .map((x) => x.trim())
@@ -372,6 +378,19 @@ export function ListingWizard({ listingId, initial }: { listingId?: string; init
             onChange={(e) => setForm((f) => ({ ...f, descriptionAr: e.target.value }))}
           />
         </div>
+        <div className="grid gap-2 md:grid-cols-2">
+          <Input
+            placeholder={t("projectNameOptional")}
+            value={String(form.projectName ?? "")}
+            onChange={(e) => setForm((f) => ({ ...f, projectName: e.target.value }))}
+          />
+          <Input
+            placeholder={t("unitCodeOptional")}
+            value={String(form.unitCode ?? "")}
+            onChange={(e) => setForm((f) => ({ ...f, unitCode: e.target.value }))}
+          />
+        </div>
+        <p className="text-soft text-xs">{t("projectUnitHint")}</p>
         <div className="grid grid-cols-2 gap-2">
           <Select value={String(form.transaction)} onChange={(e) => setForm((f) => ({ ...f, transaction: e.target.value }))} required>
             <option value="BUY">{translateTransaction("BUY", language)}</option>

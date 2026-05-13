@@ -317,6 +317,12 @@ const seller = {
   description: { en: "Description", ar: "الوصف" },
   descriptionEnglishOptional: { en: "Description (English, optional)", ar: "الوصف (إنجليزي، اختياري)" },
   descriptionArabicOptional: { en: "Description (Arabic, optional)", ar: "الوصف (عربي، اختياري)" },
+  projectNameOptional: { en: "Project name (optional)", ar: "اسم المشروع (اختياري)" },
+  unitCodeOptional: { en: "Unit code (optional)", ar: "كود الوحدة (اختياري)" },
+  projectUnitHint: {
+    en: "Add project and unit details when they matter for admin review or inventory matching.",
+    ar: "أضف تفاصيل المشروع والوحدة عندما تكون مهمة للمراجعة أو لمطابقة المخزون."
+  },
   address: { en: "Address", ar: "العنوان" },
   latitude: { en: "Lat", ar: "خط العرض" },
   longitude: { en: "Lng", ar: "خط الطول" },
@@ -418,6 +424,10 @@ const admin = {
   feesUnpaid: { en: "Fees Unpaid", ar: "الرسوم غير مدفوعة" },
   sellerLabel: { en: "Seller: {name} ({email})", ar: "البائع: {name} ({email})" },
   companyLabel: { en: "Company: {name}", ar: "الشركة: {name}" },
+  sourceManual: { en: "Manual listing", ar: "إعلان يدوي" },
+  sourceImported: { en: "Imported inventory", ar: "مخزون مستورد" },
+  inventoryStatusLabel: { en: "Inventory status: {value}", ar: "حالة المخزون: {value}" },
+  updatedAtLabel: { en: "Updated: {value}", ar: "آخر تحديث: {value}" },
   reviewListing: { en: "Review Listing", ar: "مراجعة الإعلان" },
   noPendingListings: { en: "No pending listings.", ar: "لا توجد إعلانات معلقة." },
   approvedStatus: { en: "Approved", ar: "مقبول" },

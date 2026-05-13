@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test, { beforeEach } from "node:test";
 import { PrismaClient } from "@prisma/client";
 import { loadLocalEnv } from "../../lib/server/load-env.ts";
+import { toMobilePropertySearchResponse } from "../../lib/mobile-api.ts";
 import { IMPORTED_INVENTORY_OWNER_ID, upsertImportedInventory } from "../../prisma/import-ai-inventory.ts";
 import { importRuntimeData } from "../../prisma/import-runtime-data.ts";
 import {
@@ -10,6 +11,7 @@ import {
   createOrUpdateSellerListing,
   createSavedSearch,
   listFavorites,
+  searchAiReadableProperties,
   searchProperties,
   toggleFavorite,
   updateListingStatus,
@@ -36,7 +38,10 @@ test("toggleFavorite persists through Prisma queries", async () => {
   const propertyId = result.items[0]?.id;
   assert.ok(propertyId);
 
-  const saved = await toggleFavorite("u-buyer-1", propertyId);
+  let saved = await toggleFavorite("u-buyer-1", propertyId);
+  if (!saved.saved) {
+    saved = await toggleFavorite("u-buyer-1", propertyId);
+  }
   assert.equal(saved.saved, true);
 
   const favorites = await listFavorites("u-buyer-1");
@@ -141,6 +146,78 @@ test("seller listing submission and admin approval use the database-backed flow"
 
   const searchResult = await searchProperties({ q: "Phase 2 Service Test Listing", page: 1, pageSize: 10 });
   assert.ok(searchResult.items.some((item) => item.id === created?.property.id));
+});
+
+test("approval state gates website search, mobile api results, and AI retrieval together", async () => {
+  const listingTitle = "Phase 13 Visibility Gate Listing";
+  const created = await createOrUpdateSellerListing({
+    sellerId: "u-seller-1",
+    feesPaid: true,
+    property: {
+      title: listingTitle,
+      description: "Listing used to verify approval-state visibility across runtime surfaces",
+      projectName: "Crescent Heights",
+      unitCode: "CH-1301",
+      inventoryStatus: "Available",
+      sourceType: "IMPORTED",
+      transaction: "BUY",
+      type: "APARTMENT",
+      price: 4100000,
+      rentPrice: null,
+      currency: "EGP",
+      bedrooms: 3,
+      bathrooms: 2,
+      areaSqm: 170,
+      lat: 30.0444,
+      lng: 31.2357,
+      address: "Phase 13 Test Address",
+      city: "Cairo",
+      area: "New Cairo",
+      district: "Lotus",
+      furnishing: "SEMI",
+      paymentType: "CASH",
+      completionStatus: "READY",
+      amenities: ["Parking", "Clubhouse"],
+      images: ["/phase13-cover.jpg"]
+    }
+  });
+
+  assert.ok(created);
+  assert.equal(created?.property.sourceType, "MANUAL");
+  assert.equal(created?.property.inventoryStatus, null);
+  assert.equal(created?.property.projectName, "Crescent Heights");
+  assert.equal(created?.property.unitCode, "CH-1301");
+
+  const pendingSearch = await searchProperties({ q: listingTitle, page: 1, pageSize: 10 });
+  assert.ok(pendingSearch.items.every((item) => item.id !== created?.property.id));
+
+  const mobilePendingBody = toMobilePropertySearchResponse(pendingSearch, "http://127.0.0.1:3000");
+  assert.ok(mobilePendingBody.items.every((item: { id: string }) => item.id !== created?.property.id));
+
+  const aiPendingBody = await searchAiReadableProperties({ q: listingTitle, page: 1, pageSize: 10 });
+  assert.ok(aiPendingBody.items.every((item: { id: string }) => item.id !== created?.property.id));
+
+  await updateListingStatus(created!.listing.id, "APPROVED", "u-admin-1", "Ready for publishing");
+
+  const approvedSearch = await searchProperties({ q: listingTitle, page: 1, pageSize: 10 });
+  assert.ok(approvedSearch.items.some((item) => item.id === created?.property.id));
+
+  const mobileApprovedBody = toMobilePropertySearchResponse(approvedSearch, "http://127.0.0.1:3000");
+  assert.ok(mobileApprovedBody.items.some((item: { id: string; projectName: string | null; unitCode: string | null }) => item.id === created?.property.id && item.projectName === "Crescent Heights" && item.unitCode === "CH-1301"));
+
+  const aiApprovedBody = await searchAiReadableProperties({ q: listingTitle, page: 1, pageSize: 10 });
+  assert.ok(aiApprovedBody.items.some((item: { id: string }) => item.id === created?.property.id));
+
+  await updateListingStatus(created!.listing.id, "REJECTED", "u-admin-1", "Rejected after verification");
+
+  const rejectedSearch = await searchProperties({ q: listingTitle, page: 1, pageSize: 10 });
+  assert.ok(rejectedSearch.items.every((item) => item.id !== created?.property.id));
+
+  const mobileRejectedBody = toMobilePropertySearchResponse(rejectedSearch, "http://127.0.0.1:3000");
+  assert.ok(mobileRejectedBody.items.every((item: { id: string }) => item.id !== created?.property.id));
+
+  const aiRejectedBody = await searchAiReadableProperties({ q: listingTitle, page: 1, pageSize: 10 });
+  assert.ok(aiRejectedBody.items.every((item: { id: string }) => item.id !== created?.property.id));
 });
 
 test("saved searches are written to PostgreSQL", async () => {

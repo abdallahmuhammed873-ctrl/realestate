@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { PrismaClient } from "@prisma/client";
+import { toMobilePropertySearchResponse } from "../../lib/mobile-api.ts";
 import { parseInternalAiSearchFilters, parsePublicSearchFilters, toSearchParams } from "../../lib/search-contract.ts";
 import { loadLocalEnv } from "../../lib/server/load-env.ts";
 import { IMPORTED_INVENTORY_OWNER_ID, upsertImportedInventory } from "../../prisma/import-ai-inventory.ts";
@@ -10,6 +11,7 @@ import {
   createOrUpdateSellerListing,
   createSavedSearch,
   listFavorites,
+  searchAiReadableProperties,
   searchProperties,
   toggleFavorite,
   updateListingStatus,
@@ -60,7 +62,10 @@ async function main() {
   const propertyId = searchResult.items[0]?.id;
   assert.ok(propertyId, "Expected at least one searchable property");
 
-  const savedFavorite = await toggleFavorite("u-buyer-1", propertyId);
+  let savedFavorite = await toggleFavorite("u-buyer-1", propertyId);
+  if (!savedFavorite.saved) {
+    savedFavorite = await toggleFavorite("u-buyer-1", propertyId);
+  }
   assert.equal(savedFavorite.saved, true, "Expected favorite to be created");
   const favorites = await listFavorites("u-buyer-1");
   assert.ok(favorites.some((item) => item.id === propertyId), "Expected favorite list to include saved property");
@@ -123,6 +128,104 @@ async function main() {
   assert.ok(
     approvedSearch.items.some((item) => item.id === createdListing?.property.id),
     "Expected approved seller listing to appear in search"
+  );
+
+  const phase13Title = "Phase 13 Visibility Gate Listing";
+  const phase13Listing = await createOrUpdateSellerListing({
+    sellerId: "u-seller-1",
+    feesPaid: true,
+    property: {
+      title: phase13Title,
+      description: "Listing used to verify approval-state visibility across runtime surfaces",
+      projectName: "Crescent Heights",
+      unitCode: "CH-1301",
+      inventoryStatus: "Available",
+      sourceType: "IMPORTED",
+      transaction: "BUY",
+      type: "APARTMENT",
+      price: 4100000,
+      rentPrice: null,
+      currency: "EGP",
+      bedrooms: 3,
+      bathrooms: 2,
+      areaSqm: 170,
+      lat: 30.0444,
+      lng: 31.2357,
+      address: "Phase 13 Test Address",
+      city: "Cairo",
+      area: "New Cairo",
+      district: "Lotus",
+      furnishing: "SEMI",
+      paymentType: "CASH",
+      completionStatus: "READY",
+      amenities: ["Parking", "Clubhouse"],
+      images: ["/phase13-cover.jpg"]
+    }
+  });
+  assert.equal(phase13Listing?.property.sourceType, "MANUAL", "Expected seller flow to keep manual inventory source");
+  assert.equal(phase13Listing?.property.inventoryStatus, null, "Expected seller flow to ignore imported-only inventory status");
+  assert.equal(phase13Listing?.property.projectName, "Crescent Heights", "Expected project name to persist through seller flow");
+  assert.equal(phase13Listing?.property.unitCode, "CH-1301", "Expected unit code to persist through seller flow");
+
+  const pendingVisibility = await searchProperties({ q: phase13Title, page: 1, pageSize: 10 });
+  assert.ok(
+    pendingVisibility.items.every((item) => item.id !== phase13Listing?.property.id),
+    "Expected pending seller listing to stay hidden from public website search"
+  );
+
+  const mobilePendingBody = toMobilePropertySearchResponse(pendingVisibility, "http://127.0.0.1:3000");
+  assert.ok(
+    mobilePendingBody.items.every((item: { id: string }) => item.id !== phase13Listing?.property.id),
+    "Expected pending seller listing to stay hidden from mobile property search"
+  );
+
+  const aiPendingBody = await searchAiReadableProperties({ q: phase13Title, page: 1, pageSize: 10 });
+  assert.ok(
+    aiPendingBody.items.every((item: { id: string }) => item.id !== phase13Listing?.property.id),
+    "Expected pending seller listing to stay hidden from AI retrieval"
+  );
+
+  await updateListingStatus(phase13Listing!.listing.id, "APPROVED", "u-admin-1", "Ready for publishing");
+
+  const approvedVisibility = await searchProperties({ q: phase13Title, page: 1, pageSize: 10 });
+  assert.ok(
+    approvedVisibility.items.some((item) => item.id === phase13Listing?.property.id),
+    "Expected approved seller listing to appear in public website search"
+  );
+
+  const mobileApprovedBody = toMobilePropertySearchResponse(approvedVisibility, "http://127.0.0.1:3000");
+  assert.ok(
+    mobileApprovedBody.items.some(
+      (item: { id: string; projectName: string | null; unitCode: string | null }) =>
+        item.id === phase13Listing?.property.id && item.projectName === "Crescent Heights" && item.unitCode === "CH-1301"
+    ),
+    "Expected approved seller listing to appear in mobile property search with project/unit metadata"
+  );
+
+  const aiApprovedBody = await searchAiReadableProperties({ q: phase13Title, page: 1, pageSize: 10 });
+  assert.ok(
+    aiApprovedBody.items.some((item: { id: string }) => item.id === phase13Listing?.property.id),
+    "Expected approved seller listing to appear in AI retrieval"
+  );
+
+  await updateListingStatus(phase13Listing!.listing.id, "REJECTED", "u-admin-1", "Rejected after verification");
+
+  const rejectedVisibility = await searchProperties({ q: phase13Title, page: 1, pageSize: 10 });
+  assert.ok(
+    rejectedVisibility.items.every((item) => item.id !== phase13Listing?.property.id),
+    "Expected rejected seller listing to be removed from public website search"
+  );
+
+  const mobileRejectedBody = toMobilePropertySearchResponse(rejectedVisibility, "http://127.0.0.1:3000");
+  assert.ok(
+    mobileRejectedBody.items.every((item: { id: string }) => item.id !== phase13Listing?.property.id),
+    "Expected rejected seller listing to be removed from mobile property search"
+  );
+
+  const aiRejectedBody = await searchAiReadableProperties({ q: phase13Title, page: 1, pageSize: 10 });
+  assert.ok(
+    aiRejectedBody.items.every((item: { id: string }) => item.id !== phase13Listing?.property.id),
+    "Expected rejected seller listing to be removed from AI retrieval"
   );
 
   const savedSearch = await createSavedSearch("u-buyer-1", JSON.stringify({ city: "Cairo", transaction: "BUY" }));

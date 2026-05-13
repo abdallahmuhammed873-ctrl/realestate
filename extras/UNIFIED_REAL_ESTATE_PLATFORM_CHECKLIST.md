@@ -304,11 +304,11 @@
 
 ## Phase 13 - Update The Seller/Admin Flows To Match The New Architecture
 
-- [ ] Keep seller creation/edit approval flows working after the DB migration.
-- [ ] Add local media upload to seller listing creation/edit flow.
-- [ ] Add project/unit fields to seller/admin forms only where they are truly needed.
-- [ ] Keep imported inventory and manually created listings distinguishable for admin review.
-- [ ] Ensure approval state changes affect:
+- [x] Keep seller creation/edit approval flows working after the DB migration.
+- [x] Add local media upload to seller listing creation/edit flow.
+- [x] Add project/unit fields to seller/admin forms only where they are truly needed.
+- [x] Keep imported inventory and manually created listings distinguishable for admin review.
+- [x] Ensure approval state changes affect:
   - public website visibility
   - mobile API visibility
   - AI retrieval visibility

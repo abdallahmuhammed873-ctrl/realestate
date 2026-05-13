@@ -162,7 +162,7 @@ function toPropertyCreateData(input: SellerListingInput["property"]) {
     descriptionAr: input.descriptionAr ?? null,
     projectName: input.projectName ?? null,
     unitCode: input.unitCode ?? null,
-    inventoryStatus: input.inventoryStatus ?? null,
+    inventoryStatus: null,
     transaction: input.transaction,
     type: input.type,
     price: input.price,
@@ -191,9 +191,10 @@ function toPropertyCreateData(input: SellerListingInput["property"]) {
     installmentDownPayment: input.installmentDownPayment ?? null,
     installmentYears: input.installmentYears ?? null,
     installmentMonthly: input.installmentMonthly ?? null,
-    sourceType: input.sourceType ?? "MANUAL",
-    sourceFile: input.sourceFile ?? null,
-    sourceSheet: input.sourceSheet ?? null
+    // Seller-created and seller-edited listings always stay in the manual inventory lane.
+    sourceType: "MANUAL" as const,
+    sourceFile: null,
+    sourceSheet: null
   };
 }
 

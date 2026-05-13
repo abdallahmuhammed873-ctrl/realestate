@@ -19,6 +19,9 @@ type RejectedItem = {
     id: string;
     title: string;
     description: string;
+    projectName?: string | null;
+    unitCode?: string | null;
+    sourceType?: "MANUAL" | "IMPORTED";
     transaction: "BUY" | "RENT" | "VACATION";
     paymentType: "CASH" | "INSTALLMENTS";
     price: number | null;
@@ -66,6 +69,9 @@ export async function RejectedListings({ items }: { items: RejectedItem[] }) {
                   <span className="status-danger rounded-full px-2 py-1 text-xs font-semibold">{t(language, "rejectedStatus")}</span>
                   <span className="status-brand rounded-full px-2 py-1 text-xs font-semibold">{translateTransaction(property.transaction, language)}</span>
                   <span className="status-neutral rounded-full px-2 py-1 text-xs font-semibold">{translatePaymentType(property.paymentType, language)}</span>
+                  <span className="status-neutral rounded-full px-2 py-1 text-xs font-semibold">
+                    {property.sourceType === "IMPORTED" ? t(language, "sourceImported") : t(language, "sourceManual")}
+                  </span>
                   <span className={`rounded-full px-2 py-1 text-xs font-semibold ${listing.feesPaid ? "status-positive" : "status-danger"}`}>
                     {listing.feesPaid ? t(language, "feesPaid") : t(language, "feesUnpaid")}
                   </span>
@@ -73,6 +79,11 @@ export async function RejectedListings({ items }: { items: RejectedItem[] }) {
                 <p className="text-base font-semibold">{property.title}</p>
                 <p className="text-muted line-clamp-2 text-sm">{property.description}</p>
                 <p className="text-sm font-semibold text-[var(--brand)]">{formatPrice(price, property.currency, language)}</p>
+                {property.projectName || property.unitCode ? (
+                  <p className="text-muted text-xs">
+                    {[property.projectName, property.unitCode].filter(Boolean).join(" | ")}
+                  </p>
+                ) : null}
                 <p className="text-muted text-xs">
                   {property.city} | {property.area} | {property.district}
                 </p>

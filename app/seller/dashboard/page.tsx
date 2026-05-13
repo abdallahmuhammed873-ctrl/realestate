@@ -85,6 +85,11 @@ export default async function SellerDashboardPage() {
                     <p className="text-base font-semibold">{property.title}</p>
                     <p className="line-clamp-2 text-sm text-slate-600">{property.description}</p>
                     <p className="text-sm font-semibold text-brand-700">{formatPrice(price, property.currency, language)}</p>
+                    {property.projectName || property.unitCode ? (
+                      <p className="text-xs text-slate-600">
+                        {[property.projectName, property.unitCode].filter(Boolean).join(" | ")}
+                      </p>
+                    ) : null}
                     <p className="text-xs text-slate-600">
                       {property.city} | {property.area} | {property.district}
                     </p>
