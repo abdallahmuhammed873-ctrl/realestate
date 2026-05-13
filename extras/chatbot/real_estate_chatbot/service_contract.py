@@ -5,21 +5,37 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 LanguageCode = Literal["EN", "AR"]
+ChatRole = Literal["user", "assistant"]
 TransactionType = Literal["BUY", "RENT", "VACATION"]
 PropertyType = Literal["APARTMENT", "VILLA", "DUPLEX", "PENTHOUSE", "CHALET", "LAND", "COMMERCIAL"]
 PaymentType = Literal["CASH", "INSTALLMENTS"]
 CompletionStatus = Literal["OFF_PLAN", "READY"]
 SortType = Literal["FEATURED", "NEWEST", "PRICE_ASC", "PRICE_DESC", "AREA_DESC", "DISTANCE_ASC"]
 FurnishingType = Literal["FULLY", "SEMI", "UNFURNISHED"]
+AssistantIntent = Literal["GREETING", "CLARIFY", "SEARCH_RESULTS", "NO_RESULTS", "COMPARE", "GUIDANCE"]
 
 
 class ServiceBaseModel(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+class ChatHistoryItem(ServiceBaseModel):
+    role: ChatRole
+    content: str = Field(min_length=1)
+
+    @field_validator("content")
+    @classmethod
+    def strip_content(cls, value: str) -> str:
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("content is required")
+        return cleaned
+
+
 class ChatRequest(ServiceBaseModel):
     message: str = Field(min_length=1)
     language: LanguageCode = "EN"
+    history: list[ChatHistoryItem] = Field(default_factory=list)
 
     @field_validator("message")
     @classmethod
@@ -98,8 +114,13 @@ class AiPropertyFilters(ServiceBaseModel):
 class ChatResponse(ServiceBaseModel):
     reply: str
     language: LanguageCode
+    intent: AssistantIntent = "GUIDANCE"
+    shouldSearch: bool = False
+    clarifyingQuestion: str | None = None
+    suggestions: list[str] = Field(default_factory=list)
     suggestedFilters: list[str] = Field(default_factory=list)
     extractedFilters: dict[str, Any] = Field(default_factory=dict)
+    relaxedFilters: list[str] = Field(default_factory=list)
     total: int = 0
     items: list[dict[str, Any]] = Field(default_factory=list)
 

@@ -6,46 +6,96 @@ from typing import Iterable
 from service_contract import AiPropertyFilters, ExtractFiltersResponse
 
 PROPERTY_TYPE_ALIASES = {
-    "APARTMENT": ["apartment", "flat"],
-    "VILLA": ["villa", "standalone villa", "stand alone villa"],
-    "DUPLEX": ["duplex"],
-    "PENTHOUSE": ["penthouse"],
-    "CHALET": ["chalet"],
-    "LAND": ["land", "plot"],
-    "COMMERCIAL": ["commercial", "office", "retail", "clinic"],
+    "APARTMENT": ["apartment", "apartments", "flat", "flats", "شقة", "شقق"],
+    "VILLA": ["villa", "villas", "standalone villa", "stand alone villa", "فيلا", "فلل"],
+    "DUPLEX": ["duplex", "دوبلكس"],
+    "PENTHOUSE": ["penthouse", "بنتهاوس"],
+    "CHALET": ["chalet", "chalets", "شاليه", "شاليهات"],
+    "LAND": ["land", "plot", "أرض", "قطعة أرض"],
+    "COMMERCIAL": ["commercial", "office", "retail", "clinic", "محل", "تجاري", "مكتب", "عيادة"],
 }
 
 PROJECT_ALIASES = {
     "aliva": "Aliva",
     "lvls": "LVLS",
     "new cairo": "New Cairo",
+    "fifth settlement": "Fifth Settlement",
+    "north 90": "North 90 Street",
+    "north 90 street": "North 90 Street",
     "sheikh zayed": "Sheikh Zayed",
     "zayed": "Sheikh Zayed",
     "6 october": "6 October",
     "october": "6 October",
+    "maadi": "Maadi",
+    "heliopolis": "Heliopolis",
 }
 
-AREA_ALIASES = {
-    "new cairo": ("New Cairo", None, None),
+LOCATION_ALIASES = {
+    "cairo": ("Cairo", None, None),
+    "new cairo": ("Cairo", "New Cairo", None),
+    "fifth settlement": ("Cairo", "New Cairo", "Fifth Settlement"),
+    "north 90": ("Cairo", "New Cairo", "North 90 Street"),
+    "north 90 street": ("Cairo", "New Cairo", "North 90 Street"),
+    "maadi": ("Cairo", "Maadi", None),
+    "degla": ("Cairo", "Maadi", "Degla"),
+    "heliopolis": ("Cairo", "Heliopolis", None),
+    "korba": ("Cairo", "Heliopolis", "Korba"),
+    "giza": ("Giza", None, None),
     "sheikh zayed": ("Giza", "Sheikh Zayed", None),
     "zayed": ("Giza", "Sheikh Zayed", None),
     "6 october": ("Giza", "6 October", None),
     "october": ("Giza", "6 October", None),
+    "beverly hills": ("Giza", "Sheikh Zayed", "Beverly Hills"),
+    "sahel": ("North Coast", None, None),
+    "north coast": ("North Coast", None, None),
+    "الساحل": ("North Coast", None, None),
+    "الساحل الشمالي": ("North Coast", None, None),
+    "القاهرة": ("Cairo", None, None),
+    "القاهرة الجديدة": ("Cairo", "New Cairo", None),
+    "التجمع": ("Cairo", "New Cairo", None),
+    "التجمع الخامس": ("Cairo", "New Cairo", "Fifth Settlement"),
+    "المعادي": ("Cairo", "Maadi", None),
+    "مصر الجديدة": ("Cairo", "Heliopolis", None),
+    "الجيزة": ("Giza", None, None),
+    "الشيخ زايد": ("Giza", "Sheikh Zayed", None),
+    "اكتوبر": ("Giza", "6 October", None),
+    "أكتوبر": ("Giza", "6 October", None),
 }
+
+AMENITY_ALIASES = {
+    "parking": "Parking",
+    "garage": "Parking",
+    "pool": "Pool",
+    "swimming pool": "Pool",
+    "gym": "Gym",
+    "elevator": "Elevator",
+    "security": "Security",
+    "garden": "Garden",
+    "storage": "Storage",
+    "balcony": "Balcony",
+    "ac": "A/C",
+    "a/c": "A/C",
+}
+
+GREETING_TOKENS = {"hi", "hello", "hey", "hola", "مرحبا", "اهلا", "أهلا", "السلام", "هاي"}
 
 
 def _parse_money(raw: str) -> float | None:
-    cleaned = raw.lower().replace(",", "").strip()
-    match = re.search(r"(\d+(?:\.\d+)?)\s*(m|million|k|thousand)?", cleaned)
+    cleaned = raw.lower().replace(",", "").replace("egp", "").replace("جنيه", "").strip()
+    match = re.search(r"(\d+(?:\.\d+)?)\s*(m|million|mn|k|thousand)?", cleaned)
     if not match:
         return None
     value = float(match.group(1))
     unit = match.group(2)
-    if unit in {"m", "million"}:
+    if unit in {"m", "million", "mn"}:
         return value * 1_000_000
     if unit in {"k", "thousand"}:
         return value * 1_000
     return value
+
+
+def _contains_any(text: str, tokens: Iterable[str]) -> bool:
+    return any(token in text for token in tokens)
 
 
 def _match_alias(value: str, aliases: dict[str, str]) -> str | None:
@@ -63,14 +113,20 @@ def _collect_types(question: str) -> list[str] | None:
     return matches or None
 
 
+def _collect_amenities(question: str) -> list[str] | None:
+    amenities = [canonical for alias, canonical in AMENITY_ALIASES.items() if alias in question]
+    unique = list(dict.fromkeys(amenities))
+    return unique or None
+
+
 def _detect_sort(question: str) -> str | None:
-    if "cheapest" in question or "lowest price" in question:
+    if _contains_any(question, ["cheapest", "lowest price", "اقل سعر", "أقل سعر", "ارخص", "أرخص"]):
         return "PRICE_ASC"
-    if "most expensive" in question or "highest price" in question:
+    if _contains_any(question, ["most expensive", "highest price", "اغلى", "أغلى"]):
         return "PRICE_DESC"
-    if "largest" in question or "biggest" in question:
+    if _contains_any(question, ["largest", "biggest", "اكبر", "أكبر"]):
         return "AREA_DESC"
-    if "newest" in question or "latest" in question:
+    if _contains_any(question, ["newest", "latest", "الأحدث", "الاحدث"]):
         return "NEWEST"
     return None
 
@@ -86,22 +142,8 @@ def _detect_range(question: str, patterns: Iterable[tuple[str, str]]) -> dict[st
     return values
 
 
-def extract_filters(message: str) -> ExtractFiltersResponse:
-    normalized = " ".join(message.strip().split())
-    question = normalized.lower()
-    payload: dict[str, object] = {"page": 1, "pageSize": 10}
-    warnings: list[str] = []
-
-    if "rent" in question or "rental" in question:
-        payload["transaction"] = "RENT"
-    elif "buy" in question or "sale" in question or "purchase" in question:
-        payload["transaction"] = "BUY"
-
-    matched_types = _collect_types(question)
-    if matched_types:
-        payload["type"] = matched_types
-
-    for alias, location in AREA_ALIASES.items():
+def _apply_location_aliases(question: str, payload: dict[str, object]) -> None:
+    for alias, location in sorted(LOCATION_ALIASES.items(), key=lambda item: len(item[0]), reverse=True):
         if alias in question:
             city, area, district = location
             if city:
@@ -112,62 +154,121 @@ def extract_filters(message: str) -> ExtractFiltersResponse:
                 payload["district"] = district
             break
 
-    project_name = _match_alias(question, PROJECT_ALIASES)
-    if project_name:
-        payload["projectName"] = project_name
 
-    code_match = re.search(r"\bunit\s*([a-z0-9\-_/]+)\b", question, re.IGNORECASE)
-    if code_match:
-        payload["unitCode"] = code_match.group(1).upper()
+def _detect_transaction(question: str) -> str | None:
+    if _contains_any(question, ["rent", "rental", "lease", "إيجار", "ايجار", "للإيجار", "للايجار"]):
+        return "RENT"
+    if _contains_any(question, ["vacation", "holiday", "summer", "مصيف", "ساحل", "اجازة", "إجازة"]):
+        return "VACATION"
+    if _contains_any(question, ["buy", "sale", "purchase", "own", "شراء", "للبيع"]):
+        return "BUY"
+    return None
 
-    if "garden" in question:
-        payload["hasGarden"] = True
-    if "roof" in question:
-        payload["hasRoof"] = True
 
-    if "installment" in question:
-        payload["paymentType"] = "INSTALLMENTS"
-    elif "cash" in question:
-        payload["paymentType"] = "CASH"
-
-    if "ready" in question or "ready to move" in question:
-        payload["completionStatus"] = "READY"
-    elif "off plan" in question:
-        payload["completionStatus"] = "OFF_PLAN"
-
-    price_ranges = _detect_range(
-        question,
-        [
-            ("maxPrice", r"(?:under|max|up to|budget)\s+([0-9][0-9,.\s]*(?:m|million|k|thousand)?)"),
-            ("minPrice", r"(?:from|starting at|min)\s+([0-9][0-9,.\s]*(?:m|million|k|thousand)?)"),
-        ],
-    )
-    payload.update(price_ranges)
-
-    area_max = re.search(r"(?:under|max|up to)\s+(\d+(?:\.\d+)?)\s*(?:sqm|m2|sq m)", question)
+def _apply_area_ranges(question: str, payload: dict[str, object]) -> None:
+    area_max = re.search(r"(?:under|max|up to|less than|اقل من|أقل من)\s+(\d+(?:\.\d+)?)\s*(?:sqm|m2|sq m|متر)", question)
     if area_max:
         payload["maxArea"] = float(area_max.group(1))
 
-    beds_match = re.search(r"(\d+)\s*bed", question)
+    area_min = re.search(r"(?:from|min|starting at|more than|على الأقل|اقل مساحة|أقل مساحة)\s+(\d+(?:\.\d+)?)\s*(?:sqm|m2|sq m|متر)", question)
+    if area_min:
+        payload["minArea"] = float(area_min.group(1))
+
+
+def _apply_room_counts(question: str, payload: dict[str, object]) -> None:
+    beds_match = re.search(r"(\d+)\s*(?:bed|beds|bedroom|bedrooms|غرفة|غرف)", question)
     if beds_match:
         beds = int(beds_match.group(1))
         payload["minBeds"] = beds
         payload["maxBeds"] = beds
 
-    baths_match = re.search(r"(\d+)\s*bath", question)
+    baths_match = re.search(r"(\d+)\s*(?:bath|baths|bathroom|bathrooms|حمام|حمامين)", question)
     if baths_match:
         baths = int(baths_match.group(1))
         payload["minBaths"] = baths
         payload["maxBaths"] = baths
 
-    down_payment = re.search(r"down payment(?: max)?\s+([0-9][0-9,.\s]*(?:m|million|k|thousand)?)", question)
+
+def _strip_greeting_only(question: str) -> bool:
+    compact = re.sub(r"[^\w\u0600-\u06FF]+", " ", question).strip()
+    return compact in GREETING_TOKENS
+
+
+def extract_filters(message: str) -> ExtractFiltersResponse:
+    normalized = " ".join(message.strip().split())
+    question = normalized.lower()
+    payload: dict[str, object] = {"page": 1, "pageSize": 10}
+    warnings: list[str] = []
+
+    if _strip_greeting_only(question):
+        return ExtractFiltersResponse(normalized_query=normalized, filters=payload, warnings=["Greeting only."])
+
+    transaction = _detect_transaction(question)
+    if transaction:
+        payload["transaction"] = transaction
+
+    matched_types = _collect_types(question)
+    if matched_types:
+        payload["type"] = matched_types
+
+    _apply_location_aliases(question, payload)
+
+    project_name = _match_alias(question, PROJECT_ALIASES)
+    if project_name and "projectName" not in payload:
+        payload["projectName"] = project_name
+
+    code_match = re.search(r"\b(?:unit|code)\s*([a-z0-9\-_/]+)\b", question, re.IGNORECASE)
+    if code_match:
+        payload["unitCode"] = code_match.group(1).upper()
+
+    if _contains_any(question, ["garden", "حديقة"]):
+        payload["hasGarden"] = True
+    if _contains_any(question, ["roof", "روف"]):
+        payload["hasRoof"] = True
+
+    if _contains_any(question, ["installment", "installments", "تقسيط", "أقساط", "اقساط"]):
+        payload["paymentType"] = "INSTALLMENTS"
+    elif _contains_any(question, ["cash", "كاش", "نقد", "full payment"]):
+        payload["paymentType"] = "CASH"
+
+    if _contains_any(question, ["ready", "ready to move", "جاهز", "استلام فوري"]):
+        payload["completionStatus"] = "READY"
+    elif _contains_any(question, ["off plan", "under construction", "اوف بلان", "تحت الانشاء", "تحت الإنشاء"]):
+        payload["completionStatus"] = "OFF_PLAN"
+
+    if _contains_any(question, ["fully furnished", "furnished", "مفروش"]):
+        payload["furnishing"] = "FULLY"
+    elif _contains_any(question, ["semi furnished", "semi finished", "semi", "نصف تشطيب", "سيمي"]):
+        payload["furnishing"] = "SEMI"
+    elif _contains_any(question, ["unfurnished", "without furniture", "بدون فرش"]):
+        payload["furnishing"] = "UNFURNISHED"
+
+    amenities = _collect_amenities(question)
+    if amenities:
+        payload["amenities"] = amenities
+
+    price_ranges = _detect_range(
+        question,
+        [
+            ("maxPrice", r"(?:under|max|up to|budget|less than|اقل من|أقل من|بحد أقصى|بحد اقصى)\s+([0-9][0-9,.\s]*(?:m|million|mn|k|thousand)?)"),
+            ("minPrice", r"(?:from|starting at|min|over|more than|من|ابتداء من)\s+([0-9][0-9,.\s]*(?:m|million|mn|k|thousand)?)"),
+        ],
+    )
+    payload.update(price_ranges)
+
+    _apply_area_ranges(question, payload)
+    _apply_room_counts(question, payload)
+
+    down_payment = re.search(
+        r"(?:down payment|dp|مقدم)(?: max)?\s+([0-9][0-9,.\s]*(?:m|million|mn|k|thousand)?)", question
+    )
     if down_payment:
         parsed = _parse_money(down_payment.group(1))
         if parsed is not None:
             payload["downPaymentMax"] = parsed
 
-    installment_years = re.search(r"(\d+)\s*(?:year|years)", question)
-    if installment_years and "installment" in question:
+    installment_years = re.search(r"(\d+)\s*(?:year|years|سنة|سنين)", question)
+    if installment_years and payload.get("paymentType") == "INSTALLMENTS":
         payload["installmentYearsMax"] = float(installment_years.group(1))
 
     payload["sort"] = _detect_sort(question) or "FEATURED"
@@ -175,11 +276,13 @@ def extract_filters(message: str) -> ExtractFiltersResponse:
     structured_keys = set(payload.keys()) - {"page", "pageSize", "sort"}
     if not structured_keys:
         payload["q"] = normalized
-    elif "unitCode" in structured_keys and "q" in payload:
+    elif "unitCode" in structured_keys:
         payload.pop("q", None)
+    elif len(normalized.split()) >= 4 and not {"city", "area", "district", "projectName"} & structured_keys:
+        payload["q"] = normalized
 
-    if len(payload) <= 3:
-        warnings.append("No strong structured filters were detected, so broad search text will be used.")
+    if len(structured_keys) <= 1:
+        warnings.append("Limited structured filters were detected, so the assistant may need clarification.")
 
     validated = AiPropertyFilters(**payload)
     return ExtractFiltersResponse(

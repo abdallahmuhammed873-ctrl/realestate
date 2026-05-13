@@ -80,6 +80,7 @@ const profile = {
 
 const chatbot = {
   sending: { en: "Sending...", ar: "جارٍ الإرسال..." },
+  you: { en: "You", ar: "أنت" },
   assistantError: {
     en: "Sorry, I could not complete that request right now.",
     ar: "عذرًا، تعذر إكمال هذا الطلب الآن."
@@ -88,11 +89,34 @@ const chatbot = {
   closeAssistant: { en: "Close AI assistant", ar: "إغلاق المساعد الذكي" },
   aiAssistant: { en: "AI Assistant", ar: "المساعد الذكي" },
   assistant: { en: "Assistant", ar: "المساعد" },
-  typeYourQuestion: { en: "Type your question", ar: "اكتب سؤالك" },
+  assistantSubtitle: {
+    en: "Smarter property guidance with faster next steps.",
+    ar: "إرشاد عقاري أذكى مع خطوات أسرع."
+  },
+  assistantReady: { en: "Ready", ar: "جاهز" },
+  assistantSearching: { en: "Searching", ar: "يبحث" },
+  assistantThinking: {
+    en: "Checking listings and matching your request...",
+    ar: "يجري فحص العقارات ومطابقة طلبك..."
+  },
+  assistantInputHint: {
+    en: "Try budget, city, deal type, or property type in one message.",
+    ar: "اذكر الميزانية أو المدينة أو نوع العملية أو نوع العقار في رسالة واحدة."
+  },
+  assistantNoResultsHint: {
+    en: "Tip: add a budget, neighborhood, or property type to get a better match.",
+    ar: "نصيحة: أضف الميزانية أو الحي أو نوع العقار للحصول على نتائج أدق."
+  },
+  assistantTryThese: { en: "Try one of these", ar: "جرّب أحد هذه الاقتراحات" },
+  clearChat: { en: "Clear chat", ar: "مسح المحادثة" },
+  typeYourQuestion: {
+    en: "Ask for area, budget, and deal type",
+    ar: "اسأل عن المنطقة والميزانية ونوع العملية"
+  },
   send: { en: "Send", ar: "إرسال" },
   assistantGreeting: {
-    en: "Hi, I can help you find properties. Budget? Buy, rent, or vacation?",
-    ar: "مرحباً، يمكنني مساعدتك في العثور على عقار. ما الميزانية؟ شراء أم إيجار أم مصيف؟"
+    en: "Tell me the city, budget, and whether you want to buy, rent, or vacation. I will narrow the best matches for you.",
+    ar: "اذكر المدينة والميزانية وهل تريد شراء أم إيجار أم مصيف، وسأقوم بتضييق أفضل النتائج لك."
   }
 } satisfies TranslationSection;
 

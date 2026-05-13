@@ -16,10 +16,18 @@ export const aiExtractFiltersRequestSchema = z
   })
   .strict();
 
+export const aiChatHistoryItemSchema = z
+  .object({
+    role: z.enum(["user", "assistant"]),
+    content: z.string().trim().min(1)
+  })
+  .strict();
+
 export const aiChatRequestSchema = z
   .object({
     message: z.string().trim().min(1),
-    language: aiLanguageSchema.optional()
+    language: aiLanguageSchema.optional(),
+    history: z.array(aiChatHistoryItemSchema).max(12).optional()
   })
   .strict();
 
