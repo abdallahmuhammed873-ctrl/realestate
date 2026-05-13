@@ -23,7 +23,7 @@ export default async function PropertyDetailsPage({ params }: { params: Promise<
     <div className="space-y-6">
       <div className="grid gap-4 md:grid-cols-[2fr,1fr]">
         <Card className="p-0">
-          <PropertyGallery images={property.images} title={property.title} />
+          <PropertyGallery images={property.images} media={property.media} title={property.title} />
         </Card>
         <Card>
           <div className="space-y-2">

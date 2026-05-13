@@ -99,12 +99,42 @@ test("seller listing submission and admin approval use the database-backed flow"
       paymentType: "CASH",
       completionStatus: "READY",
       amenities: ["Parking"],
-      images: ["/test.jpg"]
+      images: ["/test.jpg"],
+      media: [
+        {
+          id: "draft-photo",
+          propertyId: "draft-property",
+          kind: "IMAGE",
+          path: "/test.jpg",
+          label: "Cover Photo",
+          altText: "Front elevation",
+          sortOrder: 0,
+          mimeType: "image/jpeg",
+          createdAt: new Date(0).toISOString(),
+          updatedAt: new Date(0).toISOString()
+        },
+        {
+          id: "draft-panorama",
+          propertyId: "draft-property",
+          kind: "PANORAMA_360",
+          path: "/tour-360.jpg",
+          label: "Living Room Tour",
+          altText: "360 living room panorama",
+          sortOrder: 1,
+          mimeType: "image/jpeg",
+          createdAt: new Date(0).toISOString(),
+          updatedAt: new Date(0).toISOString()
+        }
+      ]
     }
   });
 
   assert.ok(created);
   assert.equal(created?.listing.status, "PENDING");
+  assert.deepEqual(created?.property.images, ["/test.jpg"]);
+  assert.equal(created?.property.media?.length, 2);
+  assert.equal(created?.property.media?.[1]?.kind, "PANORAMA_360");
+  assert.equal(created?.property.media?.[1]?.label, "Living Room Tour");
 
   const approved = await updateListingStatus(created!.listing.id, "APPROVED", "u-admin-1", "Looks good");
   assert.equal(approved?.status, "APPROVED");

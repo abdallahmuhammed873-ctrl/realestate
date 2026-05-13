@@ -3,23 +3,67 @@
 import { useState, type ChangeEvent, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { deleteUploadedPath, uploadFiles } from "@/lib/client/uploads";
+import type { PropertyMediaKind } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { OSMMapPicker } from "@/components/maps/osm-map";
 
-export function ListingWizard({ listingId, initial }: { listingId?: string; initial?: Record<string, unknown> }) {
-  const router = useRouter();
-  const [error, setError] = useState("");
-  const [uploading, setUploading] = useState(false);
-  const initialImages = Array.isArray(initial?.images)
-    ? (initial?.images as string[])
+type ListingMediaDraft = {
+  path: string;
+  kind: Extract<PropertyMediaKind, "IMAGE" | "PANORAMA_360">;
+  label: string;
+  altText: string;
+  mimeType: string | null;
+};
+
+const MAX_PHOTOS = 12;
+const MAX_PANORAMAS = 6;
+
+function fallbackMediaLabel(kind: ListingMediaDraft["kind"], index: number) {
+  return kind === "PANORAMA_360" ? `360 View ${index + 1}` : `Photo ${index + 1}`;
+}
+
+function normalizeInitialMedia(initial?: Record<string, unknown>) {
+  const initialMedia = Array.isArray(initial?.media) ? initial.media : [];
+  if (initialMedia.length > 0) {
+    return initialMedia
+      .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object")
+      .map((item, index) => {
+        const kind = item.kind === "PANORAMA_360" ? "PANORAMA_360" : "IMAGE";
+        return {
+          path: String(item.path ?? "").trim(),
+          kind,
+          label: String(item.label ?? fallbackMediaLabel(kind, index)),
+          altText: String(item.altText ?? ""),
+          mimeType: typeof item.mimeType === "string" ? item.mimeType : null
+        } satisfies ListingMediaDraft;
+      })
+      .filter((item) => item.path.length > 0);
+  }
+
+  const legacyImages = Array.isArray(initial?.images)
+    ? (initial.images as string[])
     : String(initial?.images ?? "")
         .split(/[\n,]/)
         .map((x) => x.trim())
         .filter(Boolean);
-  const [images, setImages] = useState<string[]>(initialImages);
+
+  return legacyImages.map((path, index) => ({
+    path,
+    kind: "IMAGE" as const,
+    label: fallbackMediaLabel("IMAGE", index),
+    altText: "",
+    mimeType: null
+  }));
+}
+
+export function ListingWizard({ listingId, initial }: { listingId?: string; initial?: Record<string, unknown> }) {
+  const router = useRouter();
+  const [error, setError] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [media, setMedia] = useState<ListingMediaDraft[]>(() => normalizeInitialMedia(initial));
   const [form, setForm] = useState<Record<string, unknown>>(
     initial ?? {
       title: "",
@@ -48,33 +92,62 @@ export function ListingWizard({ listingId, initial }: { listingId?: string; init
     }
   );
 
-  async function onPickImages(e: ChangeEvent<HTMLInputElement>) {
+  const photos = media.filter((item) => item.kind === "IMAGE");
+  const panoramas = media.filter((item) => item.kind === "PANORAMA_360");
+
+  async function onPickMedia(kind: ListingMediaDraft["kind"], e: ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
     if (files.length === 0) return;
-    const imageFiles = files.filter((f) => f.type.startsWith("image/"));
+    const imageFiles = files.filter((file) => file.type.startsWith("image/"));
+    const nextCount = kind === "IMAGE" ? photos.length + imageFiles.length : panoramas.length + imageFiles.length;
+    const limit = kind === "IMAGE" ? MAX_PHOTOS : MAX_PANORAMAS;
+
+    if (nextCount > limit) {
+      setError(
+        kind === "IMAGE"
+          ? `You can upload up to ${MAX_PHOTOS} photos per listing.`
+          : `You can upload up to ${MAX_PANORAMAS} panorama files per listing.`
+      );
+      e.target.value = "";
+      return;
+    }
+
     try {
       setUploading(true);
       const uploaded = await uploadFiles("property", imageFiles);
-      setImages((prev) => [...prev, ...uploaded.map((item) => item.path)]);
+      setMedia((prev) => [
+        ...prev,
+        ...uploaded.map((item, index) => ({
+          path: item.path,
+          kind,
+          label: fallbackMediaLabel(kind, kind === "IMAGE" ? photos.length + index : panoramas.length + index),
+          altText: "",
+          mimeType: item.mimeType
+        }))
+      ]);
       setError("");
     } catch (uploadError) {
-      setError(uploadError instanceof Error ? uploadError.message : "Could not upload one or more images. Please try again.");
+      setError(uploadError instanceof Error ? uploadError.message : "Could not upload one or more files. Please try again.");
     } finally {
       setUploading(false);
       e.target.value = "";
     }
   }
 
-  async function removeImage(index: number) {
-    const targetPath = images[index];
-    setImages((prev) => prev.filter((_, i) => i !== index));
-    if (targetPath.startsWith("/uploads/tmp/")) {
+  async function removeMedia(index: number) {
+    const target = media[index];
+    setMedia((prev) => prev.filter((_, itemIndex) => itemIndex !== index));
+    if (target?.path.startsWith("/uploads/tmp/")) {
       try {
-        await deleteUploadedPath(targetPath);
+        await deleteUploadedPath(target.path);
       } catch {
-        setError("Image removed locally, but the temporary upload could not be cleaned up.");
+        setError("File removed locally, but the temporary upload could not be cleaned up.");
       }
     }
+  }
+
+  function updateMediaField(index: number, field: "label" | "altText", value: string) {
+    setMedia((prev) => prev.map((item, itemIndex) => (itemIndex === index ? { ...item, [field]: value } : item)));
   }
 
   function buildPayload() {
@@ -116,23 +189,40 @@ export function ListingWizard({ listingId, initial }: { listingId?: string; init
     const hasMissing = requiredFields.some(([, value]) => String(value ?? "").trim() === "");
     if (hasMissing) {
       setError("Please fill all required fields before submitting.");
-      return;
+      return null;
     }
-    if (images.length === 0) {
-      setError("Please upload at least one image.");
+    if (photos.length === 0) {
+      setError("Please upload at least one standard property photo.");
       return null;
     }
     if (uploading) {
-      setError("Please wait for image uploads to finish.");
+      setError("Please wait for uploads to finish.");
       return null;
     }
+
+    const draftMedia = media.map((item, index) => ({
+      id: `draft-media-${index}`,
+      propertyId: listingId ?? "draft-property",
+      kind: item.kind,
+      path: item.path,
+      label: item.label.trim() || fallbackMediaLabel(item.kind, index),
+      altText: item.altText.trim() || null,
+      sortOrder: index,
+      mimeType: item.mimeType ?? null,
+      createdAt: new Date(0).toISOString(),
+      updatedAt: new Date(0).toISOString()
+    }));
 
     return {
       listingId,
       property: {
         ...form,
-        amenities: String(form.amenities ?? "").split(",").map((x) => x.trim()).filter(Boolean),
-        images,
+        amenities: String(form.amenities ?? "")
+          .split(",")
+          .map((x) => x.trim())
+          .filter(Boolean),
+        images: draftMedia.filter((item) => item.kind === "IMAGE").map((item) => item.path),
+        media: draftMedia,
         price: Number(form.price) || null,
         rentPrice: Number(form.rentPrice) || null,
         areaSqm: Number(form.areaSqm),
@@ -165,6 +255,51 @@ export function ListingWizard({ listingId, initial }: { listingId?: string; init
     if (!payload) return;
     sessionStorage.setItem("seller_listing_draft", JSON.stringify(payload));
     router.push("/seller/new/payment");
+  }
+
+  function renderMediaSection(kind: ListingMediaDraft["kind"], title: string, helperText: string, items: ListingMediaDraft[]) {
+    return (
+      <div className="space-y-2">
+        <label className="block text-sm font-semibold text-slate-800">{title}</label>
+        <Input type="file" accept="image/*" multiple onChange={(e) => void onPickMedia(kind, e)} />
+        <p className="text-xs text-slate-500">{helperText}</p>
+        {items.length > 0 ? (
+          <div className="grid gap-3 sm:grid-cols-2">
+            {media.map((item, index) => {
+              if (item.kind !== kind) return null;
+              return (
+                <div key={`${item.kind}-${item.path}`} className="space-y-2 rounded-xl border border-slate-200 p-3">
+                  <img
+                    src={item.path}
+                    alt={item.altText || item.label}
+                    className={`w-full rounded-lg border object-cover ${kind === "PANORAMA_360" ? "h-28" : "h-24"}`}
+                  />
+                  <Input
+                    placeholder={kind === "PANORAMA_360" ? "Viewer label" : "Photo label"}
+                    value={item.label}
+                    onChange={(e) => updateMediaField(index, "label", e.target.value)}
+                  />
+                  <Input
+                    placeholder={kind === "PANORAMA_360" ? "360 alt text" : "Photo alt text"}
+                    value={item.altText}
+                    onChange={(e) => updateMediaField(index, "altText", e.target.value)}
+                  />
+                  <Button type="button" variant="outline" className="w-full text-xs" onClick={() => void removeMedia(index)}>
+                    Remove
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="text-xs text-slate-500">
+            {kind === "PANORAMA_360"
+              ? "Optional. Add one or more wide equirectangular images for the 360 viewer."
+              : "Upload one or more standard listing photos from your device."}
+          </p>
+        )}
+      </div>
+    );
   }
 
   return (
@@ -273,26 +408,9 @@ export function ListingWizard({ listingId, initial }: { listingId?: string; init
           </Select>
         </div>
         <Input placeholder="Amenities comma separated" value={String(form.amenities ?? "")} onChange={(e) => setForm((f) => ({ ...f, amenities: e.target.value }))} required />
-        <div className="space-y-2">
-          <label className="block text-sm font-semibold text-slate-800">Property Photos</label>
-          <Input type="file" accept="image/*" multiple onChange={onPickImages} />
-          <p className="text-xs text-slate-500">Upload up to 12 JPG, PNG, or WebP images. Each image must be 6MB or smaller.</p>
-          {images.length > 0 ? (
-            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-              {images.map((src, idx) => (
-                <div key={`${idx}-${src.slice(0, 24)}`} className="space-y-1">
-                  <img src={src} alt={`Uploaded ${idx + 1}`} className="h-20 w-full rounded-lg border object-cover" />
-                  <Button type="button" variant="outline" className="w-full text-xs" onClick={() => removeImage(idx)}>
-                    Remove
-                  </Button>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-xs text-slate-500">Upload one or more photos from your device.</p>
-          )}
-          {uploading ? <p className="text-xs text-brand-700">Uploading images...</p> : null}
-        </div>
+        {renderMediaSection("IMAGE", "Property Photos", "Upload up to 12 JPG, PNG, or WebP images. Each file must be 6MB or smaller.", photos)}
+        {renderMediaSection("PANORAMA_360", "360 Panorama Files", "Upload up to 6 panorama images. Wide equirectangular JPG, PNG, or WebP files work best.", panoramas)}
+        {uploading ? <p className="text-xs text-brand-700">Uploading media...</p> : null}
       </div>
       <div className="mt-4 space-y-2">
         {listingId ? (

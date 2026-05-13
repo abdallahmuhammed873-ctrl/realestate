@@ -1,6 +1,7 @@
 import { randomUUID } from "crypto";
 import { promises as fs } from "fs";
 import path from "path";
+import type { PropertyMediaKind } from "../types.ts";
 
 const PUBLIC_ROOT = path.join(process.cwd(), "public");
 const UPLOADS_ROOT = path.join(PUBLIC_ROOT, "uploads");
@@ -22,6 +23,15 @@ export type StoredUploadFile = {
   size: number;
   mimeType: string;
   originalName: string;
+};
+
+export type PropertyMediaDraft = {
+  kind: PropertyMediaKind;
+  path: string;
+  label?: string | null;
+  altText?: string | null;
+  sortOrder?: number;
+  mimeType?: string | null;
 };
 
 const UPLOAD_POLICIES: Record<UploadScope, UploadPolicy> = {
@@ -233,25 +243,51 @@ async function moveFileToDir(relativePath: string, absoluteDir: string, index = 
   return toUploadUrl(absoluteTarget);
 }
 
-export async function promotePropertyImages(propertyId: string, nextPaths: string[], previousPaths: string[]) {
+export async function promotePropertyMedia(propertyId: string, nextMedia: PropertyMediaDraft[], previousPaths: string[]) {
   const finalDir = path.join(UPLOADS_ROOT, ...UPLOAD_POLICIES.property.finalDir(propertyId));
-  const finalPaths: string[] = [];
+  const normalizedMedia: PropertyMediaDraft[] = [];
 
-  for (const [index, imagePath] of nextPaths.entries()) {
-    if (!isLocalUploadPath(imagePath)) {
-      finalPaths.push(imagePath);
+  for (const [index, mediaItem] of nextMedia.entries()) {
+    const rawPath = mediaItem.path.trim();
+    if (!rawPath) continue;
+
+    if (!isLocalUploadPath(rawPath)) {
+      normalizedMedia.push({
+        kind: mediaItem.kind,
+        path: rawPath,
+        label: mediaItem.label?.trim() || null,
+        altText: mediaItem.altText?.trim() || null,
+        sortOrder: index,
+        mimeType: mediaItem.mimeType ?? null
+      });
       continue;
     }
 
-    const normalized = normalizeUploadPath(imagePath);
+    const normalized = normalizeUploadPath(rawPath);
     if (normalized.startsWith(`/uploads/properties/${propertyId}/`)) {
-      finalPaths.push(normalized);
+      normalizedMedia.push({
+        kind: mediaItem.kind,
+        path: normalized,
+        label: mediaItem.label?.trim() || null,
+        altText: mediaItem.altText?.trim() || null,
+        sortOrder: index,
+        mimeType: mediaItem.mimeType ?? inferMimeTypeFromPath(normalized)
+      });
       continue;
     }
 
-    finalPaths.push(await moveFileToDir(normalized, finalDir, index));
+    const finalPath = await moveFileToDir(normalized, finalDir, index);
+    normalizedMedia.push({
+      kind: mediaItem.kind,
+      path: finalPath,
+      label: mediaItem.label?.trim() || null,
+      altText: mediaItem.altText?.trim() || null,
+      sortOrder: index,
+      mimeType: mediaItem.mimeType ?? inferMimeTypeFromPath(finalPath)
+    });
   }
 
+  const finalPaths = normalizedMedia.map((item) => item.path);
   const removedPaths = previousPaths.filter(
     (existingPath) => isLocalUploadPath(existingPath) && !finalPaths.includes(existingPath)
   );
@@ -260,13 +296,8 @@ export async function promotePropertyImages(propertyId: string, nextPaths: strin
   }
 
   return {
-    images: finalPaths,
-    media: finalPaths.map((filePath, index) => ({
-      kind: "IMAGE" as const,
-      path: filePath,
-      sortOrder: index,
-      mimeType: isLocalUploadPath(filePath) ? inferMimeTypeFromPath(filePath) : null
-    }))
+    images: normalizedMedia.filter((item) => item.kind === "IMAGE").map((item) => item.path),
+    media: normalizedMedia
   };
 }
 

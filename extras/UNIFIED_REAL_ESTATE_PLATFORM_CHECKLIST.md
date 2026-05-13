@@ -241,22 +241,22 @@
 
 ## Phase 10 - 360 Media Support
 
-- [ ] Use the simplest graduation-project-friendly 360 approach first:
+- [x] Use the simplest graduation-project-friendly 360 approach first:
   - regular photos remain supported
   - optional `PANORAMA_360` media is added for interactive viewing
-- [ ] Model media kinds in `PropertyMedia`:
+- [x] Model media kinds in `PropertyMedia`:
   - `IMAGE`
   - `PANORAMA_360`
   - optional later: `SPIN_360_FRAME`
-- [ ] Add `sortOrder`, `label`, and language-friendly alt text fields for media items.
-- [ ] Update the seller UI so a property can upload:
+- [x] Add `sortOrder`, `label`, and language-friendly alt text fields for media items.
+- [x] Update the seller UI so a property can upload:
   - normal photos
   - one or more 360 panorama files
-- [ ] Update the property page gallery logic:
+- [x] Update the property page gallery logic:
   - show photo carousel for normal photos
   - show a 360 viewer when panorama media exists
-- [ ] Keep the first version lightweight and avoid jumping to full 3D/three.js unless absolutely required.
-- [ ] If the team later wants exterior spin-rotation instead of panorama, add frame-set support as a second step, not in the first MVP.
+- [x] Keep the first version lightweight and avoid jumping to full 3D/three.js unless absolutely required.
+- [x] If the team later wants exterior spin-rotation instead of panorama, add frame-set support as a second step, not in the first MVP.
 
 ## Phase 11 - Dark/Light Theme
 
@@ -369,7 +369,7 @@
 - [x] Phase 7: local network deployment model
 - [x] Phase 8: versioned mobile API
 - [x] Phase 9: local media upload
-- [ ] Phase 10: 360 panorama support
+- [x] Phase 10: 360 panorama support
 - [ ] Phase 11: dark/light theme
 - [ ] Phase 12: AR/EN support
 - [ ] Phase 13: acceptance verification and cleanup

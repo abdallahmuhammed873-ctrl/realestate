@@ -7,7 +7,7 @@ import {
   mapUser,
   toPublicPropertyCard
 } from "../server/repository-helpers.ts";
-import { deleteUploadedFile, isLocalUploadPath, promotePropertyImages } from "../server/local-media.ts";
+import { deleteUploadedFile, isLocalUploadPath, promotePropertyMedia, type PropertyMediaDraft } from "../server/local-media.ts";
 import { prisma } from "../server/prisma.ts";
 
 export async function listSellerListingsForAdmin(sellerId: string) {
@@ -193,8 +193,47 @@ function toPropertyCreateData(input: SellerListingInput["property"]) {
   };
 }
 
-async function syncPropertyImages(propertyId: string, nextPaths: string[], previousPaths: string[]) {
-  const normalized = await promotePropertyImages(propertyId, nextPaths, previousPaths);
+function normalizePropertyMedia(property: SellerListingInput["property"]): PropertyMediaDraft[] {
+  const candidateMedia =
+    Array.isArray(property.media) && property.media.length > 0
+      ? property.media
+      : property.images.map((path, index) => ({
+          id: `image-${index}`,
+          propertyId: "draft-property",
+          kind: "IMAGE" as const,
+          path,
+          label: null,
+          altText: property.title,
+          sortOrder: index,
+          mimeType: null,
+          createdAt: new Date(0).toISOString(),
+          updatedAt: new Date(0).toISOString()
+        }));
+
+  return candidateMedia
+    .filter((item) => typeof item?.path === "string" && item.path.trim().length > 0)
+    .map((item, index) => {
+      const kind: PropertyMediaDraft["kind"] =
+        item.kind === "PANORAMA_360" || item.kind === "SPIN_360_FRAME" ? item.kind : "IMAGE";
+
+      return {
+        kind,
+        path: item.path.trim(),
+        label: item.label ?? null,
+        altText: item.altText ?? (kind === "PANORAMA_360" ? `${property.title} 360 view` : property.title),
+        sortOrder: typeof item.sortOrder === "number" ? item.sortOrder : index,
+        mimeType: item.mimeType ?? null
+      };
+    })
+    .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+    .map((item, index) => ({
+      ...item,
+      sortOrder: index
+    }));
+}
+
+async function syncPropertyMedia(propertyId: string, nextMedia: PropertyMediaDraft[], previousPaths: string[]) {
+  const normalized = await promotePropertyMedia(propertyId, nextMedia, previousPaths);
 
   await prisma.$transaction([
     prisma.property.update({
@@ -204,7 +243,7 @@ async function syncPropertyImages(propertyId: string, nextPaths: string[], previ
       }
     }),
     prisma.propertyMedia.deleteMany({
-      where: { propertyId, kind: "IMAGE" }
+      where: { propertyId }
     }),
     ...(normalized.media.length > 0
       ? [
@@ -213,8 +252,10 @@ async function syncPropertyImages(propertyId: string, nextPaths: string[], previ
               propertyId,
               kind: item.kind,
               path: item.path,
+              label: item.label ?? null,
+              altText: item.altText ?? null,
               sortOrder: item.sortOrder,
-              mimeType: item.mimeType
+              mimeType: item.mimeType ?? null
             }))
           })
         ]
@@ -223,6 +264,8 @@ async function syncPropertyImages(propertyId: string, nextPaths: string[], previ
 }
 
 export async function createOrUpdateSellerListing(input: SellerListingInput) {
+  const nextMedia = normalizePropertyMedia(input.property);
+
   if (input.listingId) {
     const listing = await prisma.listing.findUnique({
       where: { id: input.listingId },
@@ -257,9 +300,9 @@ export async function createOrUpdateSellerListing(input: SellerListingInput) {
     });
     if (!updated.property) return null;
 
-    await syncPropertyImages(
+    await syncPropertyMedia(
       updated.property.id,
-      input.property.images,
+      nextMedia,
       Array.from(new Set([...(listing.property.images ?? []), ...listing.property.media.map((item) => item.path)]))
     );
 
@@ -300,7 +343,7 @@ export async function createOrUpdateSellerListing(input: SellerListingInput) {
   });
   if (!created.property) return null;
 
-  await syncPropertyImages(created.property.id, input.property.images, []);
+  await syncPropertyMedia(created.property.id, nextMedia, []);
 
   const refreshed = await prisma.listing.findUnique({
     where: { id: created.id },

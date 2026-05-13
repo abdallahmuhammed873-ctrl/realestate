@@ -12,6 +12,9 @@ export async function POST(req: NextRequest) {
   if (Array.isArray(body.property?.images) && body.property.images.some((image: unknown) => String(image ?? "").startsWith("data:"))) {
     return NextResponse.json({ error: "Property images must be uploaded through the backend before saving." }, { status: 400 });
   }
+  if (Array.isArray(body.property?.media) && body.property.media.some((item: unknown) => String((item as { path?: string } | null)?.path ?? "").startsWith("data:"))) {
+    return NextResponse.json({ error: "Property media must be uploaded through the backend before saving." }, { status: 400 });
+  }
 
   const result = await createOrUpdateSellerListing({
     listingId: body.listingId ? String(body.listingId) : undefined,
