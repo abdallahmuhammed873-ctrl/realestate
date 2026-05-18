@@ -1,34 +1,48 @@
 from __future__ import annotations
 
+import logging
+import traceback
 from copy import deepcopy
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 
 from filter_extractor import extract_filters
 from platform_client import PlatformClient
-from scripts.llm_engine import build_llm_provider
+from scripts.llm_engine import AgentToolbox, build_llm_provider
 from service_contract import AiPropertyFilters, ChatRequest, ChatResponse, ExtractFiltersResponse, HealthResponse
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s %(message)s",
+)
 
 app = FastAPI(title="Unified Real Estate AI Service", version="1.0.0")
 platform_client = PlatformClient()
 llm_provider = build_llm_provider()
+logger = logging.getLogger("real_estate_ai.api")
 
 GREETING_WORDS = {"hi", "hello", "hey", "مرحبا", "اهلا", "أهلا", "السلام", "هاي"}
-CORE_FILTER_KEYS = {
-    "transaction",
-    "type",
-    "city",
-    "area",
-    "district",
-    "projectName",
-    "unitCode",
-    "minPrice",
-    "maxPrice",
-    "paymentType",
-    "completionStatus",
-    "minBeds",
-    "maxBeds",
-}
+
+
+def _normalize_compact_text(value: str) -> str:
+    compact = "".join(ch if ch.isalnum() or ch.isspace() else " " for ch in value.lower()).strip()
+    return " ".join(compact.split())
+
+
+def _looks_like_greeting(message: str) -> bool:
+    compact = _normalize_compact_text(message)
+    if compact in GREETING_WORDS:
+        return True
+
+    english_token = compact.replace(" ", "")
+    if english_token.startswith("hi") and set(english_token) <= {"h", "i"}:
+        return True
+    if english_token.startswith("hey") and set(english_token) <= {"h", "e", "y"}:
+        return True
+    if english_token.startswith("hel") and "o" in english_token and set(english_token) <= {"h", "e", "l", "o"}:
+        return True
+
+    return False
 
 
 def _build_suggested_filters(filters: dict) -> list[str]:
@@ -85,45 +99,30 @@ def _to_grounded_items(items: list[dict]) -> list[dict]:
 
 
 def _is_greeting(message: str) -> bool:
-    compact = "".join(ch if ch.isalnum() or ch.isspace() else " " for ch in message.lower()).strip()
-    return compact in GREETING_WORDS
-
-
-def _conversation_summary(language: str, filters: dict) -> str | None:
-    parts: list[str] = []
-    transaction = filters.get("transaction")
-    if transaction == "BUY":
-        parts.append("buy" if language == "EN" else "شراء")
-    elif transaction == "RENT":
-        parts.append("rent" if language == "EN" else "إيجار")
-    elif transaction == "VACATION":
-        parts.append("vacation" if language == "EN" else "مصيف")
-
-    property_types = filters.get("type")
-    if isinstance(property_types, list) and property_types:
-        parts.append(", ".join(property_types).lower())
-
-    location = next((filters.get(key) for key in ("district", "area", "city", "projectName") if filters.get(key)), None)
-    if location:
-        parts.append(f"in {location}" if language == "EN" else f"في {location}")
-
-    if "maxPrice" in filters:
-        budget = f"under EGP {int(filters['maxPrice']):,}"
-        parts.append(budget if language == "EN" else f"بميزانية حتى {int(filters['maxPrice']):,} جنيه")
-
-    if not parts:
-        return None
-
-    if language == "AR":
-        return "أفهم أنك تبحث عن " + " ".join(parts) + "."
-    return "I understand you're looking to " + " ".join(parts) + "."
+    return _looks_like_greeting(message)
 
 
 def _merge_filters(base: dict, extra: dict) -> dict:
     merged = deepcopy(base)
+    base_has_specific_search = any(
+        key in merged
+        for key in (
+            "transaction",
+            "type",
+            "city",
+            "area",
+            "district",
+            "projectName",
+            "unitCode",
+            "minPrice",
+            "maxPrice",
+        )
+    )
     for key, value in extra.items():
         if key in {"page", "pageSize", "sort"}:
             merged[key] = value
+            continue
+        if key == "q" and base_has_specific_search:
             continue
         if key not in merged or merged.get(key) in (None, "", []):
             merged[key] = value
@@ -140,67 +139,6 @@ def _history_filters(request: ChatRequest) -> dict:
     return merged
 
 
-def _needs_clarification(message: str, filters: dict) -> bool:
-    if _is_greeting(message):
-        return True
-    strong_keys = CORE_FILTER_KEYS & set(filters.keys())
-    if "unitCode" in filters:
-        return False
-    if len(strong_keys) >= 2:
-        return False
-    if any(key in filters for key in ("city", "area", "district", "projectName")) and any(
-        key in filters for key in ("transaction", "type", "minPrice", "maxPrice")
-    ):
-        return False
-    return len(strong_keys) == 0
-
-
-def _clarifying_question(language: str, filters: dict) -> str:
-    if not any(key in filters for key in ("transaction",)):
-        return (
-            "Are you looking to buy, rent, or vacation?"
-            if language == "EN"
-            else "هل تبحث عن شراء أم إيجار أم مصيف؟"
-        )
-    if not any(key in filters for key in ("city", "area", "district", "projectName")):
-        return (
-            "Which city or area should I focus on?"
-            if language == "EN"
-            else "ما المدينة أو المنطقة التي تريدني أن أركز عليها؟"
-        )
-    return (
-        "Do you have a budget range or preferred property type?"
-        if language == "EN"
-        else "هل لديك ميزانية محددة أو نوع عقار مفضل؟"
-    )
-
-
-def _default_suggestions(language: str, filters: dict | None = None) -> list[str]:
-    filters = filters or {}
-    location = filters.get("area") or filters.get("city") or "New Cairo"
-    if language == "AR":
-        return [
-            f"شقق للبيع في {location}",
-            f"فلل للإيجار في {location}",
-            "تقسيط ومقدم منخفض",
-        ]
-    return [
-        f"Buy apartments in {location}",
-        f"Rent villas in {location}",
-        "Installments with low down payment",
-    ]
-
-
-def _compare_suggestions(language: str, items: list[dict]) -> list[str]:
-    if len(items) >= 2:
-        left = items[0].get("title") or items[0].get("projectName") or "first result"
-        right = items[1].get("title") or items[1].get("projectName") or "second result"
-        if language == "AR":
-            return [f"قارن بين {left} و {right}", "رتّب حسب أقل سعر", "اعرض فقط الشقق"]
-        return [f"Compare {left} vs {right}", "Sort by lowest price", "Show apartments only"]
-    return _default_suggestions(language)
-
-
 def _relax_filters(filters: dict) -> tuple[dict, list[str]]:
     relaxed = deepcopy(filters)
     relaxed_keys: list[str] = []
@@ -210,8 +148,12 @@ def _relax_filters(filters: dict) -> tuple[dict, list[str]]:
             relaxed.pop(key, None)
             relaxed_keys.append(key)
 
-    if "district" in relaxed:
+    if "projectName" in relaxed:
+        drop("projectName")
+    elif "district" in relaxed:
         drop("district")
+    elif "area" in relaxed and "city" in relaxed:
+        drop("area")
     elif "maxPrice" in relaxed and isinstance(relaxed["maxPrice"], (int, float)):
         relaxed["maxPrice"] = float(relaxed["maxPrice"]) * 1.2
         relaxed_keys.append("maxPrice")
@@ -222,14 +164,25 @@ def _relax_filters(filters: dict) -> tuple[dict, list[str]]:
     elif "minBeds" in relaxed or "maxBeds" in relaxed:
         drop("minBeds")
         drop("maxBeds")
+    elif "transaction" in relaxed:
+        drop("transaction")
 
     return relaxed, relaxed_keys
 
 
-def _search(filters: dict) -> tuple[dict, list[dict]]:
+def _search(filters: dict, trace_id: str | None = None) -> tuple[dict, list[dict]]:
     validated_filters = AiPropertyFilters(**filters)
-    search_result = platform_client.search_properties(validated_filters.to_payload())
+    payload = validated_filters.to_payload()
+    logger.info("[AI Chat][%s] search request filters=%s", trace_id or "-", payload)
+    search_result = platform_client.search_properties(payload, trace_id=trace_id)
     items = _to_grounded_items(search_result.get("items", []))
+    logger.info(
+        "[AI Chat][%s] search result total=%s returned=%s item_ids=%s",
+        trace_id or "-",
+        search_result.get("total"),
+        len(items),
+        [item.get("id") for item in items[:5]],
+    )
     return search_result, items
 
 
@@ -250,97 +203,60 @@ def extract_filters_endpoint(request: ChatRequest) -> ExtractFiltersResponse:
 
 
 @app.post("/chat", response_model=ChatResponse)
-def chat(request: ChatRequest) -> ChatResponse:
-    extraction = extract_filters(request.message)
-    history_filters = _history_filters(request)
-    merged_filters = _merge_filters(extraction.filters, history_filters)
+def chat(request: ChatRequest, raw_request: Request) -> ChatResponse:
+    trace_id = raw_request.headers.get("x-chat-trace-id", f"py-chat-{id(request)}")
+    logger.info(
+        "[AI Chat][%s] incoming /chat message=%r language=%s history_count=%s",
+        trace_id,
+        request.message,
+        request.language,
+        len(request.history),
+    )
+
+    prior_filters = _history_filters(request)
+    logger.info("[AI Chat][%s] prior_filters=%s", trace_id, prior_filters)
 
     try:
-        validated_filters = AiPropertyFilters(**merged_filters)
-    except Exception as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-    filters_payload = validated_filters.to_payload()
-    if _needs_clarification(request.message, filters_payload):
-        clarifying_question = _clarifying_question(request.language, filters_payload)
-        greeting_reply = (
-            "I can help you search, compare, and refine properties step by step."
-            if request.language == "EN"
-            else "أقدر أساعدك في البحث عن العقارات ومقارنتها وتضييق النتائج خطوة بخطوة."
+        outcome = llm_provider.assist(
+            AgentToolbox(
+                language=request.language,
+                trace_id=trace_id,
+                user_message=request.message,
+                history=[{"role": item.role, "content": item.content} for item in request.history],
+                prior_filters=prior_filters,
+                extract_filters=extract_filters,
+                merge_filters=_merge_filters,
+                search=lambda filters: _search(filters, trace_id=trace_id),
+                relax_filters=_relax_filters,
+                suggested_filters=_build_suggested_filters,
+                is_greeting=_is_greeting,
+            )
         )
-        reply = f"{greeting_reply}\n{clarifying_question}"
-        return ChatResponse(
-            reply=reply,
-            language=request.language,
-            intent="CLARIFY" if not _is_greeting(request.message) else "GREETING",
-            shouldSearch=False,
-            clarifyingQuestion=clarifying_question,
-            suggestions=_default_suggestions(request.language, filters_payload),
-            suggestedFilters=_build_suggested_filters(filters_payload),
-            extractedFilters=filters_payload,
-        )
-
-    try:
-        search_result, grounded_items = _search(filters_payload)
     except Exception as exc:
+        logger.exception("[AI Chat][%s] /chat failed: %s", trace_id, exc)
+        logger.debug("[AI Chat][%s] traceback\n%s", trace_id, traceback.format_exc())
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
-    relaxed_filters: list[str] = []
-    result_total = int(search_result.get("total", 0))
-    if not grounded_items:
-        relaxed_payload, relaxed_filters = _relax_filters(filters_payload)
-        if relaxed_filters:
-            try:
-                search_result, grounded_items = _search(relaxed_payload)
-                result_total = int(search_result.get("total", 0))
-                filters_payload = AiPropertyFilters(**relaxed_payload).to_payload()
-            except Exception:
-                grounded_items = []
-
-    conversation_summary = _conversation_summary(request.language, filters_payload)
-
-    if not grounded_items:
-        clarifying_question = _clarifying_question(request.language, filters_payload)
-        reply = (
-            "I could not find a direct match yet. I can broaden the search or refine it with one more detail."
-            if request.language == "EN"
-            else "لم أجد تطابقًا مباشرًا بعد. يمكنني توسيع البحث أو تضييقه إذا أعطيتني تفصيلة إضافية."
-        )
-        return ChatResponse(
-            reply=f"{reply}\n{clarifying_question}",
-            language=request.language,
-            intent="NO_RESULTS",
-            shouldSearch=True,
-            clarifyingQuestion=clarifying_question,
-            suggestions=_default_suggestions(request.language, filters_payload),
-            suggestedFilters=_build_suggested_filters(filters_payload),
-            extractedFilters=filters_payload,
-            relaxedFilters=relaxed_filters,
-            total=0,
-            items=[],
-        )
-
-    intent = "COMPARE" if "compare" in request.message.lower() else "SEARCH_RESULTS"
-    reply = llm_provider.answer(
-        language=request.language,
-        user_question=request.message,
-        filters=filters_payload,
-        properties=grounded_items,
-        result_total=result_total,
-        relaxed_filters=relaxed_filters,
-        conversation_summary=conversation_summary,
+    logger.info(
+        "[AI Chat][%s] success intent=%s should_search=%s total=%s suggestions=%s extracted_filters=%s",
+        trace_id,
+        outcome.intent,
+        outcome.should_search,
+        outcome.total,
+        len(outcome.suggestions),
+        outcome.extracted_filters,
     )
 
     return ChatResponse(
-        reply=reply,
+        reply=outcome.reply,
         language=request.language,
-        intent=intent,
-        shouldSearch=True,
-        clarifyingQuestion=None,
-        suggestions=_compare_suggestions(request.language, grounded_items),
-        suggestedFilters=_build_suggested_filters(filters_payload),
-        extractedFilters=filters_payload,
-        relaxedFilters=relaxed_filters,
-        total=result_total,
-        items=grounded_items,
+        intent=outcome.intent,
+        shouldSearch=outcome.should_search,
+        clarifyingQuestion=outcome.clarifying_question,
+        suggestions=outcome.suggestions,
+        suggestedFilters=outcome.suggested_filters,
+        extractedFilters=outcome.extracted_filters,
+        relaxedFilters=outcome.relaxed_filters,
+        total=outcome.total,
+        items=outcome.items,
     )

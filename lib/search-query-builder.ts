@@ -20,9 +20,9 @@ export function buildPrismaPropertyWhere(filters: SearchFilters): Prisma.Propert
   }
   if (filters.transaction) where.transaction = filters.transaction;
   if (filters.type?.length) where.type = { in: filters.type };
-  if (filters.city) where.city = filters.city;
-  if (filters.area) where.area = filters.area;
-  if (filters.district) where.district = filters.district;
+  if (filters.city) where.city = { contains: filters.city, mode: "insensitive" };
+  if (filters.area) where.area = { contains: filters.area, mode: "insensitive" };
+  if (filters.district) where.district = { contains: filters.district, mode: "insensitive" };
   if (filters.projectName) where.projectName = { contains: filters.projectName, mode: "insensitive" };
   if (filters.unitCode) where.unitCode = { contains: filters.unitCode, mode: "insensitive" };
   if (filters.inventoryStatus) where.inventoryStatus = { contains: filters.inventoryStatus, mode: "insensitive" };

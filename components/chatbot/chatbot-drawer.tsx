@@ -65,6 +65,8 @@ const QUICK_PROMPTS = {
   ],
 } as const;
 
+const CHAT_DEBUG_ENABLED = process.env.NODE_ENV !== "production";
+
 function normalizeAssistantReply(content: string) {
   return content
     .replaceAll("**", "")
@@ -108,21 +110,50 @@ function buildHistory(messages: Message[]) {
   return messages.slice(-8).map(({ role, content }) => ({ role, content }));
 }
 
+function createChatTraceId() {
+  return `chat-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function logChatRequest(traceId: string, payload: { message: string; language: "EN" | "AR"; history: { role: ChatRole; content: string }[] }) {
+  if (!CHAT_DEBUG_ENABLED) return;
+  console.groupCollapsed(`[AI Chat][${traceId}] request`);
+  console.log("message", payload.message);
+  console.log("language", payload.language);
+  console.log("historyCount", payload.history.length);
+  console.log("history", payload.history);
+  console.groupEnd();
+}
+
+function logChatResponse(
+  traceId: string,
+  meta: { ok: boolean; status: number },
+  data: AssistantResponse | Record<string, unknown> | null,
+) {
+  if (!CHAT_DEBUG_ENABLED) return;
+  console.groupCollapsed(`[AI Chat][${traceId}] response ${meta.status}`);
+  console.log("ok", meta.ok);
+  console.log("body", data);
+  if (data && typeof data === "object") {
+    console.log("reply", "reply" in data ? data.reply : undefined);
+    console.log("intent", "intent" in data ? data.intent : undefined);
+    console.log("items", Array.isArray(data.items) ? data.items.length : 0);
+    console.log("suggestions", Array.isArray(data.suggestions) ? data.suggestions : []);
+  }
+  console.groupEnd();
+}
+
+function logChatError(traceId: string, error: unknown) {
+  if (!CHAT_DEBUG_ENABLED) return;
+  console.error(`[AI Chat][${traceId}] request failed`, error);
+}
+
 export function ChatbotDrawer() {
   const { direction, language, t } = useLanguage();
-  const initialAssistantMessage: Message = { role: "assistant", content: t("assistantGreeting") };
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([initialAssistantMessage]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const scrollRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    setMessages((prev) => {
-      if (prev.length !== 1 || prev[0]?.role !== "assistant") return prev;
-      return [{ role: "assistant", content: t("assistantGreeting") }];
-    });
-  }, [t]);
 
   useEffect(() => {
     const node = scrollRef.current;
@@ -136,6 +167,14 @@ export function ChatbotDrawer() {
     if (!userMessage) return;
 
     const history = buildHistory(messages);
+    const requestLanguage: "EN" | "AR" = language === "ar" ? "AR" : "EN";
+    const traceId = createChatTraceId();
+    const payload = {
+      message: userMessage,
+      language: requestLanguage,
+      history,
+    };
+    logChatRequest(traceId, payload);
     setMessages((prev) => [...prev, { role: "user", content: userMessage }]);
     setInput("");
     setSending(true);
@@ -143,17 +182,17 @@ export function ChatbotDrawer() {
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: userMessage,
-          language: language === "ar" ? "AR" : "EN",
-          history,
-        }),
+        headers: {
+          "Content-Type": "application/json",
+          "x-chat-trace-id": traceId,
+        },
+        body: JSON.stringify(payload),
       });
-      const data: AssistantResponse | null = await res.json().catch(() => null);
+      const data: AssistantResponse | Record<string, unknown> | null = await res.json().catch(() => null);
+      logChatResponse(traceId, { ok: res.ok, status: res.status }, data);
       const reply =
-        typeof data?.reply === "string" && data.reply.trim().length > 0
-          ? normalizeAssistantReply(data.reply)
+        typeof (data as AssistantResponse | null)?.reply === "string" && (data as AssistantResponse).reply!.trim().length > 0
+          ? normalizeAssistantReply((data as AssistantResponse).reply!)
           : t("assistantError");
 
       setMessages((prev) => [
@@ -161,16 +200,17 @@ export function ChatbotDrawer() {
         {
           role: "assistant",
           content: reply,
-          intent: data?.intent,
-          suggestions: Array.isArray(data?.suggestions) ? data.suggestions : [],
-          suggestedFilters: Array.isArray(data?.suggestedFilters) ? data.suggestedFilters : [],
-          extractedFilters: data?.extractedFilters ?? {},
-          relaxedFilters: Array.isArray(data?.relaxedFilters) ? data.relaxedFilters : [],
-          total: typeof data?.total === "number" ? data.total : 0,
-          items: Array.isArray(data?.items) ? data.items : [],
+          intent: (data as AssistantResponse | null)?.intent,
+          suggestions: Array.isArray((data as AssistantResponse | null)?.suggestions) ? (data as AssistantResponse).suggestions! : [],
+          suggestedFilters: Array.isArray((data as AssistantResponse | null)?.suggestedFilters) ? (data as AssistantResponse).suggestedFilters! : [],
+          extractedFilters: (data as AssistantResponse | null)?.extractedFilters ?? {},
+          relaxedFilters: Array.isArray((data as AssistantResponse | null)?.relaxedFilters) ? (data as AssistantResponse).relaxedFilters! : [],
+          total: typeof (data as AssistantResponse | null)?.total === "number" ? (data as AssistantResponse).total! : 0,
+          items: Array.isArray((data as AssistantResponse | null)?.items) ? (data as AssistantResponse).items! : [],
         },
       ]);
-    } catch {
+    } catch (error) {
+      logChatError(traceId, error);
       setMessages((prev) => [...prev, { role: "assistant", content: t("assistantError") }]);
     } finally {
       setSending(false);
@@ -183,32 +223,48 @@ export function ChatbotDrawer() {
 
   return (
     <>
-      <Button
-        className={`fixed bottom-20 z-50 gap-2 rounded-full px-5 py-3 md:bottom-6 ${edgeClass}`}
-        onClick={() => setOpen((value) => !value)}
-        aria-label={open ? t("closeAssistant") : t("openAssistant")}
-      >
-        <span className="inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400" aria-hidden />
-        {t("aiAssistant")}
-      </Button>
+      {!open ? (
+        <Button
+          className={`fixed bottom-20 z-50 gap-2 rounded-full px-5 py-3 md:bottom-6 ${edgeClass}`}
+          onClick={() => setOpen(true)}
+          aria-label={t("openAssistant")}
+        >
+          <span className="inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400" aria-hidden />
+          {t("aiAssistant")}
+        </Button>
+      ) : null}
       {open ? (
-        <aside className={`surface-panel fixed bottom-32 z-50 w-[min(95vw,420px)] overflow-hidden rounded-[28px] ${edgeClass}`}>
-          <div className="border-b theme-divider bg-[linear-gradient(135deg,rgba(46,111,127,0.18),rgba(212,176,106,0.12))] px-4 py-4">
-            <div className="mb-1 flex items-center justify-between gap-3">
+        <aside
+          className={`surface-panel fixed ${edgeClass} top-4 bottom-4 z-50 flex w-[min(96vw,420px)] flex-col overflow-hidden rounded-[28px]`}
+        >
+          <div className="border-b theme-divider bg-[linear-gradient(135deg,rgba(46,111,127,0.18),rgba(212,176,106,0.12))] px-4 py-3">
+            <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-base font-semibold">{t("assistant")}</p>
-                <p className="text-xs text-muted">{t("assistantSubtitle")}</p>
+                <p className="mt-0.5 text-xs text-muted">{t("assistantSubtitle")}</p>
               </div>
-              <span className="status-positive rounded-full px-2.5 py-1 text-[11px] font-semibold">
-                {sending ? t("assistantSearching") : t("assistantReady")}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="status-positive rounded-full px-2.5 py-1 text-[11px] font-semibold">
+                  {sending ? t("assistantSearching") : t("assistantReady")}
+                </span>
+                <button
+                  type="button"
+                  aria-label={t("closeAssistant")}
+                  className="grid h-8 w-8 place-items-center rounded-full text-[var(--muted)] hover:bg-[var(--surface)] hover:text-[var(--ink)]"
+                  onClick={() => setOpen(false)}
+                >
+                  <span className="text-lg leading-none" aria-hidden>
+                    ×
+                  </span>
+                </button>
+              </div>
             </div>
-            <div className="flex flex-wrap gap-2 pt-2">
+            <div className="flex flex-wrap gap-2 pt-3">
               {quickPrompts.map((prompt) => (
                 <button
                   key={prompt}
                   type="button"
-                  className="rounded-full border theme-divider bg-[var(--surface)] px-3 py-1.5 text-left text-xs text-[var(--ink)] shadow-sm hover:bg-[var(--surface-soft)]"
+                  className="rounded-full border theme-divider bg-[var(--surface)] px-3 py-1.5 text-left text-xs leading-5 text-[var(--ink)] shadow-sm hover:bg-[var(--surface-soft)]"
                   onClick={() => void sendMessage(prompt)}
                   disabled={sending}
                 >
@@ -218,11 +274,11 @@ export function ChatbotDrawer() {
             </div>
           </div>
 
-          <div ref={scrollRef} className="h-[28rem] space-y-3 overflow-auto bg-[var(--surface-soft)] px-3 py-4">
+          <div ref={scrollRef} className="min-h-0 flex-1 space-y-3 overflow-auto bg-[var(--surface-soft)] px-3 py-3">
             {messages.map((message, index) => (
               <div key={index} className={`flex ${message.role === "assistant" ? "justify-start" : "justify-end"}`}>
                 <div
-                  className={`max-w-[92%] rounded-2xl px-3 py-2.5 text-sm shadow-sm ${
+                  className={`max-w-[92%] rounded-2xl px-3 py-2 text-sm shadow-sm ${
                     message.role === "assistant"
                       ? "bg-[var(--surface)] text-[var(--ink)]"
                       : "bg-[var(--brand)] text-[var(--brand-contrast)]"
@@ -241,7 +297,7 @@ export function ChatbotDrawer() {
                   ) : null}
 
                   {message.role === "assistant" && message.suggestedFilters && message.suggestedFilters.length > 0 ? (
-                    <div className="mt-3 flex flex-wrap gap-2">
+                    <div className="mt-3 flex flex-wrap gap-1.5">
                       {message.suggestedFilters.map((key) => (
                         <span key={key} className="status-brand rounded-full px-2.5 py-1 text-[11px] font-semibold">
                           {formatFilterKey(key, language)}
@@ -267,7 +323,7 @@ export function ChatbotDrawer() {
                             href={item.id ? `/p/${item.id}` : "#"}
                             className="block overflow-hidden rounded-2xl border theme-divider bg-[var(--surface-soft)] hover:bg-[var(--surface-strong)]"
                           >
-                            <div className="flex gap-3 p-2">
+                            <div className="flex gap-3 p-2.5">
                               <div className="h-20 w-24 shrink-0 overflow-hidden rounded-xl bg-[var(--surface)]">
                                 {item.images?.[0] ? (
                                   <img src={item.images[0]} alt={title} className="h-full w-full object-cover" loading="lazy" />
@@ -309,7 +365,7 @@ export function ChatbotDrawer() {
                       <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-soft">
                         {language === "ar" ? "الخطوة التالية" : "Next step"}
                       </p>
-                      <div className="flex flex-wrap gap-2">
+                      <div className="flex flex-wrap gap-1.5">
                         {message.suggestions.map((suggestion) => (
                           <button
                             key={suggestion}
@@ -329,7 +385,7 @@ export function ChatbotDrawer() {
 
             {sending ? (
               <div className="flex justify-start">
-                <div className="max-w-[88%] rounded-2xl bg-[var(--surface)] px-3 py-2.5 text-sm text-[var(--ink)] shadow-sm">
+                <div className="max-w-[88%] rounded-2xl bg-[var(--surface)] px-3 py-2 text-sm text-[var(--ink)] shadow-sm">
                   <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.16em] opacity-70">{t("assistant")}</p>
                   <p className="text-muted">{t("assistantThinking")}</p>
                 </div>
@@ -338,9 +394,9 @@ export function ChatbotDrawer() {
           </div>
 
           {lastAssistantMessage?.role === "assistant" && lastAssistantMessage.suggestions?.length ? (
-            <div className="border-t theme-divider bg-[var(--surface)] px-4 py-3">
+            <div className="border-t theme-divider bg-[var(--surface)] px-4 py-2.5">
               <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-soft">{t("assistantTryThese")}</p>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-1.5">
                 {lastAssistantMessage.suggestions.slice(0, 3).map((prompt) => (
                   <button
                     key={`footer-${prompt}`}
@@ -355,7 +411,7 @@ export function ChatbotDrawer() {
             </div>
           ) : null}
 
-          <div className="border-t theme-divider bg-[var(--surface)] p-3">
+          <div className="border-t theme-divider bg-[var(--surface)] px-3 py-2.5">
             <p className="mb-2 text-xs text-muted">{t("assistantInputHint")}</p>
             <Input
               value={input}
@@ -373,7 +429,7 @@ export function ChatbotDrawer() {
               <button
                 type="button"
                 className="text-xs font-medium text-muted hover:text-[var(--ink)]"
-                onClick={() => setMessages([{ role: "assistant", content: t("assistantGreeting") }])}
+                onClick={() => setMessages([])}
                 disabled={sending}
               >
                 {t("clearChat")}

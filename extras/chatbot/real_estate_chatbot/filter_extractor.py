@@ -18,16 +18,6 @@ PROPERTY_TYPE_ALIASES = {
 PROJECT_ALIASES = {
     "aliva": "Aliva",
     "lvls": "LVLS",
-    "new cairo": "New Cairo",
-    "fifth settlement": "Fifth Settlement",
-    "north 90": "North 90 Street",
-    "north 90 street": "North 90 Street",
-    "sheikh zayed": "Sheikh Zayed",
-    "zayed": "Sheikh Zayed",
-    "6 october": "6 October",
-    "october": "6 October",
-    "maadi": "Maadi",
-    "heliopolis": "Heliopolis",
 }
 
 LOCATION_ALIASES = {
@@ -78,6 +68,90 @@ AMENITY_ALIASES = {
 }
 
 GREETING_TOKENS = {"hi", "hello", "hey", "hola", "مرحبا", "اهلا", "أهلا", "السلام", "هاي"}
+
+
+CONTEXT_FOLLOWUP_TOKENS = {
+    "ok",
+    "okay",
+    "yes",
+    "sure",
+    "go ahead",
+    "continue",
+    "more details",
+    "show more",
+    "show me more",
+    "show me more details",
+    "show details",
+    "tell me more",
+    "more info",
+    "details",
+    "compare them",
+    "show similar",
+    "show similar properties",
+    "refine search",
+}
+
+
+def _normalize_compact_text(value: str) -> str:
+    compact = re.sub(r"[^\w\u0600-\u06FF]+", " ", value.lower()).strip()
+    return " ".join(compact.split())
+
+
+def _looks_like_greeting(question: str) -> bool:
+    compact = _normalize_compact_text(question)
+    if compact in GREETING_TOKENS:
+        return True
+
+    english_token = compact.replace(" ", "")
+    if re.fullmatch(r"hi+", english_token):
+        return True
+    if re.fullmatch(r"hey+", english_token):
+        return True
+    if re.fullmatch(r"hel+o+", english_token):
+        return True
+
+    return False
+
+
+def _looks_like_context_followup(question: str) -> bool:
+    return _normalize_compact_text(question) in CONTEXT_FOLLOWUP_TOKENS
+
+
+def _should_keep_free_text_query(normalized: str, structured_keys: set[str]) -> bool:
+    generic_only_keys = {
+        "transaction",
+        "type",
+        "minPrice",
+        "maxPrice",
+        "minArea",
+        "maxArea",
+        "minBeds",
+        "maxBeds",
+        "minBaths",
+        "maxBaths",
+        "paymentType",
+        "furnishing",
+        "completionStatus",
+        "hasGarden",
+        "hasRoof",
+        "amenities",
+        "downPaymentMax",
+        "installmentYearsMax",
+        "installmentMonthlyMax",
+    }
+    if structured_keys and structured_keys <= generic_only_keys:
+        return False
+
+    compact = _normalize_compact_text(normalized)
+    generic_phrases = (
+        "i want",
+        "i need",
+        "looking for",
+        "find me",
+        "show me",
+        "search for",
+    )
+    return not any(compact.startswith(phrase) for phrase in generic_phrases)
 
 
 def _parse_money(raw: str) -> float | None:
@@ -190,8 +264,7 @@ def _apply_room_counts(question: str, payload: dict[str, object]) -> None:
 
 
 def _strip_greeting_only(question: str) -> bool:
-    compact = re.sub(r"[^\w\u0600-\u06FF]+", " ", question).strip()
-    return compact in GREETING_TOKENS
+    return _looks_like_greeting(question)
 
 
 def extract_filters(message: str) -> ExtractFiltersResponse:
@@ -202,6 +275,13 @@ def extract_filters(message: str) -> ExtractFiltersResponse:
 
     if _strip_greeting_only(question):
         return ExtractFiltersResponse(normalized_query=normalized, filters=payload, warnings=["Greeting only."])
+
+    if _looks_like_context_followup(question):
+        return ExtractFiltersResponse(
+            normalized_query=normalized,
+            filters=payload,
+            warnings=["Context follow-up only; reuse prior filters if available."],
+        )
 
     transaction = _detect_transaction(question)
     if transaction:
@@ -278,7 +358,11 @@ def extract_filters(message: str) -> ExtractFiltersResponse:
         payload["q"] = normalized
     elif "unitCode" in structured_keys:
         payload.pop("q", None)
-    elif len(normalized.split()) >= 4 and not {"city", "area", "district", "projectName"} & structured_keys:
+    elif (
+        len(normalized.split()) >= 4
+        and not {"city", "area", "district", "projectName"} & structured_keys
+        and _should_keep_free_text_query(normalized, structured_keys)
+    ):
         payload["q"] = normalized
 
     if len(structured_keys) <= 1:
