@@ -1,5 +1,40 @@
-.next
-node_modules
+# dependencies
+node_modules/
+
+# Next.js
+.next/
+out/
+
+# production / build output
+dist/
+coverage/
+
+# runtime uploads generated during local demos/tests
+public/uploads/
+
+# local environment
 .env
-dist
-coverage
+.env.*
+!.env.example
+
+# logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# TypeScript
+*.tsbuildinfo
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+.pytest_cache/
+
+# local OS/editor noise
+.DS_Store
+Thumbs.db
