@@ -2,17 +2,19 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { getLocalizedPropertyTitle, Language, t, translateLocation, translatePaymentType } from "@/lib/i18n";
+import { getPropertyCoverImage } from "@/lib/property-images";
 import { PublicPropertyCard } from "@/lib/types";
 import { formatPrice } from "@/lib/utils";
 
 export function PropertyCard({ property, language = "en" }: { property: PublicPropertyCard; language?: Language }) {
   const price = property.transaction === "RENT" ? property.rentPrice : property.price;
   const title = getLocalizedPropertyTitle(property, language);
+  const coverImage = getPropertyCoverImage(property.images, property.media);
   return (
     <Link href={`/p/${property.id}`} className="block" aria-label={`Open listing: ${title}`}>
       <Card className="overflow-hidden p-0 transition hover:shadow-md">
         <div className="relative h-52">
-          <img src={property.images[0]} alt={title} className="h-full w-full object-cover" loading="lazy" />
+          <img src={coverImage} alt={title} className="h-full w-full object-cover" loading="lazy" />
         </div>
         <div className="space-y-2 p-4">
           <div className="flex flex-wrap gap-2">

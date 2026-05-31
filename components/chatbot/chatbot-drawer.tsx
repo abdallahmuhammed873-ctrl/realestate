@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useLanguage } from "@/components/layout/language-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { getPropertyCoverImage } from "@/lib/property-images";
 
 type ChatRole = "user" | "assistant";
 
@@ -322,6 +323,7 @@ export function ChatbotDrawer() {
                       {message.items.map((item) => {
                         const title = item.title || item.projectName || (language === "ar" ? "عقار" : "Property");
                         const location = [item.district, item.area, item.city].filter(Boolean).join(", ");
+                        const coverImage = getPropertyCoverImage(item.images);
 
                         return (
                           <a
@@ -331,13 +333,7 @@ export function ChatbotDrawer() {
                           >
                             <div className="flex gap-3 p-2.5">
                               <div className="h-20 w-24 shrink-0 overflow-hidden rounded-xl bg-[var(--surface)]">
-                                {item.images?.[0] ? (
-                                  <img src={item.images[0]} alt={title} className="h-full w-full object-cover" loading="lazy" />
-                                ) : (
-                                  <div className="grid h-full w-full place-items-center text-[11px] text-muted">
-                                    {language === "ar" ? "بدون صورة" : "No image"}
-                                  </div>
-                                )}
+                                <img src={coverImage} alt={title} className="h-full w-full object-cover" loading="lazy" />
                               </div>
                               <div className="min-w-0 flex-1">
                                 <div className="mb-1 flex flex-wrap gap-1.5">

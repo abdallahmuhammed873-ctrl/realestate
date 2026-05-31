@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { getPropertyCoverImage } from "@/lib/property-images";
 import type { ListingStatus, Property, User } from "@/lib/types";
 
 type AdminTextPost = {
@@ -130,11 +131,11 @@ export function AdminCommunityPostsManager({
           {items.map((entry) => {
             if (entry.kind === "listing") {
               const { listing, property, seller, company, likesCount, commentsCount } = entry.item;
-              const imageUrl = property.images[0];
+              const imageUrl = getPropertyCoverImage(property.images, property.media);
               return (
                 <li key={`listing-${entry.id}`} className="rounded-xl border border-slate-200 p-3">
                   <div className="flex flex-col gap-3 md:flex-row">
-                    {imageUrl ? <img src={imageUrl} alt={property.title} className="h-28 w-full rounded-xl border border-slate-200 object-cover md:w-40" /> : null}
+                    <img src={imageUrl} alt={property.title} className="h-28 w-full rounded-xl border border-slate-200 object-cover md:w-40" />
                     <div className="min-w-0 flex-1 space-y-2">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="rounded-full bg-brand-100 px-2 py-1 text-xs font-semibold text-brand-800">Property post</span>

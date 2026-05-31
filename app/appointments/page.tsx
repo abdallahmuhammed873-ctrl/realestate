@@ -6,6 +6,7 @@ import { AppointmentActions } from "@/components/seller/appointment-actions";
 import { getCurrentUser } from "@/lib/auth";
 import { listBuyerAppointments, listSellerAppointments } from "@/lib/repository";
 import { formatPrice } from "@/lib/utils";
+import { getPropertyCoverImage } from "@/lib/property-images";
 
 function AppointmentStatus({ status }: { status: "PENDING" | "CONFIRMED" | "CANCELLED" | "RESCHEDULED" }) {
   if (status === "CONFIRMED") {
@@ -61,12 +62,13 @@ export default async function AppointmentsPage({ searchParams }: { searchParams:
             <ul className="space-y-3">
               {rows.map(({ appointment, property, seller }) => {
                 const price = property ? (property.transaction === "RENT" ? property.rentPrice : property.price) : null;
+                const coverImage = property ? getPropertyCoverImage(property.images) : null;
                 return (
                   <li key={appointment.id} className="rounded-xl border p-3">
                     <div className="grid gap-3 md:grid-cols-[220px,1fr]">
-                      {property?.images?.[0] ? (
+                      {property ? (
                         <div className="relative h-40 overflow-hidden rounded-xl">
-                          <Image src={property.images[0]} alt={property.title} fill className="object-cover" sizes="(max-width: 768px) 100vw, 220px" quality={72} loading="lazy" />
+                          <Image src={coverImage!} alt={property.title} fill className="object-cover" sizes="(max-width: 768px) 100vw, 220px" quality={72} loading="lazy" />
                         </div>
                       ) : (
                         <div className="grid h-40 place-items-center rounded-xl bg-slate-100 text-xs text-slate-500">No image</div>
@@ -132,11 +134,12 @@ export default async function AppointmentsPage({ searchParams }: { searchParams:
             <ul className="space-y-3">
               {appointments.map(({ appointment, property, buyer }) => {
                 const price = property.transaction === "RENT" ? property.rentPrice : property.price;
+                const coverImage = getPropertyCoverImage(property.images);
                 return (
                   <li key={appointment.id} className="rounded-xl border p-3">
                     <div className="grid gap-3 md:grid-cols-[220px,1fr]">
                       <div className="relative h-40 overflow-hidden rounded-xl">
-                        <Image src={property.images[0]} alt={property.title} fill className="object-cover" sizes="(max-width: 768px) 100vw, 220px" quality={72} loading="lazy" />
+                        <Image src={coverImage} alt={property.title} fill className="object-cover" sizes="(max-width: 768px) 100vw, 220px" quality={72} loading="lazy" />
                       </div>
                       <div className="space-y-2">
                         <div className="flex flex-wrap items-center gap-2">

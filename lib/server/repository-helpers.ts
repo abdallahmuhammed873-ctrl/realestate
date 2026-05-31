@@ -19,6 +19,7 @@ import type {
   SellerMessage,
   User
 } from "../types.ts";
+import { getPropertyCoverImage } from "../property-images.ts";
 import { haversineDistanceKm, isValidPhoneNumber } from "../utils.ts";
 import { buildPrismaPropertyWhere } from "../search-query-builder.ts";
 import { prisma } from "./prisma.ts";
@@ -801,6 +802,7 @@ function mapCommunityPostView(post: CommunityPostWithRelations, viewerId?: strin
 
 function mapCommunityListingView(listing: CommunityListingWithRelations, viewerId?: string | null): CommunityListingView {
   const property = listing.property!;
+  const mappedProperty = mapProperty(property)!;
   const seller = listing.user;
   const viewerIsAdmin = false;
 
@@ -809,7 +811,7 @@ function mapCommunityListingView(listing: CommunityListingWithRelations, viewerI
     propertyId: property.id,
     title: property.title,
     description: property.description,
-    imageUrl: mapProperty(property)?.images[0] ?? undefined,
+    imageUrl: getPropertyCoverImage(mappedProperty.images, mappedProperty.media),
     city: property.city,
     area: property.area,
     district: property.district,

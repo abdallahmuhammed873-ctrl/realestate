@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useLanguage } from "@/components/layout/language-provider";
 import type { PropertyMedia } from "@/lib/types";
 import { PanoramaViewer, Spin360Viewer } from "@/components/property/panorama-viewer";
+import { getPropertyImageSources } from "@/lib/property-images";
 
 type PropertyGalleryProps = {
   images: string[];
@@ -13,9 +14,6 @@ type PropertyGalleryProps = {
 
 export function PropertyGallery({ images, title, media = [] }: PropertyGalleryProps) {
   const { direction, t } = useLanguage();
-  const photoMedia = media
-    .filter((item) => item.kind === "IMAGE")
-    .sort((a, b) => a.sortOrder - b.sortOrder);
   const panoramaMedia = media
     .filter((item) => item.kind === "PANORAMA_360")
     .sort((a, b) => a.sortOrder - b.sortOrder);
@@ -23,12 +21,7 @@ export function PropertyGallery({ images, title, media = [] }: PropertyGalleryPr
     .filter((item) => item.kind === "SPIN_360_FRAME")
     .sort((a, b) => a.sortOrder - b.sortOrder);
 
-  const safeImages =
-    photoMedia.length > 0
-      ? photoMedia.map((item) => item.path)
-      : images.length > 0
-        ? images
-        : ["https://images.unsplash.com/photo-1560185007-cde436f6a4d0?w=1200"];
+  const safeImages = getPropertyImageSources(images, media);
 
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [activePanoramaIndex, setActivePanoramaIndex] = useState(0);
