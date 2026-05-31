@@ -146,6 +146,7 @@ test("seller listing submission and admin approval use the database-backed flow"
 
   const searchResult = await searchProperties({ q: "Phase 2 Service Test Listing", page: 1, pageSize: 10 });
   assert.ok(searchResult.items.some((item) => item.id === created?.property.id));
+  await updateListingStatus(created!.listing.id, "REJECTED", "u-admin-1", "Service test cleanup");
 });
 
 test("approval state gates website search, mobile api results, and AI retrieval together", async () => {
