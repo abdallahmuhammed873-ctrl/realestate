@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800" role="img">
+<defs>
+      <linearGradient id="sky" x1="0" x2="1" y1="0" y2="1">
+        <stop offset="0%" stop-color="#2e6f7f"/>
+        <stop offset="100%" stop-color="#101827"/>
+      </linearGradient>
+      <linearGradient id="floor" x1="0" x2="1">
+        <stop offset="0%" stop-color="#d7b46a"/>
+        <stop offset="100%" stop-color="#8f6e38"/>
+      </linearGradient>
+    </defs>
+    <rect width="1200" height="800" fill="url(#sky)"/>
+    <rect x="0" y="560" width="1200" height="240" fill="url(#floor)"/>
+    <rect x="90" y="110" width="390" height="300" rx="28" fill="#f8fafc" opacity="0.92"/>
+    <rect x="535" y="110" width="575" height="300" rx="28" fill="#f8fafc" opacity="0.34"/>
+    <rect x="170" y="460" width="330" height="110" rx="28" fill="#223047"/>
+    <rect x="620" y="470" width="310" height="96" rx="26" fill="#244c5a"/>
+    <circle cx="990" cy="520" r="58" fill="#d7b46a"/>
+    <text x="90" y="690" fill="#f8fafc" font-family="Arial, sans-serif" font-size="56" font-weight="700">360 Demo Sky Apartment</text>
+    <text x="92" y="745" fill="#d9e4ea" font-family="Arial, sans-serif" font-size="32" font-weight="700">Approved sample with two panorama rooms</text>
+</svg>
