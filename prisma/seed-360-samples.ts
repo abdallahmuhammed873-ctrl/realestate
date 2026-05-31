@@ -12,6 +12,7 @@ const SAMPLE_SELLER_ID = "sample-360-seller";
 const PUBLIC_SAMPLE_DIR = path.join(process.cwd(), "public", "samples", "360");
 const PUBLIC_SAMPLE_PATH = "/samples/360";
 const SVG_MIME = "image/svg+xml";
+const PNG_MIME = "image/png";
 
 type SampleAsset = {
   path: string;
@@ -68,44 +69,6 @@ function makeCoverSvg(title: string, subtitle: string, color: string) {
   );
 }
 
-function makePanoramaSvg(title: string, zones: string[], accent: string) {
-  const width = 3600;
-  const height = 900;
-  const zoneWidth = width / zones.length;
-  const zoneRects = zones
-    .map((zone, index) => {
-      const x = index * zoneWidth;
-      const hue = 185 + index * 18;
-      return `
-        <rect x="${x}" y="0" width="${zoneWidth}" height="${height}" fill="hsl(${hue}, 36%, ${index % 2 ? 25 : 20}%)"/>
-        <rect x="${x + 70}" y="135" width="${zoneWidth - 140}" height="305" rx="34" fill="#f8fafc" opacity="${index % 2 ? "0.38" : "0.24"}"/>
-        <rect x="${x + 140}" y="500" width="${zoneWidth - 280}" height="105" rx="28" fill="${accent}" opacity="0.82"/>
-        ${label(zone, x + 145, 675, 46)}
-      `;
-    })
-    .join("");
-
-  return svg(
-    width,
-    height,
-    `
-    <defs>
-      <linearGradient id="floor" x1="0" x2="1">
-        <stop offset="0%" stop-color="#c49b57"/>
-        <stop offset="50%" stop-color="#e8c981"/>
-        <stop offset="100%" stop-color="#9b723a"/>
-      </linearGradient>
-    </defs>
-    ${zoneRects}
-    <rect x="0" y="690" width="${width}" height="210" fill="url(#floor)"/>
-    <path d="M0 690 C600 628 980 746 1440 690 C1960 626 2350 744 2880 690 C3200 656 3440 672 3600 690 L3600 742 L0 742 Z" fill="#f6e4b0" opacity="0.28"/>
-    <rect x="0" y="0" width="${width}" height="88" fill="#020617" opacity="0.42"/>
-    ${label(title, 64, 62, 42)}
-    ${label("Drag or use the slider to inspect this full sample panorama", 2190, 62, 34, "#cbd5e1")}
-  `
-  );
-}
-
 function makeSpinFrameSvg(index: number, total: number) {
   const angle = Math.round((index / total) * 360);
   const radians = (angle * Math.PI) / 180;
@@ -150,6 +113,14 @@ async function writeAsset(fileName: string, content: string): Promise<SampleAsse
   };
 }
 
+async function existingPngAsset(fileName: string): Promise<SampleAsset> {
+  await fs.access(path.join(PUBLIC_SAMPLE_DIR, fileName));
+  return {
+    path: `${PUBLIC_SAMPLE_PATH}/${fileName}`,
+    mimeType: PNG_MIME
+  };
+}
+
 async function createAssets() {
   const panoramaCover = await writeAsset(
     "sample-360-panorama-cover.svg",
@@ -159,18 +130,9 @@ async function createAssets() {
     "sample-360-spin-cover.svg",
     makeCoverSvg("360 Demo Villa Spin Tour", "Approved sample with panorama and spin frames", "#5b6f95")
   );
-  const livingPanorama = await writeAsset(
-    "sample-360-living-panorama.svg",
-    makePanoramaSvg("Living Room Panorama", ["Entrance", "Kitchen", "Dining", "Lounge", "Balcony", "City View"], "#2e6f7f")
-  );
-  const bedroomPanorama = await writeAsset(
-    "sample-360-bedroom-panorama.svg",
-    makePanoramaSvg("Bedroom Panorama", ["Wardrobe", "Reading", "Bed", "Desk", "Terrace", "Ensuite"], "#7c5f2d")
-  );
-  const villaPanorama = await writeAsset(
-    "sample-360-villa-panorama.svg",
-    makePanoramaSvg("Villa Reception Panorama", ["Garden", "Reception", "Stairs", "Family Area", "Dining", "Pool View"], "#475569")
-  );
+  const livingPanorama = await existingPngAsset("sample-360-living-panorama.png");
+  const bedroomPanorama = await existingPngAsset("sample-360-bedroom-panorama.png");
+  const villaPanorama = await existingPngAsset("sample-360-villa-panorama.png");
   const spinFrames = await Promise.all(
     Array.from({ length: 12 }, (_, index) => writeAsset(`sample-360-spin-frame-${String(index + 1).padStart(2, "0")}.svg`, makeSpinFrameSvg(index, 12)))
   );
