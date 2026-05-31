@@ -41,34 +41,6 @@ function label(text: string, x: number, y: number, size = 52, fill = "#f8fafc") 
   return `<text x="${x}" y="${y}" fill="${fill}" font-family="Arial, sans-serif" font-size="${size}" font-weight="700">${text}</text>`;
 }
 
-function makeCoverSvg(title: string, subtitle: string, color: string) {
-  return svg(
-    1200,
-    800,
-    `
-    <defs>
-      <linearGradient id="sky" x1="0" x2="1" y1="0" y2="1">
-        <stop offset="0%" stop-color="${color}"/>
-        <stop offset="100%" stop-color="#101827"/>
-      </linearGradient>
-      <linearGradient id="floor" x1="0" x2="1">
-        <stop offset="0%" stop-color="#d7b46a"/>
-        <stop offset="100%" stop-color="#8f6e38"/>
-      </linearGradient>
-    </defs>
-    <rect width="1200" height="800" fill="url(#sky)"/>
-    <rect x="0" y="560" width="1200" height="240" fill="url(#floor)"/>
-    <rect x="90" y="110" width="390" height="300" rx="28" fill="#f8fafc" opacity="0.92"/>
-    <rect x="535" y="110" width="575" height="300" rx="28" fill="#f8fafc" opacity="0.34"/>
-    <rect x="170" y="460" width="330" height="110" rx="28" fill="#223047"/>
-    <rect x="620" y="470" width="310" height="96" rx="26" fill="#244c5a"/>
-    <circle cx="990" cy="520" r="58" fill="#d7b46a"/>
-    ${label(title, 90, 690, 56)}
-    ${label(subtitle, 92, 745, 32, "#d9e4ea")}
-  `
-  );
-}
-
 function makeSpinFrameSvg(index: number, total: number) {
   const angle = Math.round((index / total) * 360);
   const radians = (angle * Math.PI) / 180;
@@ -122,14 +94,8 @@ async function existingPngAsset(fileName: string): Promise<SampleAsset> {
 }
 
 async function createAssets() {
-  const panoramaCover = await writeAsset(
-    "sample-360-panorama-cover.svg",
-    makeCoverSvg("360 Demo Sky Apartment", "Approved sample with two panorama rooms", "#2e6f7f")
-  );
-  const spinCover = await writeAsset(
-    "sample-360-spin-cover.svg",
-    makeCoverSvg("360 Demo Villa Spin Tour", "Approved sample with panorama and spin frames", "#5b6f95")
-  );
+  const panoramaCover = await existingPngAsset("sample-360-panorama-cover.png");
+  const spinCover = await existingPngAsset("sample-360-spin-cover.png");
   const livingPanorama = await existingPngAsset("sample-360-living-panorama.png");
   const bedroomPanorama = await existingPngAsset("sample-360-bedroom-panorama.png");
   const villaPanorama = await existingPngAsset("sample-360-villa-panorama.png");
