@@ -4,7 +4,7 @@ Phase 5 defines one canonical property-search filter contract for every platform
 
 - Next.js web search
 - Next.js internal AI search endpoint
-- Python AI service requests
+- Next.js Gemini AI requests
 - Future mobile `/api/v1/properties` work
 
 ## Canonical Filters
@@ -67,6 +67,6 @@ The canonical runtime path is:
 
 1. Parse and validate filters with `lib/search-contract.ts`
 2. Execute property search through the Next.js service layer
-3. Reuse the same normalized filter payload from the Python AI service
+3. Reuse the same normalized filter payload from the Gemini-backed AI route
 
 This keeps search behavior centralized in the Next.js backend instead of duplicating business rules in clients or the AI layer.

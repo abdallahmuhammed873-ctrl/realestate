@@ -9,7 +9,8 @@ console.log(`Backend bind host: ${summary.backendBinding.host}`);
 console.log(`Backend port: ${summary.backendBinding.port}`);
 console.log(`Backend localhost URL: ${summary.backendUrls.localUrl}`);
 console.log(`Backend network URL: ${summary.backendUrls.networkUrl ?? "not available"}`);
-console.log(`AI service URL: ${summary.aiServiceUrl}`);
+console.log(`AI service: ${summary.aiService.provider}:${summary.aiService.model}`);
+console.log(`AI configured: ${summary.aiService.configured ? "yes" : "no"}`);
 console.log(`Database host: ${summary.database.host}:${summary.database.port}`);
 console.log("Detected private IPv4 addresses:");
 

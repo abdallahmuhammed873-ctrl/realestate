@@ -47,10 +47,10 @@ When `PHASE14_BASE_URL` is set, the script additionally verifies:
 - media file serving from backend absolute URLs
 - rendered `lang` / `dir` HTML output for EN and AR requests
 - homepage, search page, property page, and seller wizard rendering under EN/AR plus light/dark cookies
-- `POST /api/v1/chat` if the backend reports the Python AI service as healthy
+- `POST /api/v1/chat` if the backend reports Gemini AI as healthy
 - same-network backend and media reachability through the reported laptop IPv4 URL when the backend is running in network mode
 
-If the Python AI service is not reachable, the script reports that as a pending live check instead of pretending the AI answer path was verified.
+If Gemini is not configured, the script reports that as a pending live check instead of pretending the AI answer path was verified.
 
 ## 3. Same-network phone verification
 
@@ -62,24 +62,17 @@ These checks are now partly automated and partly manual:
 npm run dev:network
 ```
 
-2. Start the Python AI service locally on the laptop:
-
-```powershell
-cd extras/chatbot/real_estate_chatbot
-uvicorn api:app --host 127.0.0.1 --port 8001
-```
-
-3. Print the current laptop IP:
+2. Print the current laptop IP:
 
 ```powershell
 npm run network:info
 ```
 
-4. From the phone browser, verify:
+3. From the phone browser, verify:
    - `http://<laptop-ip>:3000/api/health`
    - a property media URL returned from `/api/v1/properties`
 
-5. From the mobile app or API client on the phone, verify:
+4. From the mobile app or API client on the phone, verify:
    - `POST http://<laptop-ip>:3000/api/v1/auth/login`
    - `GET http://<laptop-ip>:3000/api/v1/properties`
    - `POST http://<laptop-ip>:3000/api/v1/chat`

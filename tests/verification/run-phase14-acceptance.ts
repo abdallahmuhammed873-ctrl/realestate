@@ -471,7 +471,7 @@ async function runLiveAcceptance(baseUrl: string, propertyId: string, propertyTi
   } else {
     pending.push({
       label: "Live AI answer verification",
-      details: "The backend health endpoint reported the Python AI service as unavailable, so /api/v1/chat was not asserted."
+      details: "The backend health endpoint reported Gemini AI as unavailable, so /api/v1/chat was not asserted."
     });
   }
 
@@ -508,8 +508,8 @@ async function main() {
   const backendHealth = await getBackendHealthSnapshot();
   if (backendHealth.aiService.status !== "ok") {
     pendingChecks.push({
-      label: "Laptop-local AI reachability",
-      details: backendHealth.aiService.details || "The Python AI service was not reachable from this workspace run."
+      label: "Gemini AI configuration",
+      details: backendHealth.aiService.details || "Gemini AI was not configured for this workspace run."
     });
   }
 

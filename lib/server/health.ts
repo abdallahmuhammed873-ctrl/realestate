@@ -1,4 +1,5 @@
 import { prisma } from "./prisma.ts";
+import { getGeminiStatus } from "./ai-config.ts";
 import { getBackendUrls, getLocalIpv4Addresses, getPreferredLocalIpv4, getServerBindingConfig } from "./network.ts";
 import { getServerRuntimeSummary } from "./runtime-config.ts";
 
@@ -6,15 +7,6 @@ type ServiceCheck = {
   status: "ok" | "error";
   details?: string;
 };
-
-function buildTimeoutSignal(timeoutMs: number) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
-  return {
-    signal: controller.signal,
-    clear: () => clearTimeout(timeout)
-  };
-}
 
 export async function getDatabaseHealthCheck(): Promise<ServiceCheck> {
   try {
@@ -29,38 +21,18 @@ export async function getDatabaseHealthCheck(): Promise<ServiceCheck> {
 }
 
 export async function getAiServiceHealthCheck(): Promise<ServiceCheck> {
-  const { aiServiceUrl } = getServerRuntimeSummary();
-  const { signal, clear } = buildTimeoutSignal(5_000);
-
-  try {
-    const response = await fetch(`${aiServiceUrl}/health`, {
-      method: "GET",
-      cache: "no-store",
-      signal
-    });
-    const payload = await response.json().catch(() => null);
-
-    if (!response.ok) {
-      return {
-        status: "error",
-        details: payload?.detail || payload?.error || `AI service returned ${response.status}.`
-      };
-    }
-
-    return payload?.status === "ok"
-      ? { status: "ok" }
-      : {
-          status: "error",
-          details: payload?.detail || "AI service reported a degraded state."
-        };
-  } catch (error) {
+  const gemini = getGeminiStatus();
+  if (gemini.configured) {
     return {
-      status: "error",
-      details: error instanceof Error ? error.message : "Unknown AI service health error."
+      status: "ok",
+      details: `${gemini.provider}:${gemini.model}`
     };
-  } finally {
-    clear();
   }
+
+  return {
+    status: "error",
+    details: "GEMINI_API_KEY is not configured."
+  };
 }
 
 export async function getBackendHealthSnapshot() {
@@ -85,7 +57,9 @@ export async function getBackendHealthSnapshot() {
     database,
     aiService: {
       ...aiService,
-      url: runtime.aiServiceUrl
+      provider: runtime.aiService.provider,
+      model: runtime.aiService.model,
+      configured: runtime.aiService.configured
     }
   };
 }

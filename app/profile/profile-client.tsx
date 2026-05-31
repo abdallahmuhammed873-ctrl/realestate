@@ -171,18 +171,18 @@ export function ProfileClient({ user, sellerListings }: { user: ProfileUser; sel
 
   return (
     <div className="mx-auto max-w-2xl space-y-4">
-      <h1 className="text-2xl font-bold">{title}</h1>
+      <h1 className="text-3xl font-bold text-[var(--ink)]">{title}</h1>
       <Card className="space-y-4">
         <div className="flex items-center gap-4">
-          <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border border-slate-300 bg-slate-100">
+          <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border theme-divider bg-[var(--surface-soft)]">
             {avatarUrl ? (
               <img src={avatarUrl} alt={t("profileImageAlt", { name: profile.name })} className="h-full w-full object-cover" />
             ) : (
-              <span className="text-2xl font-bold text-brand-800">{(profile.name.trim().charAt(0) || "U").toUpperCase()}</span>
+              <span className="text-2xl font-bold text-[var(--brand-strong)]">{(profile.name.trim().charAt(0) || "U").toUpperCase()}</span>
             )}
           </div>
           <div className="flex flex-wrap gap-2">
-            <label className="inline-flex cursor-pointer items-center rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50">
+            <label className="inline-flex cursor-pointer items-center rounded-lg border theme-divider px-3 py-2 text-sm font-semibold text-[var(--ink)] hover:bg-[var(--surface-soft)]">
               {avatarLoading ? t("uploading") : t("addProfilePicture")}
               <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={onPickImage} disabled={avatarLoading} />
             </label>
@@ -200,15 +200,15 @@ export function ProfileClient({ user, sellerListings }: { user: ProfileUser; sel
         {isEditing ? (
           <form className="space-y-3" onSubmit={saveProfile}>
             <div>
-              <p className="text-xs font-semibold uppercase text-slate-500">{t("name")}</p>
+              <p className="text-sm font-bold uppercase text-[var(--muted)]">{t("name")}</p>
               <Input value={name} onChange={(e) => setName(e.target.value)} required />
             </div>
             <div>
-              <p className="text-xs font-semibold uppercase text-slate-500">{t("email")}</p>
+              <p className="text-sm font-bold uppercase text-[var(--muted)]">{t("email")}</p>
               <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
             </div>
             <div>
-              <p className="text-xs font-semibold uppercase text-slate-500">{t("phoneNumber")}</p>
+              <p className="text-sm font-bold uppercase text-[var(--muted)]">{t("phoneNumber")}</p>
               <Input
                 type="tel"
                 value={phone}
@@ -230,27 +230,27 @@ export function ProfileClient({ user, sellerListings }: { user: ProfileUser; sel
         ) : (
           <>
             <div>
-              <p className="text-xs font-semibold uppercase text-slate-500">{t("name")}</p>
-              <p className="text-base font-semibold text-slate-900">{profile.name}</p>
+              <p className="text-sm font-bold uppercase text-[var(--muted)]">{t("name")}</p>
+              <p className="mt-1 text-lg font-semibold text-[var(--ink)]">{profile.name}</p>
             </div>
             <div>
-              <p className="text-xs font-semibold uppercase text-slate-500">{t("email")}</p>
-              <p className="text-base text-slate-800">{profile.email}</p>
+              <p className="text-sm font-bold uppercase text-[var(--muted)]">{t("email")}</p>
+              <p className="mt-1 text-lg font-semibold text-[var(--ink)]">{profile.email}</p>
             </div>
             <div>
-              <p className="text-xs font-semibold uppercase text-slate-500">{t("phoneNumber")}</p>
-              <p className="text-base text-slate-800">{profile.phone ?? t("noPhoneAdded")}</p>
+              <p className="text-sm font-bold uppercase text-[var(--muted)]">{t("phoneNumber")}</p>
+              <p className="mt-1 text-lg font-semibold text-[var(--ink)]">{profile.phone ?? t("noPhoneAdded")}</p>
             </div>
           </>
         )}
         <div>
-          <p className="text-xs font-semibold uppercase text-slate-500">{t("role")}</p>
-          <p className="text-base text-slate-800">{roleLabel}</p>
+          <p className="text-sm font-bold uppercase text-[var(--muted)]">{t("role")}</p>
+          <p className="mt-1 text-lg font-semibold text-[var(--ink)]">{roleLabel}</p>
         </div>
         {profile.companyName ? (
           <div>
-            <p className="text-xs font-semibold uppercase text-slate-500">{t("company")}</p>
-            <p className="text-base text-slate-800">{profile.companyName}</p>
+            <p className="text-sm font-bold uppercase text-[var(--muted)]">{t("company")}</p>
+            <p className="mt-1 text-lg font-semibold text-[var(--ink)]">{profile.companyName}</p>
           </div>
         ) : null}
         {saveError ? <p className="text-sm text-red-600">{saveError}</p> : null}
@@ -260,31 +260,31 @@ export function ProfileClient({ user, sellerListings }: { user: ProfileUser; sel
       {profile.role === "SELLER" ? (
         <Card className="space-y-3">
           <div className="flex items-center justify-between gap-2">
-            <h2 className="text-lg font-bold">{t("yourPropertyPosts")}</h2>
+            <h2 className="text-xl font-bold text-[var(--ink)]">{t("yourPropertyPosts")}</h2>
             <Link href="/seller/new" className="rounded-xl bg-brand-700 px-3 py-2 text-sm font-semibold text-white">
               {t("newListing")}
             </Link>
           </div>
           {myListings.length === 0 ? (
-            <p className="text-sm text-slate-600">{t("noListingsYet")}</p>
+            <p className="text-sm font-medium text-[var(--muted)]">{t("noListingsYet")}</p>
           ) : (
             <ul className="space-y-3">
               {myListings.map((item) => (
-                <li key={item.listingId} className="rounded-xl border p-3">
+                <li key={item.listingId} className="rounded-xl border theme-divider bg-[var(--surface-elevated)] p-3">
                   <div className="flex flex-col gap-3 sm:flex-row">
-                    {item.imageUrl ? <img src={item.imageUrl} alt={item.title} className="h-28 w-full rounded-xl border object-cover sm:w-40" /> : null}
+                    {item.imageUrl ? <img src={item.imageUrl} alt={item.title} className="h-28 w-full rounded-xl border theme-divider object-cover sm:w-40" /> : null}
                     <div className="min-w-0 flex-1 space-y-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700">{item.status}</span>
-                        <span className="text-xs text-slate-500">{t("updatedAtLabel", { value: new Date(item.updatedAt).toLocaleString() })}</span>
+                        <span className="status-neutral rounded-full px-2 py-1 text-xs font-semibold">{item.status}</span>
+                        <span className="text-xs font-medium text-[var(--muted)]">{t("updatedAtLabel", { value: new Date(item.updatedAt).toLocaleString() })}</span>
                       </div>
-                      <p className="truncate text-base font-semibold text-slate-900">{item.title}</p>
-                      <p className="line-clamp-2 text-sm text-slate-600">{item.description}</p>
-                      <p className="text-xs text-slate-600">
+                      <p className="truncate text-lg font-semibold text-[var(--ink)]">{item.title}</p>
+                      <p className="line-clamp-2 text-sm font-medium text-[var(--muted)]">{item.description}</p>
+                      <p className="text-xs font-medium text-[var(--muted)]">
                         {t("createdByLabel", { name: item.createdByName })} {item.isCompanyUser ? t("companyUserSuffix") : ""}
                       </p>
                       <div className="flex flex-wrap gap-3 pt-1">
-                        <Link href={`/seller/listings/${item.listingId}/edit`} className="text-sm font-semibold text-brand-700">
+                        <Link href={`/seller/listings/${item.listingId}/edit`} className="text-sm font-semibold link-accent">
                           {t("editListing")}
                         </Link>
                         <button

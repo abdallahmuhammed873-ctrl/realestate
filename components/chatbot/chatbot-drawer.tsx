@@ -38,6 +38,7 @@ type AssistantResponse = {
   relaxedFilters?: string[];
   total?: number;
   items?: AssistantItem[];
+  externalSources?: Array<{ title: string; uri: string }>;
 };
 
 type Message = {
@@ -180,7 +181,7 @@ export function ChatbotDrawer() {
     setSending(true);
 
     try {
-      const res = await fetch("/api/chat", {
+      const res = await fetch("/api/ai/chat", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -219,7 +220,6 @@ export function ChatbotDrawer() {
 
   const edgeClass = direction === "rtl" ? "left-4" : "right-4";
   const quickPrompts = QUICK_PROMPTS[language];
-  const lastAssistantMessage = [...messages].reverse().find((message) => message.role === "assistant");
 
   return (
     <>
@@ -259,19 +259,21 @@ export function ChatbotDrawer() {
                 </button>
               </div>
             </div>
-            <div className="flex flex-wrap gap-2 pt-3">
-              {quickPrompts.map((prompt) => (
-                <button
-                  key={prompt}
-                  type="button"
-                  className="rounded-full border theme-divider bg-[var(--surface)] px-3 py-1.5 text-left text-xs leading-5 text-[var(--ink)] shadow-sm hover:bg-[var(--surface-soft)]"
-                  onClick={() => void sendMessage(prompt)}
-                  disabled={sending}
-                >
-                  {prompt}
-                </button>
-              ))}
-            </div>
+            {messages.length === 0 ? (
+              <div className="flex flex-wrap gap-2 pt-3">
+                {quickPrompts.map((prompt) => (
+                  <button
+                    key={prompt}
+                    type="button"
+                    className="rounded-full border theme-divider bg-[var(--surface)] px-3 py-1.5 text-left text-xs leading-5 text-[var(--ink)] shadow-sm hover:bg-[var(--surface-soft)]"
+                    onClick={() => void sendMessage(prompt)}
+                    disabled={sending}
+                  >
+                    {prompt}
+                  </button>
+                ))}
+              </div>
+            ) : null}
           </div>
 
           <div ref={scrollRef} className="min-h-0 flex-1 space-y-3 overflow-auto bg-[var(--surface-soft)] px-3 py-3">
@@ -392,24 +394,6 @@ export function ChatbotDrawer() {
               </div>
             ) : null}
           </div>
-
-          {lastAssistantMessage?.role === "assistant" && lastAssistantMessage.suggestions?.length ? (
-            <div className="border-t theme-divider bg-[var(--surface)] px-4 py-2.5">
-              <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-soft">{t("assistantTryThese")}</p>
-              <div className="flex flex-wrap gap-1.5">
-                {lastAssistantMessage.suggestions.slice(0, 3).map((prompt) => (
-                  <button
-                    key={`footer-${prompt}`}
-                    type="button"
-                    className="rounded-full bg-[var(--brand-soft)] px-3 py-1.5 text-xs font-medium text-[var(--brand-strong)] hover:opacity-90"
-                    onClick={() => void sendMessage(prompt)}
-                  >
-                    {prompt}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : null}
 
           <div className="border-t theme-divider bg-[var(--surface)] px-3 py-2.5">
             <p className="mb-2 text-xs text-muted">{t("assistantInputHint")}</p>
