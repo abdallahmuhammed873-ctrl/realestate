@@ -304,7 +304,7 @@ function buildTransparentFallback(input: {
   if (input.language === "AR") {
     if (input.items.length === 0) {
       return {
-        reply: "لم أتمكن من توليد رد Gemini الآن، ولا توجد نتائج مطابقة في بيانات المنصة. جرّب إضافة المنطقة أو الميزانية أو نوع العقار.",
+        reply: "\u0644\u0645 \u0623\u062c\u062f \u0646\u062a\u0627\u0626\u062c \u0645\u0637\u0627\u0628\u0642\u0629 \u0641\u064a \u0628\u064a\u0627\u0646\u0627\u062a \u0627\u0644\u0645\u0646\u0635\u0629. \u062c\u0631\u0651\u0628 \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u0645\u0646\u0637\u0642\u0629 \u0623\u0648 \u0627\u0644\u0645\u064a\u0632\u0627\u0646\u064a\u0629 \u0623\u0648 \u0646\u0648\u0639 \u0627\u0644\u0639\u0642\u0627\u0631.",
         suggestions
       };
     }
@@ -312,14 +312,14 @@ function buildTransparentFallback(input: {
       .slice(0, 3)
       .map((item, index) => `${index + 1}. ${item.title} - ${formatFallbackPrice(item, input.language)} - ${[item.district, item.area, item.city].filter(Boolean).join(", ")}`);
     return {
-      reply: `لم أتمكن من توليد رد Gemini الآن، لكنني وجدت بيانات حقيقية من المنصة:\n${lines.join("\n")}`,
+      reply: `\u0647\u0630\u0647 \u0623\u0641\u0636\u0644 \u0627\u0644\u0646\u062a\u0627\u0626\u062c \u0627\u0644\u0645\u0637\u0627\u0628\u0642\u0629 \u0645\u0646 \u0628\u064a\u0627\u0646\u0627\u062a \u0627\u0644\u0645\u0646\u0635\u0629:\n${lines.join("\n")}`,
       suggestions
     };
   }
 
   if (input.items.length === 0) {
     return {
-      reply: "I could not generate the Gemini response right now, and no matching platform listings were found. Try adding a location, budget, or property type.",
+      reply: "I did not find matching platform listings yet. Try adding a location, budget, or property type.",
       suggestions
     };
   }
@@ -327,7 +327,7 @@ function buildTransparentFallback(input: {
     .slice(0, 3)
     .map((item, index) => `${index + 1}. ${item.title} - ${formatFallbackPrice(item, input.language)} - ${[item.district, item.area, item.city].filter(Boolean).join(", ")}`);
   return {
-    reply: `I could not generate the Gemini response right now, but I found real platform data:\n${lines.join("\n")}`,
+    reply: `Here are the best matching listings from the platform:\n${lines.join("\n")}`,
     suggestions
   };
 }
