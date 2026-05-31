@@ -65,6 +65,10 @@ export function toMobilePropertyMedia(media: PropertyMedia, context: MobileMedia
 }
 
 export function toMobileProperty(property: Property, context: MobileMediaContext) {
+  const media = property.media ?? [];
+  const hasPanorama360 = media.some((item) => item.kind === "PANORAMA_360");
+  const hasSpin360 = media.some((item) => item.kind === "SPIN_360_FRAME");
+
   return {
     id: property.id,
     listingId: property.listingId,
@@ -102,7 +106,10 @@ export function toMobileProperty(property: Property, context: MobileMediaContext
     completionStatus: property.completionStatus,
     amenities: property.amenities,
     imageUrls: property.images.map((image) => normalizePathToAbsoluteUrl(image, context.origin)),
-    media: (property.media ?? []).map((media) => toMobilePropertyMedia(media, context)),
+    media: media.map((mediaItem) => toMobilePropertyMedia(mediaItem, context)),
+    has360View: hasPanorama360 || hasSpin360,
+    hasPanorama360,
+    hasSpin360,
     installmentDownPayment: property.installmentDownPayment ?? null,
     installmentYears: property.installmentYears ?? null,
     installmentMonthly: property.installmentMonthly ?? null,

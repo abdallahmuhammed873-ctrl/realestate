@@ -45,7 +45,15 @@ export async function listSellerCommunityPostsForAdmin(sellerId: string) {
   const scopeIds = await getSellerDashboardScopeIds(sellerId);
   const posts = await prisma.communityPost.findMany({
     where: { userId: { in: scopeIds } },
-    include: { user: true },
+    include: {
+      user: true,
+      _count: {
+        select: {
+          likes: true,
+          comments: true
+        }
+      }
+    },
     orderBy: { createdAt: "desc" }
   });
   return posts.map((post) => ({
@@ -56,10 +64,52 @@ export async function listSellerCommunityPostsForAdmin(sellerId: string) {
       imageUrl: post.imagePath ?? null,
       imagePath: post.imagePath ?? null,
       createdAt: post.createdAt.toISOString(),
-      updatedAt: post.updatedAt.toISOString()
+      updatedAt: post.updatedAt.toISOString(),
+      likesCount: post._count.likes,
+      commentsCount: post._count.comments
     },
     author: mapUser(post.user)
   }));
+}
+
+export async function listSellerCommunityListingsForAdmin(sellerId: string) {
+  const scopeIds = await getSellerDashboardScopeIds(sellerId);
+  const listings = await prisma.listing.findMany({
+    where: {
+      userId: { in: scopeIds },
+      status: "APPROVED"
+    },
+    include: {
+      property: {
+        include: {
+          media: { orderBy: { sortOrder: "asc" } }
+        }
+      },
+      user: {
+        include: {
+          companyOwner: true
+        }
+      },
+      _count: {
+        select: {
+          communityLikes: true,
+          communityComments: true
+        }
+      }
+    },
+    orderBy: { updatedAt: "desc" }
+  });
+
+  return listings
+    .filter((listing) => Boolean(listing.property))
+    .map((listing) => ({
+      listing: mapListing(listing)!,
+      property: mapProperty(listing.property)!,
+      seller: mapUser(listing.user),
+      company: mapUser(listing.user.companyOwner),
+      likesCount: listing._count.communityLikes,
+      commentsCount: listing._count.communityComments
+    }));
 }
 
 async function listListingsByStatus(status: ListingStatus) {
@@ -369,7 +419,17 @@ export async function createOrUpdateSellerListing(input: SellerListingInput) {
 }
 
 export async function deleteSellerListing(listingId: string, sellerId: string) {
-  const listing = await prisma.listing.findUnique({
+  const listing = await findListingWithUploadedMedia(listingId);
+  if (!listing) return { ok: false as const, error: "Listing not found." };
+  const canAccess = await canSellerAccessListing(sellerId, listing.userId);
+  if (!canAccess) return { ok: false as const, error: "Listing not found." };
+
+  await deleteListingAndUploadedFiles(listing);
+  return { ok: true as const };
+}
+
+async function findListingWithUploadedMedia(listingId: string) {
+  return prisma.listing.findUnique({
     where: { id: listingId },
     include: {
       property: {
@@ -379,10 +439,11 @@ export async function deleteSellerListing(listingId: string, sellerId: string) {
       }
     }
   });
-  if (!listing) return { ok: false as const, error: "Listing not found." };
-  const canAccess = await canSellerAccessListing(sellerId, listing.userId);
-  if (!canAccess) return { ok: false as const, error: "Listing not found." };
+}
 
+type ListingWithUploadedMedia = NonNullable<Awaited<ReturnType<typeof findListingWithUploadedMedia>>>;
+
+async function deleteListingAndUploadedFiles(listing: ListingWithUploadedMedia) {
   const pathsToDelete = listing.property
     ? Array.from(new Set([...(listing.property.images ?? []), ...listing.property.media.map((item) => item.path)])).filter(isLocalUploadPath)
     : [];
@@ -391,6 +452,31 @@ export async function deleteSellerListing(listingId: string, sellerId: string) {
     where: { id: listing.id }
   });
   await Promise.all(pathsToDelete.map((filePath) => deleteUploadedFile(filePath)));
+}
+
+export async function deleteCommunityListingForAdmin(listingId: string) {
+  const listing = await findListingWithUploadedMedia(listingId);
+  if (!listing || listing.status !== "APPROVED") {
+    return { ok: false as const, error: "Community listing not found." };
+  }
+
+  await deleteListingAndUploadedFiles(listing);
+  return { ok: true as const };
+}
+
+export async function deleteCommunityPostForAdmin(postId: string) {
+  const post = await prisma.communityPost.findUnique({
+    where: { id: postId }
+  });
+  if (!post) return { ok: false as const, error: "Community post not found." };
+
+  await prisma.communityPost.delete({
+    where: { id: post.id }
+  });
+  if (post.imagePath && isLocalUploadPath(post.imagePath)) {
+    await deleteUploadedFile(post.imagePath);
+  }
+
   return { ok: true as const };
 }
 

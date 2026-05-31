@@ -129,6 +129,7 @@ async function main() {
     approvedSearch.items.some((item) => item.id === createdListing?.property.id),
     "Expected approved seller listing to appear in search"
   );
+  await updateListingStatus(createdListing!.listing.id, "REJECTED", "u-admin-1", "Service test cleanup");
 
   const phase13Title = "Phase 13 Visibility Gate Listing";
   const phase13Listing = await createOrUpdateSellerListing({

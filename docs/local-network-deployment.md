@@ -4,7 +4,7 @@ This project's graduation-demo deployment model is intentionally simple:
 
 - PostgreSQL runs on the laptop only.
 - Next.js runs on the laptop and can be exposed to the same Wi-Fi network.
-- The Python AI service runs on the same laptop.
+- The Gemini-backed AI assistant runs inside the Next.js server.
 - The mobile app talks to the Next.js backend only.
 
 ## Current detected laptop IPv4
@@ -33,24 +33,16 @@ npm run start:network
 
 These scripts bind Next.js to `0.0.0.0:3000`, which makes the backend reachable from other devices on the same network.
 
-## Python AI service
+## Gemini AI
 
-Start the AI service on the laptop and keep it local-only:
-
-```powershell
-cd extras/chatbot/real_estate_chatbot
-uvicorn api:app --host 127.0.0.1 --port 8001
-```
-
-The Next.js backend calls the AI service internally through `PYTHON_AI_SERVICE_URL`, which defaults to `http://127.0.0.1:8001`.
-
-If Next.js is running on a non-default port, set:
+Set the Gemini API key in the Next.js environment before starting the app:
 
 ```powershell
-$env:PLATFORM_AI_BASE_URL="http://127.0.0.1:3000/api/internal/ai"
+$env:GEMINI_API_KEY="your-key"
+$env:GEMINI_MODEL="gemini-3.5-flash"
 ```
 
-before starting the Python service.
+The browser and mobile clients still call Next.js only. Gemini is called server-side from `app/api/ai/*`.
 
 ## Demo URLs
 
@@ -59,7 +51,7 @@ With the current Wi-Fi address and default ports:
 - Laptop web app: `http://127.0.0.1:3000`
 - Phone/mobile backend base URL: `http://192.168.1.4:3000`
 - Backend health endpoint from phone: `http://192.168.1.4:3000/api/health`
-- AI service internal URL on laptop: `http://127.0.0.1:8001/health`
+- AI health endpoint: `http://192.168.1.4:3000/api/ai/health`
 
 ## Health checks
 
@@ -69,10 +61,9 @@ Use these endpoints to verify the laptop demo stack:
   - confirms the backend is reachable
   - reports the current bind host/port
   - checks PostgreSQL reachability from Next.js
-  - checks Python AI reachability from Next.js
-- `GET /health` on the Python service
-  - confirms the AI service is up
-  - confirms it can still reach the protected internal platform endpoint
+  - checks Gemini configuration
+- `GET /api/ai/health`
+  - reports database and Gemini readiness for the assistant
 
 You can also print the current local IPs and URLs from the app workspace:
 
@@ -96,6 +87,6 @@ Only do this on the laptop used for the graduation demo.
 
 - PostgreSQL should remain bound for local/backend use only.
 - The phone should never connect directly to PostgreSQL.
-- The phone should never call the Python AI service directly.
+- The phone should never call Gemini directly.
 - This setup is demo-friendly, not production-grade.
 - The laptop must stay powered on and connected to the same network as the phone.

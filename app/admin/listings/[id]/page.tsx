@@ -7,6 +7,7 @@ import { ReviewActions } from "@/components/admin/review-actions";
 import { formatPrice } from "@/lib/utils";
 import { getRequestLanguage } from "@/lib/i18n-server";
 import { t } from "@/lib/i18n";
+import { getPropertyCoverImage } from "@/lib/property-images";
 
 export default async function AdminListingReviewPage({ params }: { params: Promise<{ id: string }> }) {
   const resolved = await params;
@@ -19,6 +20,7 @@ export default async function AdminListingReviewPage({ params }: { params: Promi
   const seller = await getUserById(data.listing.userId);
   const company = seller?.companyOwnerId ? await getUserById(seller.companyOwnerId) : null;
   const price = data.property.transaction === "RENT" ? data.property.rentPrice : data.property.price;
+  const coverImage = getPropertyCoverImage(data.property.images);
 
   return (
     <div className="space-y-4">
@@ -26,7 +28,7 @@ export default async function AdminListingReviewPage({ params }: { params: Promi
       <Card className="rounded-xl border p-3">
         <div className="grid gap-3 md:grid-cols-[260px,1fr]">
           <div className="relative h-52 overflow-hidden rounded-xl">
-            <Image src={data.property.images[0]} alt={data.property.title} fill className="object-cover" sizes="(max-width: 768px) 100vw, 260px" quality={72} loading="lazy" />
+            <Image src={coverImage} alt={data.property.title} fill className="object-cover" sizes="(max-width: 768px) 100vw, 260px" quality={72} loading="lazy" />
           </div>
           <div className="space-y-2">
             <div className="flex flex-wrap items-center gap-2">

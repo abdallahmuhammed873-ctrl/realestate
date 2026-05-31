@@ -401,7 +401,7 @@ function main() {
     "",
     "## Notes",
     "",
-    "- `/api/chat` proxies to the local Python AI service, which reads grounded property data from protected Next.js internal AI endpoints backed by PostgreSQL.",
+    "- `/api/chat`, `/api/v1/chat`, and `/api/ai/chat` run through the Next.js Gemini AI service, grounded by PostgreSQL-backed property search.",
     "- `resend` is listed in dependencies but no usage was detected in source files.",
     ""
   ].join("\n");

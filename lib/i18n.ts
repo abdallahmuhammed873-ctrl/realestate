@@ -197,6 +197,7 @@ const property = {
   verified: { en: "Verified", ar: "موثق" },
   verifiedByPlatform: { en: "Verified by platform", ar: "موثق من المنصة" },
   goodDeal: { en: "Good deal", ar: "صفقة جيدة" },
+  has360View: { en: "360 View", ar: "عرض 360" },
   sqm: { en: "sqm", ar: "م²" },
   beds: { en: "beds", ar: "غرف" },
   baths: { en: "baths", ar: "حمامات" },

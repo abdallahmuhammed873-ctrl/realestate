@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import {
   commonDictionary,
@@ -34,12 +35,18 @@ function applyLanguage(language: Language) {
   document.documentElement.dataset.language = language;
 }
 
+function persistLanguage(language: Language) {
+  window.localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
+  document.cookie = `${LANGUAGE_COOKIE}=${language}; path=/; max-age=31536000; samesite=lax`;
+}
+
 type LanguageProviderProps = {
   children: React.ReactNode;
   initialLanguage: Language;
 };
 
 export function LanguageProvider({ children, initialLanguage }: LanguageProviderProps) {
+  const router = useRouter();
   const [language, setLanguageState] = useState<Language>(initialLanguage);
 
   useEffect(() => {
@@ -51,16 +58,22 @@ export function LanguageProvider({ children, initialLanguage }: LanguageProvider
 
   useEffect(() => {
     applyLanguage(language);
-    window.localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
-    document.cookie = `${LANGUAGE_COOKIE}=${language}; path=/; max-age=31536000; samesite=lax`;
+    persistLanguage(language);
   }, [language]);
+
+  function setLanguage(language: Language) {
+    setLanguageState(language);
+    applyLanguage(language);
+    persistLanguage(language);
+    router.refresh();
+  }
 
   const value = useMemo(
     () => ({
       language,
       direction: getLanguageDirection(language),
-      setLanguage: setLanguageState,
-      toggleLanguage: () => setLanguageState((current) => (current === "ar" ? "en" : "ar")),
+      setLanguage,
+      toggleLanguage: () => setLanguage(language === "ar" ? "en" : "ar"),
       t: (key: CommonTranslationKey, params?: Record<string, string | number>) => {
         const template = commonDictionary[key]?.[language] ?? commonDictionary[key]?.en ?? String(key);
         if (!params) return template;
@@ -71,7 +84,7 @@ export function LanguageProvider({ children, initialLanguage }: LanguageProvider
         );
       }
     }),
-    [language]
+    [language, router]
   );
 
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;

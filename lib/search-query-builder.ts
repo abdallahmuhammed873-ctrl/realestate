@@ -31,6 +31,13 @@ export function buildPrismaPropertyWhere(filters: SearchFilters): Prisma.Propert
   if (filters.completionStatus) where.completionStatus = filters.completionStatus;
   if (filters.hasGarden !== undefined) where.hasGarden = filters.hasGarden;
   if (filters.hasRoof !== undefined) where.hasRoof = filters.hasRoof;
+  if (filters.has360View) {
+    where.media = {
+      some: {
+        kind: { in: ["PANORAMA_360", "SPIN_360_FRAME"] }
+      }
+    };
+  }
   if (filters.amenities?.length) where.amenities = { hasEvery: filters.amenities };
   if (filters.minArea !== undefined || filters.maxArea !== undefined) {
     where.areaSqm = { gte: filters.minArea, lte: filters.maxArea };

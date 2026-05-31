@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { getUserById, listSellerDashboard } from "@/lib/repository";
 import { ProfileClient } from "@/app/profile/profile-client";
+import { getPropertyCoverImage } from "@/lib/property-images";
 
 export default async function ProfilePage() {
   const user = await getCurrentUser();
@@ -18,7 +19,7 @@ export default async function ProfilePage() {
             status: listing.status,
             title: property!.title,
             description: property!.description,
-            imageUrl: property!.images[0] ?? "",
+            imageUrl: getPropertyCoverImage(property!.images),
             updatedAt: listing.updatedAt,
             createdByName: seller?.name ?? "Seller",
             isCompanyUser: Boolean(seller?.companyOwnerId)

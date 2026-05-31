@@ -7,7 +7,7 @@ Next.js App Router marketplace inspired by OLX/Dubizzle browsing and Property Fi
 - Next.js (App Router) + TypeScript
 - Tailwind CSS (shadcn-style reusable UI primitives)
 - Prisma + PostgreSQL for runtime platform data
-- Python AI service for intent extraction, grounded retrieval orchestration, and answer generation
+- Google Gemini via the Next.js server for grounded AI search, comparison, and answer generation
 
 ## Features
 
@@ -26,11 +26,11 @@ Next.js App Router marketplace inspired by OLX/Dubizzle browsing and Property Fi
 - Favorites, compare (localStorage up to 4), recommendations
 - Appointment booking flow + notification stub response
 - Saved search alerts
-- EN/AR-ready chatbot drawer via `POST /api/chat`
+- EN/AR-ready chatbot drawer via `POST /api/ai/chat`
 - Internal AI data path:
-  - Next.js exposes protected internal AI-read endpoints backed by PostgreSQL
-  - Python AI service calls those endpoints instead of reading CSV files
-  - Ollama stays behind a Python adapter with a grounded fallback response
+  - Next.js extracts filters, searches PostgreSQL-backed listings, and calls Gemini server-side
+  - AI responses return real property cards from canonical platform data
+  - Optional Gemini Google Search grounding is used for explicit external market-context requests
 - Responsive UX:
   - mobile bottom nav
   - mobile filters bottom sheet
@@ -87,9 +87,10 @@ Use `/auth` and choose role:
   Body: `{ status: "APPROVED" | "REJECTED", notes? }`
 - `GET /api/properties/by-ids?ids=p-1,p-2`
 - `GET /api/health`
-- `POST /api/chat`  
+- `POST /api/ai/chat`
   Body: `{ message, language: "EN" | "AR" }`  
   Response: `{ reply, suggestedFilters, language, extractedFilters, total, items }`
+- `GET /api/ai/health`
 - `POST /api/v1/auth/login`
   Body: `{ identifier, password, role? }`
   Response: `{ ok, accessToken, tokenType: "Bearer", expiresAt, user }`
@@ -111,7 +112,7 @@ Use `/auth` and choose role:
 - `components/` reusable UI and feature modules
 - `lib/` types, Prisma-backed services, AI contract, distance/search helpers, auth helpers
 - `prisma/` schema and seed
-- `extras/chatbot/real_estate_chatbot/` Python AI service + Streamlit debug UI
+- `app/api/ai/*` Gemini-backed AI endpoints
 
 ## Setup
 
@@ -124,23 +125,19 @@ Use `/auth` and choose role:
    - `npx prisma generate`
    - `npx prisma migrate deploy`
    - `npm run seed`
-5. Start the Next.js app:
+5. Configure Gemini:
+   - set `GEMINI_API_KEY` in `.env`
+   - optional: set `GEMINI_MODEL` (default `gemini-3.5-flash`)
+6. Start the Next.js app:
    - local laptop only: `npm run dev`
    - same-Wi-Fi demo mode: `npm run dev:network`
    - In development the server now logs the active environment, backend bind host/port, PostgreSQL connection mode, detected network URL, and AI service target once on startup.
-6. Start the Python AI service in a second terminal:
-   - `cd extras/chatbot/real_estate_chatbot`
-   - `pip install -r requirements.txt`
-   - `uvicorn api:app --host 127.0.0.1 --port 8001`
-   - If Next.js is not running on `http://127.0.0.1:3000`, set `PLATFORM_AI_BASE_URL` before starting the service.
-7. Optional debug UI for the AI service:
-   - `streamlit run app.py`
-8. For same-network mobile testing:
+7. For same-network mobile testing:
    - use `npm run network:info` to print the current local IPv4 and demo URLs
    - open `http://<laptop-ip>:3000/api/health` from the phone browser to verify backend, DB, and AI reachability
    - call `POST http://<laptop-ip>:3000/api/v1/auth/login` first, then send `Authorization: Bearer <token>` to authenticated `/api/v1/*` routes
    - see `docs/local-network-deployment.md` for the full runbook
-9. Run acceptance verification:
+8. Run acceptance verification:
    - offline shared-data verification: `npm run test:acceptance`
    - live backend/API verification: set `$env:PHASE14_BASE_URL="http://127.0.0.1:3000"` first, then run `npm run test:acceptance`
    - see `docs/acceptance-verification.md` for the full Phase 14 checklist runbook
@@ -150,7 +147,7 @@ Use `/auth` and choose role:
 - Runtime uses PostgreSQL through Prisma-backed service modules.
 - Prisma is the primary schema and migration path for runtime data changes.
 - Public listing visibility is enforced by repository-level status check (`APPROVED` only).
-- The Python AI service reads shared platform data through `app/api/internal/ai/*` and no longer depends on CSV for chat-time retrieval.
+- The AI assistant reads shared platform data directly through Next.js service modules and no longer depends on Python/Ollama.
 - Mobile and browser clients should talk to the Next.js backend only. PostgreSQL is intended to stay backend-only on the laptop for the graduation demo.
 - Web auth still uses the current session-cookie flow, while mobile-ready `/api/v1/*` routes now use a signed bearer token issued by `POST /api/v1/auth/login`.
 - `GET /api/health` is the main laptop-demo readiness endpoint for backend, database, and AI checks.

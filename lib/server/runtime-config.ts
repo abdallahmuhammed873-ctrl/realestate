@@ -1,4 +1,5 @@
 import { AUTH_COOKIE_NAME } from "../auth-session.ts";
+import { getGeminiStatus } from "./ai-config.ts";
 import { loadLocalEnv } from "./load-env.ts";
 import { getBackendUrls, getPreferredLocalIpv4, getServerBindingConfig } from "./network.ts";
 
@@ -54,7 +55,7 @@ function parseDatabaseUrl(rawUrl?: string | null): DatabaseConnectionSummary {
 
 export function getServerRuntimeSummary() {
   const database = parseDatabaseUrl(process.env.DATABASE_URL);
-  const aiServiceUrl = process.env.PYTHON_AI_SERVICE_URL?.trim() || "http://127.0.0.1:8001";
+  const aiService = getGeminiStatus();
   const backendBinding = getServerBindingConfig();
   const backendUrls = getBackendUrls();
   const preferredLocalIpv4 = getPreferredLocalIpv4()?.address ?? null;
@@ -62,7 +63,7 @@ export function getServerRuntimeSummary() {
   return {
     nodeEnv: process.env.NODE_ENV || "development",
     database,
-    aiServiceUrl,
+    aiService,
     authCookie: AUTH_COOKIE_NAME,
     backendBinding,
     backendUrls,
@@ -85,7 +86,7 @@ export function logServerRuntimeOnce() {
         : "unknown PostgreSQL mode";
 
   console.info(
-    `[runtime] env=${summary.nodeEnv} bind=${summary.backendBinding.host}:${summary.backendBinding.port} networkUrl=${summary.backendUrls.networkUrl ?? "disabled"} db=${summary.database.provider} mode=${dbModeLabel} host=${summary.database.host}:${summary.database.port} database=${summary.database.database} ai=${summary.aiServiceUrl} authCookie=${summary.authCookie}`
+    `[runtime] env=${summary.nodeEnv} bind=${summary.backendBinding.host}:${summary.backendBinding.port} networkUrl=${summary.backendUrls.networkUrl ?? "disabled"} db=${summary.database.provider} mode=${dbModeLabel} host=${summary.database.host}:${summary.database.port} database=${summary.database.database} ai=${summary.aiService.provider}:${summary.aiService.model} configured=${summary.aiService.configured} authCookie=${summary.authCookie}`
   );
 
   if (summary.database.mode !== "local") {

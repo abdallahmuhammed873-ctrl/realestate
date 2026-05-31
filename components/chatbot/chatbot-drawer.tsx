@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useLanguage } from "@/components/layout/language-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { getPropertyCoverImage } from "@/lib/property-images";
 
 type ChatRole = "user" | "assistant";
 
@@ -25,6 +26,9 @@ type AssistantItem = {
   paymentType?: string | null;
   images?: string[];
   verified?: boolean;
+  has360View?: boolean;
+  hasPanorama360?: boolean;
+  hasSpin360?: boolean;
 };
 
 type AssistantResponse = {
@@ -38,6 +42,7 @@ type AssistantResponse = {
   relaxedFilters?: string[];
   total?: number;
   items?: AssistantItem[];
+  externalSources?: Array<{ title: string; uri: string }>;
 };
 
 type Message = {
@@ -92,6 +97,7 @@ function formatFilterKey(key: string, language: "en" | "ar") {
     completionStatus: { en: "Completion", ar: "التسليم" },
     hasGarden: { en: "Garden", ar: "حديقة" },
     hasRoof: { en: "Roof", ar: "روف" },
+    has360View: { en: "360 View", ar: "عرض 360" },
   };
   return labels[key]?.[language] ?? key;
 }
@@ -180,7 +186,7 @@ export function ChatbotDrawer() {
     setSending(true);
 
     try {
-      const res = await fetch("/api/chat", {
+      const res = await fetch("/api/ai/chat", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -219,7 +225,6 @@ export function ChatbotDrawer() {
 
   const edgeClass = direction === "rtl" ? "left-4" : "right-4";
   const quickPrompts = QUICK_PROMPTS[language];
-  const lastAssistantMessage = [...messages].reverse().find((message) => message.role === "assistant");
 
   return (
     <>
@@ -259,19 +264,21 @@ export function ChatbotDrawer() {
                 </button>
               </div>
             </div>
-            <div className="flex flex-wrap gap-2 pt-3">
-              {quickPrompts.map((prompt) => (
-                <button
-                  key={prompt}
-                  type="button"
-                  className="rounded-full border theme-divider bg-[var(--surface)] px-3 py-1.5 text-left text-xs leading-5 text-[var(--ink)] shadow-sm hover:bg-[var(--surface-soft)]"
-                  onClick={() => void sendMessage(prompt)}
-                  disabled={sending}
-                >
-                  {prompt}
-                </button>
-              ))}
-            </div>
+            {messages.length === 0 ? (
+              <div className="flex flex-wrap gap-2 pt-3">
+                {quickPrompts.map((prompt) => (
+                  <button
+                    key={prompt}
+                    type="button"
+                    className="rounded-full border theme-divider bg-[var(--surface)] px-3 py-1.5 text-left text-xs leading-5 text-[var(--ink)] shadow-sm hover:bg-[var(--surface-soft)]"
+                    onClick={() => void sendMessage(prompt)}
+                    disabled={sending}
+                  >
+                    {prompt}
+                  </button>
+                ))}
+              </div>
+            ) : null}
           </div>
 
           <div ref={scrollRef} className="min-h-0 flex-1 space-y-3 overflow-auto bg-[var(--surface-soft)] px-3 py-3">
@@ -316,6 +323,7 @@ export function ChatbotDrawer() {
                       {message.items.map((item) => {
                         const title = item.title || item.projectName || (language === "ar" ? "عقار" : "Property");
                         const location = [item.district, item.area, item.city].filter(Boolean).join(", ");
+                        const coverImage = getPropertyCoverImage(item.images);
 
                         return (
                           <a
@@ -325,13 +333,7 @@ export function ChatbotDrawer() {
                           >
                             <div className="flex gap-3 p-2.5">
                               <div className="h-20 w-24 shrink-0 overflow-hidden rounded-xl bg-[var(--surface)]">
-                                {item.images?.[0] ? (
-                                  <img src={item.images[0]} alt={title} className="h-full w-full object-cover" loading="lazy" />
-                                ) : (
-                                  <div className="grid h-full w-full place-items-center text-[11px] text-muted">
-                                    {language === "ar" ? "بدون صورة" : "No image"}
-                                  </div>
-                                )}
+                                <img src={coverImage} alt={title} className="h-full w-full object-cover" loading="lazy" />
                               </div>
                               <div className="min-w-0 flex-1">
                                 <div className="mb-1 flex flex-wrap gap-1.5">
@@ -342,6 +344,11 @@ export function ChatbotDrawer() {
                                   ) : null}
                                   {item.paymentType ? (
                                     <span className="status-brand rounded-full px-2 py-0.5 text-[10px] font-semibold">{item.paymentType}</span>
+                                  ) : null}
+                                  {item.has360View ? (
+                                    <span className="status-brand rounded-full px-2 py-0.5 text-[10px] font-semibold">
+                                      {language === "ar" ? "عرض 360" : "360 View"}
+                                    </span>
                                   ) : null}
                                 </div>
                                 <p className="line-clamp-1 text-sm font-semibold">{title}</p>
@@ -392,24 +399,6 @@ export function ChatbotDrawer() {
               </div>
             ) : null}
           </div>
-
-          {lastAssistantMessage?.role === "assistant" && lastAssistantMessage.suggestions?.length ? (
-            <div className="border-t theme-divider bg-[var(--surface)] px-4 py-2.5">
-              <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-soft">{t("assistantTryThese")}</p>
-              <div className="flex flex-wrap gap-1.5">
-                {lastAssistantMessage.suggestions.slice(0, 3).map((prompt) => (
-                  <button
-                    key={`footer-${prompt}`}
-                    type="button"
-                    className="rounded-full bg-[var(--brand-soft)] px-3 py-1.5 text-xs font-medium text-[var(--brand-strong)] hover:opacity-90"
-                    onClick={() => void sendMessage(prompt)}
-                  >
-                    {prompt}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : null}
 
           <div className="border-t theme-divider bg-[var(--surface)] px-3 py-2.5">
             <p className="mb-2 text-xs text-muted">{t("assistantInputHint")}</p>

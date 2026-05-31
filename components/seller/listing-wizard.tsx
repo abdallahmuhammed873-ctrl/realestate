@@ -21,7 +21,7 @@ import { OSMMapPicker } from "@/components/maps/osm-map";
 
 type ListingMediaDraft = {
   path: string;
-  kind: Extract<PropertyMediaKind, "IMAGE" | "PANORAMA_360">;
+  kind: Extract<PropertyMediaKind, "IMAGE" | "PANORAMA_360" | "SPIN_360_FRAME">;
   label: string;
   altText: string;
   mimeType: string | null;
@@ -29,8 +29,10 @@ type ListingMediaDraft = {
 
 const MAX_PHOTOS = 12;
 const MAX_PANORAMAS = 6;
+const MAX_SPIN_FRAMES = 72;
 
 function fallbackMediaLabel(kind: ListingMediaDraft["kind"], index: number) {
+  if (kind === "SPIN_360_FRAME") return `360 Frame ${index + 1}`;
   return kind === "PANORAMA_360" ? `360 View ${index + 1}` : `Photo ${index + 1}`;
 }
 
@@ -40,7 +42,10 @@ function normalizeInitialMedia(initial?: Record<string, unknown>) {
     return initialMedia
       .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object")
       .map((item, index) => {
-        const kind = item.kind === "PANORAMA_360" ? "PANORAMA_360" : "IMAGE";
+        const kind =
+          item.kind === "PANORAMA_360" || item.kind === "SPIN_360_FRAME"
+            ? item.kind
+            : "IMAGE";
         return {
           path: String(item.path ?? "").trim(),
           kind,
@@ -110,19 +115,23 @@ export function ListingWizard({ listingId, initial }: { listingId?: string; init
 
   const photos = media.filter((item) => item.kind === "IMAGE");
   const panoramas = media.filter((item) => item.kind === "PANORAMA_360");
+  const spinFrames = media.filter((item) => item.kind === "SPIN_360_FRAME");
 
   async function onPickMedia(kind: ListingMediaDraft["kind"], e: ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
     if (files.length === 0) return;
     const imageFiles = files.filter((file) => file.type.startsWith("image/"));
-    const nextCount = kind === "IMAGE" ? photos.length + imageFiles.length : panoramas.length + imageFiles.length;
-    const limit = kind === "IMAGE" ? MAX_PHOTOS : MAX_PANORAMAS;
+    const currentCount = kind === "IMAGE" ? photos.length : kind === "PANORAMA_360" ? panoramas.length : spinFrames.length;
+    const nextCount = currentCount + imageFiles.length;
+    const limit = kind === "IMAGE" ? MAX_PHOTOS : kind === "PANORAMA_360" ? MAX_PANORAMAS : MAX_SPIN_FRAMES;
 
     if (nextCount > limit) {
       setError(
         kind === "IMAGE"
           ? t("uploadPhotoLimit")
-          : t("uploadPanoramaLimit")
+          : kind === "PANORAMA_360"
+            ? t("uploadPanoramaLimit")
+            : `Upload up to ${MAX_SPIN_FRAMES} 360 spin frames.`
       );
       e.target.value = "";
       return;
@@ -136,7 +145,7 @@ export function ListingWizard({ listingId, initial }: { listingId?: string; init
         ...uploaded.map((item, index) => ({
           path: item.path,
           kind,
-          label: fallbackMediaLabel(kind, kind === "IMAGE" ? photos.length + index : panoramas.length + index),
+          label: fallbackMediaLabel(kind, currentCount + index),
           altText: "",
           mimeType: item.mimeType
         }))
@@ -312,12 +321,12 @@ export function ListingWizard({ listingId, initial }: { listingId?: string; init
                     className={`w-full rounded-lg border object-cover ${kind === "PANORAMA_360" ? "h-28" : "h-24"}`}
                   />
                   <Input
-                    placeholder={kind === "PANORAMA_360" ? t("viewerLabel") : t("photoLabel")}
+                    placeholder={kind === "IMAGE" ? t("photoLabel") : kind === "PANORAMA_360" ? t("viewerLabel") : "Frame label"}
                     value={item.label}
                     onChange={(e) => updateMediaField(index, "label", e.target.value)}
                   />
                   <Input
-                    placeholder={kind === "PANORAMA_360" ? t("panoramaAltText") : t("photoAltText")}
+                    placeholder={kind === "IMAGE" ? t("photoAltText") : kind === "PANORAMA_360" ? t("panoramaAltText") : "Frame alt text"}
                     value={item.altText}
                     onChange={(e) => updateMediaField(index, "altText", e.target.value)}
                   />
@@ -330,7 +339,7 @@ export function ListingWizard({ listingId, initial }: { listingId?: string; init
           </div>
         ) : (
           <p className="text-soft text-xs">
-            {kind === "PANORAMA_360"
+            {kind === "PANORAMA_360" || kind === "SPIN_360_FRAME"
               ? t("optionalPanoramaHint")
               : t("uploadPhotoHint")}
           </p>
@@ -499,6 +508,7 @@ export function ListingWizard({ listingId, initial }: { listingId?: string; init
         />
         {renderMediaSection("IMAGE", t("propertyPhotos"), t("propertyPhotosHelp"), photos)}
         {renderMediaSection("PANORAMA_360", t("panoramaFiles"), t("panoramaFilesHelp"), panoramas)}
+        {renderMediaSection("SPIN_360_FRAME", "360 spin frames", "Optional: upload ordered frames for a frame-by-frame 360 rotation.", spinFrames)}
         {uploading ? <p className="text-xs text-[var(--brand)]">{t("uploadingMedia")}</p> : null}
       </div>
       <div className="mt-4 space-y-2">

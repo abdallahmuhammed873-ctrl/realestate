@@ -19,6 +19,7 @@ import type {
   SellerMessage,
   User
 } from "../types.ts";
+import { getPropertyCoverImage } from "../property-images.ts";
 import { haversineDistanceKm, isValidPhoneNumber } from "../utils.ts";
 import { buildPrismaPropertyWhere } from "../search-query-builder.ts";
 import { prisma } from "./prisma.ts";
@@ -501,6 +502,9 @@ export function toPublicPropertyCard(property: PropertyWithCardRelations): Publi
   const seller = property.listing.user;
   const ownerCompany = seller.companyOwner;
   const valueForDeal = property.transaction === "RENT" ? property.rentPrice ?? 0 : property.price ?? 0;
+  const media = propertyModel.media ?? [];
+  const hasPanorama360 = media.some((item) => item.kind === "PANORAMA_360");
+  const hasSpin360 = media.some((item) => item.kind === "SPIN_360_FRAME");
 
   return {
     ...propertyModel,
@@ -510,7 +514,10 @@ export function toPublicPropertyCard(property: PropertyWithCardRelations): Publi
     listedByName: seller.name,
     listedByCompanyName: ownerCompany?.name,
     listedByPhone: seller.phone ?? ownerCompany?.phone ?? undefined,
-    goodDeal: property.areaSqm > 0 ? valueForDeal / property.areaSqm < 28000 : false
+    goodDeal: property.areaSqm > 0 ? valueForDeal / property.areaSqm < 28000 : false,
+    has360View: hasPanorama360 || hasSpin360,
+    hasPanorama360,
+    hasSpin360
   };
 }
 
@@ -795,6 +802,7 @@ function mapCommunityPostView(post: CommunityPostWithRelations, viewerId?: strin
 
 function mapCommunityListingView(listing: CommunityListingWithRelations, viewerId?: string | null): CommunityListingView {
   const property = listing.property!;
+  const mappedProperty = mapProperty(property)!;
   const seller = listing.user;
   const viewerIsAdmin = false;
 
@@ -803,7 +811,7 @@ function mapCommunityListingView(listing: CommunityListingWithRelations, viewerI
     propertyId: property.id,
     title: property.title,
     description: property.description,
-    imageUrl: mapProperty(property)?.images[0] ?? undefined,
+    imageUrl: getPropertyCoverImage(mappedProperty.images, mappedProperty.media),
     city: property.city,
     area: property.area,
     district: property.district,

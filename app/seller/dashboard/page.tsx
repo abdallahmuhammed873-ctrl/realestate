@@ -7,6 +7,7 @@ import { formatPrice } from "@/lib/utils";
 import { ListingActions } from "@/components/seller/listing-actions";
 import { getRequestLanguage } from "@/lib/i18n-server";
 import { t, translatePaymentType, translateTransaction } from "@/lib/i18n";
+import { getPropertyCoverImage } from "@/lib/property-images";
 
 function ListingStatusBadge({
   status,
@@ -70,11 +71,12 @@ export default async function SellerDashboardPage() {
             }
 
             const price = property.transaction === "RENT" ? property.rentPrice : property.price;
+            const coverImage = getPropertyCoverImage(property.images);
             return (
               <li key={listing.id} className="rounded-xl border p-3">
                 <div className="grid gap-3 md:grid-cols-[220px,1fr]">
                   <div className="relative h-40 overflow-hidden rounded-xl">
-                    <Image src={property.images[0]} alt={property.title} fill className="object-cover" sizes="(max-width: 768px) 100vw, 220px" quality={72} loading="lazy" />
+                    <Image src={coverImage} alt={property.title} fill className="object-cover" sizes="(max-width: 768px) 100vw, 220px" quality={72} loading="lazy" />
                   </div>
                   <div className="space-y-2">
                     <div className="flex flex-wrap items-center gap-2">

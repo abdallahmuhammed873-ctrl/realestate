@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useLanguage } from "@/components/layout/language-provider";
 import type { PropertyMedia } from "@/lib/types";
-import { PanoramaViewer } from "@/components/property/panorama-viewer";
+import { PanoramaViewer, Spin360Viewer } from "@/components/property/panorama-viewer";
+import { getPropertyImageSources } from "@/lib/property-images";
 
 type PropertyGalleryProps = {
   images: string[];
@@ -13,25 +14,24 @@ type PropertyGalleryProps = {
 
 export function PropertyGallery({ images, title, media = [] }: PropertyGalleryProps) {
   const { direction, t } = useLanguage();
-  const photoMedia = media
-    .filter((item) => item.kind === "IMAGE")
-    .sort((a, b) => a.sortOrder - b.sortOrder);
   const panoramaMedia = media
     .filter((item) => item.kind === "PANORAMA_360")
     .sort((a, b) => a.sortOrder - b.sortOrder);
+  const spinFrames = media
+    .filter((item) => item.kind === "SPIN_360_FRAME")
+    .sort((a, b) => a.sortOrder - b.sortOrder);
 
-  const safeImages =
-    photoMedia.length > 0
-      ? photoMedia.map((item) => item.path)
-      : images.length > 0
-        ? images
-        : ["https://images.unsplash.com/photo-1560185007-cde436f6a4d0?w=1200"];
+  const safeImages = getPropertyImageSources(images, media);
 
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [activePanoramaIndex, setActivePanoramaIndex] = useState(0);
+  const [tourMode, setTourMode] = useState<"panorama" | "spin">("panorama");
   const activeImage = safeImages[activeImageIndex] ?? safeImages[0];
   const hasManyPhotos = safeImages.length > 1;
   const activePanorama = panoramaMedia[activePanoramaIndex] ?? null;
+  const hasPanoramas = panoramaMedia.length > 0;
+  const hasSpinFrames = spinFrames.length > 0;
+  const activeTourMode = tourMode === "spin" && hasSpinFrames ? "spin" : "panorama";
 
   function goPrev() {
     setActiveImageIndex((prev) => (prev === 0 ? safeImages.length - 1 : prev - 1));
@@ -86,19 +86,49 @@ export function PropertyGallery({ images, title, media = [] }: PropertyGalleryPr
         ) : null}
       </div>
 
-      {activePanorama ? (
+      {hasPanoramas || hasSpinFrames ? (
         <div className="surface-subtle space-y-3 rounded-2xl p-3">
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-sm font-semibold text-[var(--ink)]">{t("panoramaTitle")}</p>
               <p className="text-soft text-xs">{t("panoramaDescription")}</p>
             </div>
-            <span className="status-brand rounded-full px-3 py-1 text-xs font-semibold">
-              {activePanoramaIndex + 1} / {panoramaMedia.length}
-            </span>
+            <div className="flex items-center gap-2">
+              {hasPanoramas && hasSpinFrames ? (
+                <div className="flex rounded-full border theme-divider bg-[var(--surface)] p-0.5 text-xs font-semibold">
+                  <button
+                    type="button"
+                    className={`rounded-full px-3 py-1 ${activeTourMode === "panorama" ? "bg-[var(--brand)] text-[var(--brand-contrast)]" : "text-[var(--muted)]"}`}
+                    onClick={() => setTourMode("panorama")}
+                  >
+                    Panorama
+                  </button>
+                  <button
+                    type="button"
+                    className={`rounded-full px-3 py-1 ${activeTourMode === "spin" ? "bg-[var(--brand)] text-[var(--brand-contrast)]" : "text-[var(--muted)]"}`}
+                    onClick={() => setTourMode("spin")}
+                  >
+                    Spin
+                  </button>
+                </div>
+              ) : null}
+              <span className="status-brand rounded-full px-3 py-1 text-xs font-semibold">
+                {activeTourMode === "spin" ? spinFrames.length : `${activePanoramaIndex + 1} / ${panoramaMedia.length}`}
+              </span>
+            </div>
           </div>
-          <PanoramaViewer src={activePanorama.path} alt={activePanorama.altText || activePanorama.label || t("panoramaAlt", { title })} />
-          {panoramaMedia.length > 1 ? (
+          {activeTourMode === "spin" ? (
+            <Spin360Viewer
+              frames={spinFrames.map((item, index) => ({
+                src: item.path,
+                alt: item.altText || item.label || t("panoramaAltIndexed", { title, index: index + 1 }),
+                label: item.label
+              }))}
+            />
+          ) : activePanorama ? (
+            <PanoramaViewer src={activePanorama.path} alt={activePanorama.altText || activePanorama.label || t("panoramaAlt", { title })} />
+          ) : null}
+          {activeTourMode === "panorama" && panoramaMedia.length > 1 ? (
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
               {panoramaMedia.map((item, index) => (
                 <button

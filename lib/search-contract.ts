@@ -78,6 +78,7 @@ const searchFiltersShape = {
   completionStatus: z.preprocess(parseString, completionStatusEnum.optional()),
   hasGarden: z.preprocess(parseBoolean, z.boolean().optional()),
   hasRoof: z.preprocess(parseBoolean, z.boolean().optional()),
+  has360View: z.preprocess(parseBoolean, z.boolean().optional()),
   amenities: z.preprocess(parseStringArray, z.array(z.string().min(1)).min(1).optional()),
   lat: z.preprocess(parseNumber, z.number().finite().optional()),
   lng: z.preprocess(parseNumber, z.number().finite().optional()),

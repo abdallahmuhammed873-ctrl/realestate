@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { AdminCommunityPostsManager } from "@/components/admin/community-posts-manager";
 import { Card } from "@/components/ui/card";
 import { requireRole } from "@/lib/auth";
 import { getLanguageDirection } from "@/lib/i18n";
 import { getRequestLanguage } from "@/lib/i18n-server";
-import { getUserById, listSellerCommunityPostsForAdmin, listSellerListingsForAdmin } from "@/lib/repository";
+import { getUserById, listSellerCommunityListingsForAdmin, listSellerCommunityPostsForAdmin, listSellerListingsForAdmin } from "@/lib/repository";
 
 function StatusBadge({ status }: { status: "DRAFT" | "PENDING" | "APPROVED" | "REJECTED" }) {
   if (status === "APPROVED") return <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700">Approved</span>;
@@ -25,6 +26,7 @@ export default async function AdminDeveloperProfilePage({ params }: { params: Pr
 
   const listings = await listSellerListingsForAdmin(developer.id);
   const posts = await listSellerCommunityPostsForAdmin(developer.id);
+  const communityListings = await listSellerCommunityListingsForAdmin(developer.id);
 
   const byStatus = {
     total: listings.length,
@@ -106,27 +108,7 @@ export default async function AdminDeveloperProfilePage({ params }: { params: Pr
         )}
       </Card>
 
-      <Card>
-        <h2 className="text-lg font-bold">Community Posts</h2>
-        {posts.length === 0 ? (
-          <p className="mt-2 text-sm text-slate-600">No community posts found.</p>
-        ) : (
-          <ul className="mt-3 space-y-2">
-            {posts.map(({ post, author }) => (
-              <li key={post.id} className="rounded-xl border p-3">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-sm font-semibold text-slate-900">{author?.name ?? post.userId}</p>
-                  <p className="text-xs text-slate-500">{new Date(post.createdAt).toLocaleString()}</p>
-                </div>
-                <p className="mt-1 line-clamp-3 text-sm text-slate-700">{post.text}</p>
-                <Link href={`/community?post=${encodeURIComponent(post.id)}`} className="mt-2 inline-block text-sm font-semibold text-brand-700">
-                  Open post
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Card>
+      <AdminCommunityPostsManager initialPosts={posts} initialListingPosts={communityListings} />
     </div>
   );
 }
