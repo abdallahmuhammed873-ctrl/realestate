@@ -30,6 +30,7 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "resend": "^6.9.3",
+    "three": "^0.184.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
@@ -37,6 +38,7 @@
     "@types/nodemailer": "^6.4.14",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "@types/three": "^0.184.1",
     "autoprefixer": "^10.4.20",
     "postcss": "^8.4.47",
     "prisma": "6.0.0",
