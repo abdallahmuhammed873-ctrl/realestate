@@ -117,6 +117,13 @@ function asNumber(value: number | null | undefined) {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
+function toCompactDisplayImages(images: string[] | null | undefined) {
+  return (images ?? [])
+    .map((image) => image.trim())
+    .filter((image) => image.length > 0 && image.length <= 2048 && !image.startsWith("data:"))
+    .slice(0, 1);
+}
+
 function toGroundedItems(items: PublicPropertyCard[]): GroundedPropertyItem[] {
   return items.slice(0, 6).map((item) => ({
     id: item.id,
@@ -139,7 +146,7 @@ function toGroundedItems(items: PublicPropertyCard[]): GroundedPropertyItem[] {
     completionStatus: item.completionStatus,
     hasGarden: item.hasGarden,
     hasRoof: item.hasRoof,
-    images: item.images ?? [],
+    images: toCompactDisplayImages(item.images),
     listedByName: item.listedByName,
     listedByCompanyName: item.listedByCompanyName,
     verified: Boolean(item.verified)
@@ -285,6 +292,15 @@ function buildTransparentFallback(input: {
   relaxedFilters: string[];
 }) {
   const suggestions = buildDefaultSuggestions(input.language, input.intent, input.filters, input.items);
+  if (input.intent === "GREETING" && input.items.length === 0) {
+    return {
+      reply:
+        input.language === "AR"
+          ? "\u0623\u0647\u0644\u0627! \u0623\u0642\u062f\u0631 \u0623\u0633\u0627\u0639\u062f\u0643 \u0641\u064a \u0627\u0644\u0628\u062d\u062b \u0639\u0646 \u0639\u0642\u0627\u0631\u0627\u062a \u0645\u0648\u062b\u0642\u0629\u060c \u0645\u0642\u0627\u0631\u0646\u0629 \u0627\u0644\u062e\u064a\u0627\u0631\u0627\u062a\u060c \u0648\u062a\u0636\u064a\u064a\u0642 \u0627\u0644\u0646\u062a\u0627\u0626\u062c \u062d\u0633\u0628 \u0627\u0644\u0645\u064a\u0632\u0627\u0646\u064a\u0629 \u0648\u0627\u0644\u0645\u0646\u0637\u0642\u0629 \u0648\u062e\u0637\u0629 \u0627\u0644\u062f\u0641\u0639. \u0646\u0628\u062f\u0623 \u0628\u0623\u064a \u0645\u062f\u064a\u0646\u0629 \u0623\u0648 \u0645\u064a\u0632\u0627\u0646\u064a\u0629\u061f"
+          : "Hi! I can help you search verified properties, compare options, and narrow choices by budget, area, and payment plan. What city or budget should we start with?",
+      suggestions
+    };
+  }
   if (input.language === "AR") {
     if (input.items.length === 0) {
       return {
@@ -420,17 +436,6 @@ async function buildChatPayload(rawBody: unknown, traceId: string) {
   const language = request.language ?? "EN";
   const history = request.history ?? [];
   const gemini = getGeminiStatus();
-  if (!gemini.configured) {
-    return {
-      response: NextResponse.json(
-        {
-          error: "Gemini is not configured.",
-          details: "Set GEMINI_API_KEY in the Next.js server environment."
-        },
-        { status: 503 }
-      )
-    };
-  }
 
   const extracted = extractAiFilters(request.message);
   const priorFilters = buildHistoryFilters(history);
@@ -452,12 +457,45 @@ async function buildChatPayload(rawBody: unknown, traceId: string) {
 
   const intent = inferIntent(request.message, search.filters, search.total, search.items);
   const suggestedFilters = buildSuggestedFilterKeys(search.filters);
-  const externalResearch = await getExternalResearch(request.message, language, traceId).catch((error) => {
+  const externalResearch = gemini.configured
+    ? await getExternalResearch(request.message, language, traceId).catch((error) => {
+        if (process.env.NODE_ENV !== "production") {
+          console.warn(`[AI Chat][${traceId}] external research skipped`, error instanceof Error ? error.message : error);
+        }
+        return null;
+      })
+    : null;
+
+  if (!gemini.configured) {
+    const fallback = buildTransparentFallback({
+      language,
+      intent,
+      filters: search.filters,
+      total: search.total,
+      items: search.items,
+      relaxedFilters: search.relaxedFilters
+    });
     if (process.env.NODE_ENV !== "production") {
-      console.warn(`[AI Chat][${traceId}] external research skipped`, error instanceof Error ? error.message : error);
+      console.warn(`[AI Chat][${traceId}] Gemini is not configured; using DB-grounded fallback.`);
     }
-    return null;
-  });
+    return {
+      response: NextResponse.json({
+        reply: fallback.reply,
+        language,
+        intent,
+        shouldSearch,
+        clarifyingQuestion: null,
+        suggestions: fallback.suggestions,
+        suggestedFilters,
+        extractedFilters: search.filters,
+        relaxedFilters: search.relaxedFilters,
+        total: search.total,
+        items: search.items,
+        externalSources: [],
+        aiProviderConfigured: false
+      })
+    };
+  }
 
   try {
     const ai = getGeminiClient();
