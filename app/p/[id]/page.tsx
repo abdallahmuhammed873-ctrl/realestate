@@ -38,9 +38,10 @@ export default async function PropertyDetailsPage({ params }: { params: Promise<
         </Card>
         <Card>
           <div className="space-y-2">
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {property.verified && <Badge className="status-positive">{t(language, "verifiedByPlatform")}</Badge>}
               <Badge className="status-brand">{translatePaymentType(property.paymentType, language)}</Badge>
+              {property.has360View && <Badge className="status-brand">{t(language, "has360View")}</Badge>}
             </div>
             <h1 className="text-2xl font-bold">{title}</h1>
             <p className="text-xl font-bold">{formatPrice(price, property.currency, language)}</p>

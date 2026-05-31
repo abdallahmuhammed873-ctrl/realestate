@@ -42,6 +42,9 @@ type GroundedPropertyItem = {
   completionStatus?: string | null;
   hasGarden?: boolean | null;
   hasRoof?: boolean | null;
+  has360View?: boolean;
+  hasPanorama360?: boolean;
+  hasSpin360?: boolean;
   images?: string[];
   listedByName?: string | null;
   listedByCompanyName?: string | null;
@@ -146,6 +149,9 @@ function toGroundedItems(items: PublicPropertyCard[]): GroundedPropertyItem[] {
     completionStatus: item.completionStatus,
     hasGarden: item.hasGarden,
     hasRoof: item.hasRoof,
+    has360View: Boolean(item.has360View),
+    hasPanorama360: Boolean(item.hasPanorama360),
+    hasSpin360: Boolean(item.hasSpin360),
     images: toCompactDisplayImages(item.images),
     listedByName: item.listedByName,
     listedByCompanyName: item.listedByCompanyName,
@@ -221,8 +227,9 @@ function buildSystemInstruction(language: AiLanguage) {
     "You help users search, compare, and reason about verified property listings.",
     "Use only the supplied database items for property-specific facts such as prices, payment plans, locations, availability, and seller names.",
     "Never invent properties, prices, projects, phone numbers, or availability.",
+    "Use has360View, hasPanorama360, and hasSpin360 from returnedItems as the only source of truth for 360 tour availability.",
     "If results were broadened, explicitly say they are broadened alternatives and name the relaxed constraints.",
-    "If the user asks to compare, compare the best supplied items on price, area, bedrooms, payment type, location, and tradeoffs.",
+    "If the user asks to compare, compare the best supplied items on price, area, bedrooms, payment type, location, 360 tour availability, and tradeoffs.",
     "If external market context is supplied, keep it clearly separate from platform listing facts.",
     "Do not offer unsupported actions. Keep the answer concise, practical, and conversational.",
     languageRule
@@ -261,6 +268,7 @@ function buildGeminiPrompt(input: {
         "suggestions must be short prompts the user can click/send next.",
         "If returnedItems is empty and the request is vague, ask one focused clarification question.",
         "If returnedItems has data, mention actual item names and exact values from returnedItems.",
+        "If the user asks about 360 tours, only recommend returnedItems where has360View is true.",
         "If comparing, produce a clear recommendation with tradeoffs."
       ]
     },
@@ -281,6 +289,11 @@ function formatFallbackPrice(item: GroundedPropertyItem, language: AiLanguage) {
     currency: item.currency || "EGP",
     maximumFractionDigits: 0
   }).format(price);
+}
+
+function formatFallback360Tag(item: GroundedPropertyItem, language: AiLanguage) {
+  if (!item.has360View) return "";
+  return language === "AR" ? " - \u0639\u0631\u0636 360" : " - 360 view";
 }
 
 function buildTransparentFallback(input: {
@@ -310,7 +323,7 @@ function buildTransparentFallback(input: {
     }
     const lines = input.items
       .slice(0, 3)
-      .map((item, index) => `${index + 1}. ${item.title} - ${formatFallbackPrice(item, input.language)} - ${[item.district, item.area, item.city].filter(Boolean).join(", ")}`);
+      .map((item, index) => `${index + 1}. ${item.title} - ${formatFallbackPrice(item, input.language)} - ${[item.district, item.area, item.city].filter(Boolean).join(", ")}${formatFallback360Tag(item, input.language)}`);
     return {
       reply: `\u0647\u0630\u0647 \u0623\u0641\u0636\u0644 \u0627\u0644\u0646\u062a\u0627\u0626\u062c \u0627\u0644\u0645\u0637\u0627\u0628\u0642\u0629 \u0645\u0646 \u0628\u064a\u0627\u0646\u0627\u062a \u0627\u0644\u0645\u0646\u0635\u0629:\n${lines.join("\n")}`,
       suggestions
@@ -325,7 +338,7 @@ function buildTransparentFallback(input: {
   }
   const lines = input.items
     .slice(0, 3)
-    .map((item, index) => `${index + 1}. ${item.title} - ${formatFallbackPrice(item, input.language)} - ${[item.district, item.area, item.city].filter(Boolean).join(", ")}`);
+    .map((item, index) => `${index + 1}. ${item.title} - ${formatFallbackPrice(item, input.language)} - ${[item.district, item.area, item.city].filter(Boolean).join(", ")}${formatFallback360Tag(item, input.language)}`);
   return {
     reply: `Here are the best matching listings from the platform:\n${lines.join("\n")}`,
     suggestions

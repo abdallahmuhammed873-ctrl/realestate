@@ -501,6 +501,9 @@ export function toPublicPropertyCard(property: PropertyWithCardRelations): Publi
   const seller = property.listing.user;
   const ownerCompany = seller.companyOwner;
   const valueForDeal = property.transaction === "RENT" ? property.rentPrice ?? 0 : property.price ?? 0;
+  const media = propertyModel.media ?? [];
+  const hasPanorama360 = media.some((item) => item.kind === "PANORAMA_360");
+  const hasSpin360 = media.some((item) => item.kind === "SPIN_360_FRAME");
 
   return {
     ...propertyModel,
@@ -510,7 +513,10 @@ export function toPublicPropertyCard(property: PropertyWithCardRelations): Publi
     listedByName: seller.name,
     listedByCompanyName: ownerCompany?.name,
     listedByPhone: seller.phone ?? ownerCompany?.phone ?? undefined,
-    goodDeal: property.areaSqm > 0 ? valueForDeal / property.areaSqm < 28000 : false
+    goodDeal: property.areaSqm > 0 ? valueForDeal / property.areaSqm < 28000 : false,
+    has360View: hasPanorama360 || hasSpin360,
+    hasPanorama360,
+    hasSpin360
   };
 }
 

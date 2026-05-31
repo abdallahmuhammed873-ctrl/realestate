@@ -18,6 +18,7 @@ export function PropertyCard({ property, language = "en" }: { property: PublicPr
           <div className="flex flex-wrap gap-2">
             {property.verified && <Badge className="status-positive">{t(language, "verified")}</Badge>}
             <Badge className="status-brand">{translatePaymentType(property.paymentType, language)}</Badge>
+            {property.has360View && <Badge className="status-brand">{t(language, "has360View")}</Badge>}
             {property.goodDeal && <Badge className="bg-[var(--cheque)] text-[var(--cheque-ink)]">{t(language, "goodDeal")}</Badge>}
           </div>
           <p className="text-lg font-bold">{formatPrice(price, property.currency, language)}</p>

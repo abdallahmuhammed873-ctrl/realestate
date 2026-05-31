@@ -119,6 +119,7 @@ const GENERIC_ONLY_FILTER_KEYS = new Set([
   "completionStatus",
   "hasGarden",
   "hasRoof",
+  "has360View",
   "amenities",
   "downPaymentMax",
   "installmentYearsMax",
@@ -164,6 +165,22 @@ function collectAmenities(question: string) {
     .filter(([alias]) => question.includes(alias))
     .map(([, canonical]) => canonical);
   return Array.from(new Set(amenities));
+}
+
+function detects360View(question: string) {
+  return containsAny(question, [
+    "360",
+    "360 view",
+    "360 tour",
+    "panorama",
+    "panoramic",
+    "virtual tour",
+    "vr tour",
+    "walkthrough",
+    "\u0639\u0631\u0636 360",
+    "\u0628\u0627\u0646\u0648\u0631\u0627\u0645\u0627",
+    "\u062c\u0648\u0644\u0629 \u0627\u0641\u062a\u0631\u0627\u0636\u064a\u0629"
+  ]);
 }
 
 function matchAlias(question: string, aliases: Record<string, string>) {
@@ -299,6 +316,7 @@ export function extractAiFilters(message: string): ExtractFiltersResult {
 
   const unitCode = question.match(/\b(?:unit|code)\s*([a-z0-9\-_/]+)\b/i);
   if (unitCode) payload.unitCode = unitCode[1]?.toUpperCase();
+  if (detects360View(question)) payload.has360View = true;
 
   if (containsAny(question, ["garden", "حديقة"])) payload.hasGarden = true;
   if (containsAny(question, ["roof", "روف"])) payload.hasRoof = true;
@@ -419,7 +437,8 @@ export function buildSuggestedFilterKeys(filters: Partial<AiPropertySearchFilter
     "paymentType",
     "completionStatus",
     "hasGarden",
-    "hasRoof"
+    "hasRoof",
+    "has360View"
   ];
   return ordered.filter((key) => filters[key as keyof AiPropertySearchFilters] !== undefined);
 }
@@ -430,6 +449,7 @@ export function hasMeaningfulFilters(filters: Partial<AiPropertySearchFilters>) 
 
 export function shouldForceGroundedSearch(filters: Partial<AiPropertySearchFilters>) {
   if (!hasMeaningfulFilters(filters)) return false;
+  if (filters.has360View) return true;
   if (filters.unitCode || filters.projectName) return true;
   const hasLocation = Boolean(filters.city || filters.area || filters.district);
   const hasTransaction = Boolean(filters.transaction);
@@ -450,7 +470,8 @@ export function isSearchableFilterSet(filters: Partial<AiPropertySearchFilters>)
     "transaction",
     "type",
     "minPrice",
-    "maxPrice"
+    "maxPrice",
+    "has360View"
   ].some((key) => filters[key as keyof AiPropertySearchFilters] !== undefined);
 }
 

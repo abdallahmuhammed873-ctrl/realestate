@@ -25,6 +25,9 @@ type AssistantItem = {
   paymentType?: string | null;
   images?: string[];
   verified?: boolean;
+  has360View?: boolean;
+  hasPanorama360?: boolean;
+  hasSpin360?: boolean;
 };
 
 type AssistantResponse = {
@@ -93,6 +96,7 @@ function formatFilterKey(key: string, language: "en" | "ar") {
     completionStatus: { en: "Completion", ar: "التسليم" },
     hasGarden: { en: "Garden", ar: "حديقة" },
     hasRoof: { en: "Roof", ar: "روف" },
+    has360View: { en: "360 View", ar: "عرض 360" },
   };
   return labels[key]?.[language] ?? key;
 }
@@ -344,6 +348,11 @@ export function ChatbotDrawer() {
                                   ) : null}
                                   {item.paymentType ? (
                                     <span className="status-brand rounded-full px-2 py-0.5 text-[10px] font-semibold">{item.paymentType}</span>
+                                  ) : null}
+                                  {item.has360View ? (
+                                    <span className="status-brand rounded-full px-2 py-0.5 text-[10px] font-semibold">
+                                      {language === "ar" ? "عرض 360" : "360 View"}
+                                    </span>
                                   ) : null}
                                 </div>
                                 <p className="line-clamp-1 text-sm font-semibold">{title}</p>

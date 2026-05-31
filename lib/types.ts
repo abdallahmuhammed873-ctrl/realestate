@@ -213,6 +213,9 @@ export type PublicPropertyCard = Property & {
   listedByPhone?: string;
   distanceKm?: number;
   goodDeal?: boolean;
+  has360View?: boolean;
+  hasPanorama360?: boolean;
+  hasSpin360?: boolean;
 };
 
 export type SearchFilters = {
@@ -236,6 +239,7 @@ export type SearchFilters = {
   completionStatus?: CompletionStatus;
   hasGarden?: boolean;
   hasRoof?: boolean;
+  has360View?: boolean;
   amenities?: string[];
   lat?: number;
   lng?: number;
