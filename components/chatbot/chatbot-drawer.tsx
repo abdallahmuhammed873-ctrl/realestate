@@ -31,6 +31,11 @@ type AssistantItem = {
   hasSpin360?: boolean;
 };
 
+type ExternalSource = {
+  title: string;
+  uri: string;
+};
+
 type AssistantResponse = {
   reply?: string;
   intent?: string;
@@ -42,7 +47,8 @@ type AssistantResponse = {
   relaxedFilters?: string[];
   total?: number;
   items?: AssistantItem[];
-  externalSources?: Array<{ title: string; uri: string }>;
+  externalSources?: ExternalSource[];
+  externalResearchMode?: "MARKET_CONTEXT" | "NO_LOCAL_RESULTS" | null;
 };
 
 type Message = {
@@ -55,6 +61,7 @@ type Message = {
   relaxedFilters?: string[];
   total?: number;
   items?: AssistantItem[];
+  externalSources?: ExternalSource[];
 };
 
 const QUICK_PROMPTS = {
@@ -80,6 +87,21 @@ function normalizeAssistantReply(content: string) {
     .replace(/Note that/gi, "\nNote:")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
+}
+
+function sanitizeExternalSources(values: unknown): ExternalSource[] {
+  if (!Array.isArray(values)) return [];
+  return values
+    .map((value) => {
+      if (!value || typeof value !== "object") return null;
+      const source = value as Partial<ExternalSource>;
+      const title = typeof source.title === "string" ? source.title.trim() : "";
+      const uri = typeof source.uri === "string" ? source.uri.trim() : "";
+      if (!title || !/^https?:\/\//i.test(uri)) return null;
+      return { title, uri };
+    })
+    .filter((source): source is ExternalSource => Boolean(source))
+    .slice(0, 5);
 }
 
 function formatFilterKey(key: string, language: "en" | "ar") {
@@ -143,6 +165,7 @@ function logChatResponse(
     console.log("reply", "reply" in data ? data.reply : undefined);
     console.log("intent", "intent" in data ? data.intent : undefined);
     console.log("items", Array.isArray(data.items) ? data.items.length : 0);
+    console.log("externalSources", Array.isArray(data.externalSources) ? data.externalSources.length : 0);
     console.log("suggestions", Array.isArray(data.suggestions) ? data.suggestions : []);
   }
   console.groupEnd();
@@ -213,6 +236,7 @@ export function ChatbotDrawer() {
           relaxedFilters: Array.isArray((data as AssistantResponse | null)?.relaxedFilters) ? (data as AssistantResponse).relaxedFilters! : [],
           total: typeof (data as AssistantResponse | null)?.total === "number" ? (data as AssistantResponse).total! : 0,
           items: Array.isArray((data as AssistantResponse | null)?.items) ? (data as AssistantResponse).items! : [],
+          externalSources: sanitizeExternalSources((data as AssistantResponse | null)?.externalSources),
         },
       ]);
     } catch (error) {
@@ -364,6 +388,27 @@ export function ChatbotDrawer() {
                           </a>
                         );
                       })}
+                    </div>
+                  ) : null}
+
+                  {message.role === "assistant" && message.externalSources && message.externalSources.length > 0 ? (
+                    <div className="mt-3">
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-soft">
+                        {language === "ar" ? "\u0645\u0635\u0627\u062f\u0631 \u062e\u0627\u0631\u062c\u064a\u0629" : "External sources"}
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {message.externalSources.map((source) => (
+                          <a
+                            key={source.uri}
+                            href={source.uri}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="max-w-full rounded-full bg-[var(--brand-soft)] px-3 py-1.5 text-xs font-medium text-[var(--brand-strong)] hover:opacity-90"
+                          >
+                            <span className="line-clamp-1">{source.title}</span>
+                          </a>
+                        ))}
+                      </div>
                     </div>
                   ) : null}
 

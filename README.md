@@ -30,7 +30,7 @@ Next.js App Router marketplace inspired by OLX/Dubizzle browsing and Property Fi
 - Internal AI data path:
   - Next.js extracts filters, searches PostgreSQL-backed listings, and calls Gemini server-side
   - AI responses return real property cards from canonical platform data
-  - Optional Gemini Google Search grounding is used for explicit external market-context requests
+  - Optional Gemini Google Search grounding is used for explicit external market-context requests and no-local-results fallback
 - Responsive UX:
   - mobile bottom nav
   - mobile filters bottom sheet

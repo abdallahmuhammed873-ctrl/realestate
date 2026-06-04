@@ -63,7 +63,10 @@ type ExternalSource = {
   uri: string;
 };
 
+type ExternalResearchMode = "MARKET_CONTEXT" | "NO_LOCAL_RESULTS";
+
 type ExternalResearchContext = {
+  mode: ExternalResearchMode;
   text: string;
   sources: ExternalSource[];
 };
@@ -225,12 +228,14 @@ function buildSystemInstruction(language: AiLanguage) {
   return [
     "You are Cheque & Key's production real estate assistant.",
     "You help users search, compare, and reason about verified property listings.",
-    "Use only the supplied database items for property-specific facts such as prices, payment plans, locations, availability, and seller names.",
+    "Use returnedItems as the only source of truth for verified Cheque & Key platform listing facts such as prices, payment plans, locations, availability, and seller names.",
     "Never invent properties, prices, projects, phone numbers, or availability.",
     "Use has360View, hasPanorama360, and hasSpin360 from returnedItems as the only source of truth for 360 tour availability.",
     "If results were broadened, explicitly say they are broadened alternatives and name the relaxed constraints.",
     "If the user asks to compare, compare the best supplied items on price, area, bedrooms, payment type, location, 360 tour availability, and tradeoffs.",
-    "If external market context is supplied, keep it clearly separate from platform listing facts.",
+    "If externalResearch.mode is MARKET_CONTEXT, keep it clearly separate from platform listing facts.",
+    "If externalResearch.mode is NO_LOCAL_RESULTS and returnedItems is empty, you may summarize external/off-platform research, but clearly say it is outside Cheque & Key and not platform-verified.",
+    "Never present external research as returnedItems, verified listings, or bookable platform inventory.",
     "Do not offer unsupported actions. Keep the answer concise, practical, and conversational.",
     languageRule
   ].join("\n");
@@ -268,6 +273,8 @@ function buildGeminiPrompt(input: {
         "suggestions must be short prompts the user can click/send next.",
         "If returnedItems is empty and the request is vague, ask one focused clarification question.",
         "If returnedItems has data, mention actual item names and exact values from returnedItems.",
+        "If returnedItems is empty and externalResearch.mode is NO_LOCAL_RESULTS, say no verified Cheque & Key matches were found, then summarize useful external/off-platform findings with source names.",
+        "If externalResearch has sources, keep source-backed claims cautious and avoid unsupported exact availability/contact details.",
         "If the user asks about 360 tours, only recommend returnedItems where has360View is true.",
         "If comparing, produce a clear recommendation with tradeoffs."
       ]
@@ -345,6 +352,19 @@ function buildTransparentFallback(input: {
   };
 }
 
+function buildExternalResearchFallback(language: AiLanguage, externalResearch: ExternalResearchContext | null) {
+  if (!externalResearch?.text.trim()) return "";
+  const cleaned = externalResearch.text.trim().replace(/\n{3,}/g, "\n\n").slice(0, 1800);
+
+  if (externalResearch.mode === "NO_LOCAL_RESULTS") {
+    return language === "AR"
+      ? `\u0644\u0645 \u0623\u062c\u062f \u0646\u062a\u0627\u0626\u062c \u0645\u0648\u062b\u0642\u0629 \u0645\u0637\u0627\u0628\u0642\u0629 \u062f\u0627\u062e\u0644 Cheque & Key. \u0628\u062d\u062b\u062a \u0641\u064a \u0645\u0635\u0627\u062f\u0631 \u062e\u0627\u0631\u062c\u064a\u0629\u060c \u0648\u0647\u0630\u0647 \u0645\u0639\u0644\u0648\u0645\u0627\u062a \u063a\u064a\u0631 \u0645\u0648\u062b\u0642\u0629 \u0645\u0646 \u0627\u0644\u0645\u0646\u0635\u0629:\n${cleaned}`
+      : `I did not find matching verified listings inside Cheque & Key. I searched external sources, so treat these as off-platform and not platform-verified:\n${cleaned}`;
+  }
+
+  return cleaned;
+}
+
 function getGroundingSources(response: unknown): ExternalSource[] {
   const candidate = (response as { candidates?: Array<Record<string, unknown>> }).candidates?.[0];
   const metadata = (candidate?.groundingMetadata ?? candidate?.grounding_metadata) as { groundingChunks?: Array<Record<string, unknown>> } | undefined;
@@ -361,19 +381,119 @@ function getGroundingSources(response: unknown): ExternalSource[] {
   return Array.from(new Map(sources.map((source) => [source.uri, source])).values()).slice(0, 5);
 }
 
-async function getExternalResearch(message: string, language: AiLanguage, traceId: string): Promise<ExternalResearchContext | null> {
-  if (!shouldUseExternalResearch(message)) return null;
+function shouldUseNoLocalResultsExternalSearch(input: {
+  shouldSearch: boolean;
+  message: string;
+  filters: AiPropertySearchFilters;
+  total: number;
+  items: GroundedPropertyItem[];
+}) {
+  return (
+    input.shouldSearch &&
+    input.total === 0 &&
+    input.items.length === 0 &&
+    hasMeaningfulFilters(input.filters) &&
+    !isGreeting(input.message)
+  );
+}
+
+function buildExternalResearchInstruction(language: AiLanguage, mode: ExternalResearchMode) {
+  const languageRule =
+    language === "AR"
+      ? "Write user-facing research text in Arabic script. Keep source titles, project names, and place names as supplied by sources."
+      : "Write user-facing research text in natural English.";
+
+  const modeRule =
+    mode === "NO_LOCAL_RESULTS"
+      ? [
+          "The platform database has no verified matches for this user request.",
+          "Search public real estate portals, developer inventory pages, and official listing pages for relevant off-platform data.",
+          "Favor sources that match the requested location, budget, deal type, property type, project, or unit code.",
+          "If sources are broad search/result pages instead of concrete listings, say that clearly.",
+          "Do not invent exact prices, availability, seller names, phone numbers, or booking options."
+        ]
+      : [
+          "Search for concise external real estate market context relevant to the user request.",
+          "Do not discuss Cheque & Key platform inventory."
+        ];
+
+  return [
+    "You are a cautious web research helper for a real estate assistant.",
+    ...modeRule,
+    "Use only search-grounded information and keep unsupported claims out of the answer.",
+    languageRule
+  ].join("\n");
+}
+
+function buildExternalResearchPrompt(input: {
+  message: string;
+  language: AiLanguage;
+  filters: AiPropertySearchFilters;
+  mode: ExternalResearchMode;
+}) {
+  const noLocalResultsRequirements = [
+    "Start from the exact user need and extractedFilters.",
+    "Look for off-platform real estate matches or the most relevant external places to continue the search.",
+    "Return 3 to 5 short bullets when enough grounded information exists.",
+    "For each useful lead, include the source/site name and only source-backed facts such as project, area, rough price text, unit type, or page purpose.",
+    "Say that these are external/off-platform sources and not verified Cheque & Key listings."
+  ];
+
+  const marketRequirements = [
+    "Return concise market context that helps the user evaluate the platform results.",
+    "Keep external context separate from platform inventory.",
+    "Mention source/site names for important claims."
+  ];
+
+  return JSON.stringify(
+    {
+      task:
+        input.mode === "NO_LOCAL_RESULTS"
+          ? "Search the web because the platform database returned zero verified matches."
+          : "Search the web for external market context.",
+      mode: input.mode,
+      userMessage: input.message,
+      requestedLanguage: input.language,
+      extractedFilters: input.filters,
+      localPlatformSearch:
+        input.mode === "NO_LOCAL_RESULTS"
+          ? "zero verified matches after local search and relaxation"
+          : "external context requested by the user",
+      requirements: input.mode === "NO_LOCAL_RESULTS" ? noLocalResultsRequirements : marketRequirements
+    },
+    null,
+    2
+  );
+}
+
+async function getExternalResearch(input: {
+  message: string;
+  language: AiLanguage;
+  traceId: string;
+  filters: AiPropertySearchFilters;
+  useNoLocalResultsFallback: boolean;
+}): Promise<ExternalResearchContext | null> {
+  const explicitExternalRequest = shouldUseExternalResearch(input.message);
+  const mode: ExternalResearchMode | null = input.useNoLocalResultsFallback
+    ? "NO_LOCAL_RESULTS"
+    : explicitExternalRequest
+      ? "MARKET_CONTEXT"
+      : null;
+
+  if (!mode) return null;
 
   const ai = getGeminiClient();
   const response = await withTimeout(
     ai.models.generateContent({
       model: getGeminiModel(),
-      contents: message,
+      contents: buildExternalResearchPrompt({
+        message: input.message,
+        language: input.language,
+        filters: input.filters,
+        mode
+      }),
       config: {
-        systemInstruction:
-          language === "AR"
-            ? "قدّم سياقًا سوقيًا خارجيًا مختصرًا. لا تخترع بيانات ولا تتحدث عن عقارات المنصة."
-            : "Provide concise external market context. Do not invent platform listing data.",
+        systemInstruction: buildExternalResearchInstruction(input.language, mode),
         tools: [{ googleSearch: {} }]
       }
     }),
@@ -383,13 +503,14 @@ async function getExternalResearch(message: string, language: AiLanguage, traceI
 
   const text = response.text?.trim() || "";
   if (process.env.NODE_ENV !== "production") {
-    console.info(`[AI Chat][${traceId}] external research`, {
+    console.info(`[AI Chat][${input.traceId}] external research`, {
+      mode,
       used: Boolean(text),
       sources: getGroundingSources(response).length
     });
   }
 
-  return text ? { text, sources: getGroundingSources(response) } : null;
+  return text ? { mode, text, sources: getGroundingSources(response) } : null;
 }
 
 async function runSearchWithRelaxation(filters: AiPropertySearchFilters, traceId: string) {
@@ -470,8 +591,21 @@ async function buildChatPayload(rawBody: unknown, traceId: string) {
 
   const intent = inferIntent(request.message, search.filters, search.total, search.items);
   const suggestedFilters = buildSuggestedFilterKeys(search.filters);
+  const useNoLocalResultsFallback = shouldUseNoLocalResultsExternalSearch({
+    shouldSearch,
+    message: request.message,
+    filters: search.filters,
+    total: search.total,
+    items: search.items
+  });
   const externalResearch = gemini.configured
-    ? await getExternalResearch(request.message, language, traceId).catch((error) => {
+    ? await getExternalResearch({
+        message: request.message,
+        language,
+        traceId,
+        filters: search.filters,
+        useNoLocalResultsFallback
+      }).catch((error) => {
         if (process.env.NODE_ENV !== "production") {
           console.warn(`[AI Chat][${traceId}] external research skipped`, error instanceof Error ? error.message : error);
         }
@@ -505,6 +639,7 @@ async function buildChatPayload(rawBody: unknown, traceId: string) {
         total: search.total,
         items: search.items,
         externalSources: [],
+        externalResearchMode: null,
         aiProviderConfigured: false
       })
     };
@@ -542,6 +677,7 @@ async function buildChatPayload(rawBody: unknown, traceId: string) {
     const finalIntent = isComparisonRequest(request.message) && search.items.length >= 2 ? "COMPARE" : finalPayload.intent || intent;
     const reply =
       finalPayload.reply ||
+      buildExternalResearchFallback(language, externalResearch) ||
       buildTransparentFallback({
         language,
         intent: finalIntent,
@@ -564,7 +700,8 @@ async function buildChatPayload(rawBody: unknown, traceId: string) {
         relaxedFilters: search.relaxedFilters,
         total: search.total,
         items: search.items,
-        externalSources: externalResearch?.sources ?? []
+        externalSources: externalResearch?.sources ?? [],
+        externalResearchMode: externalResearch?.mode ?? null
       })
     };
   } catch (error) {
@@ -581,7 +718,7 @@ async function buildChatPayload(rawBody: unknown, traceId: string) {
     }
     return {
       response: NextResponse.json({
-        reply: fallback.reply,
+        reply: buildExternalResearchFallback(language, externalResearch) || fallback.reply,
         language,
         intent,
         shouldSearch,
@@ -592,7 +729,8 @@ async function buildChatPayload(rawBody: unknown, traceId: string) {
         relaxedFilters: search.relaxedFilters,
         total: search.total,
         items: search.items,
-        externalSources: externalResearch?.sources ?? []
+        externalSources: externalResearch?.sources ?? [],
+        externalResearchMode: externalResearch?.mode ?? null
       })
     };
   }
