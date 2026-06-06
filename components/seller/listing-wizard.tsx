@@ -30,6 +30,23 @@ type ListingMediaDraft = {
 const MAX_PHOTOS = 12;
 const MAX_PANORAMAS = 6;
 const MAX_SPIN_FRAMES = 72;
+const MAX_STANDARD_IMAGE_SIZE_BYTES = 6 * 1024 * 1024;
+const MAX_PANORAMA_SIZE_BYTES = 20 * 1024 * 1024;
+const ACCEPTED_IMAGE_INPUT_TYPES = "image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp";
+const SUPPORTED_IMAGE_MIME_TYPES = new Set(["image/jpeg", "image/jpg", "image/png", "image/webp"]);
+const SUPPORTED_IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp"];
+
+function isSupportedImageFile(file: File) {
+  const normalizedType = file.type.trim().toLowerCase();
+  if (normalizedType && SUPPORTED_IMAGE_MIME_TYPES.has(normalizedType)) return true;
+
+  const fileName = file.name.trim().toLowerCase();
+  return SUPPORTED_IMAGE_EXTENSIONS.some((extension) => fileName.endsWith(extension));
+}
+
+function bytesToMegabytes(bytes: number) {
+  return Math.floor(bytes / (1024 * 1024));
+}
 
 function fallbackMediaLabel(kind: ListingMediaDraft["kind"], index: number) {
   if (kind === "SPIN_360_FRAME") return `360 Frame ${index + 1}`;
@@ -120,7 +137,24 @@ export function ListingWizard({ listingId, initial }: { listingId?: string; init
   async function onPickMedia(kind: ListingMediaDraft["kind"], e: ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
     if (files.length === 0) return;
-    const imageFiles = files.filter((file) => file.type.startsWith("image/"));
+    const imageFiles = files.filter(isSupportedImageFile);
+    if (imageFiles.length !== files.length) {
+      setError("Only JPG, PNG, and WebP images are allowed.");
+      e.target.value = "";
+      return;
+    }
+
+    const maxFileSize = kind === "PANORAMA_360" ? MAX_PANORAMA_SIZE_BYTES : MAX_STANDARD_IMAGE_SIZE_BYTES;
+    if (imageFiles.some((file) => file.size > maxFileSize)) {
+      setError(
+        kind === "PANORAMA_360"
+          ? `Each panorama image must be ${bytesToMegabytes(MAX_PANORAMA_SIZE_BYTES)}MB or smaller.`
+          : `Each image must be ${bytesToMegabytes(MAX_STANDARD_IMAGE_SIZE_BYTES)}MB or smaller.`
+      );
+      e.target.value = "";
+      return;
+    }
+
     const currentCount = kind === "IMAGE" ? photos.length : kind === "PANORAMA_360" ? panoramas.length : spinFrames.length;
     const nextCount = currentCount + imageFiles.length;
     const limit = kind === "IMAGE" ? MAX_PHOTOS : kind === "PANORAMA_360" ? MAX_PANORAMAS : MAX_SPIN_FRAMES;
@@ -139,7 +173,7 @@ export function ListingWizard({ listingId, initial }: { listingId?: string; init
 
     try {
       setUploading(true);
-      const uploaded = await uploadFiles("property", imageFiles);
+      const uploaded = await uploadFiles("property", imageFiles, { mediaKind: kind });
       setMedia((prev) => [
         ...prev,
         ...uploaded.map((item, index) => ({
@@ -307,7 +341,13 @@ export function ListingWizard({ listingId, initial }: { listingId?: string; init
     return (
       <div className="space-y-2">
         <label className="block text-sm font-semibold text-[var(--ink)]">{title}</label>
-        <Input type="file" accept="image/*" multiple onChange={(e) => void onPickMedia(kind, e)} />
+        <Input
+          type="file"
+          accept={ACCEPTED_IMAGE_INPUT_TYPES}
+          multiple
+          onChange={(e) => void onPickMedia(kind, e)}
+          disabled={uploading}
+        />
         <p className="text-soft text-xs">{helperText}</p>
         {items.length > 0 ? (
           <div className="grid gap-3 sm:grid-cols-2">
@@ -507,8 +547,18 @@ export function ListingWizard({ listingId, initial }: { listingId?: string; init
           required
         />
         {renderMediaSection("IMAGE", t("propertyPhotos"), t("propertyPhotosHelp"), photos)}
-        {renderMediaSection("PANORAMA_360", t("panoramaFiles"), t("panoramaFilesHelp"), panoramas)}
-        {renderMediaSection("SPIN_360_FRAME", "360 spin frames", "Optional: upload ordered frames for a frame-by-frame 360 rotation.", spinFrames)}
+        {renderMediaSection(
+          "PANORAMA_360",
+          t("panoramaFiles"),
+          `${t("panoramaFilesHelp")} Each file can be up to ${bytesToMegabytes(MAX_PANORAMA_SIZE_BYTES)}MB.`,
+          panoramas
+        )}
+        {renderMediaSection(
+          "SPIN_360_FRAME",
+          "360 spin frames",
+          `Optional: upload ordered JPG, PNG, or WebP frames for a frame-by-frame 360 rotation. Each file must be ${bytesToMegabytes(MAX_STANDARD_IMAGE_SIZE_BYTES)}MB or smaller.`,
+          spinFrames
+        )}
         {uploading ? <p className="text-xs text-[var(--brand)]">{t("uploadingMedia")}</p> : null}
       </div>
       <div className="mt-4 space-y-2">

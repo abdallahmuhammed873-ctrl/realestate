@@ -19,6 +19,10 @@ const LIVE_BASE_URL = process.env.PHASE14_BASE_URL?.trim() || "";
 const SELLER_ID = "u-seller-1";
 const ADMIN_ID = "u-admin-1";
 const ACCEPTANCE_TITLE = "Phase 14 Acceptance Verification Listing";
+const ONE_PIXEL_PNG = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=",
+  "base64"
+);
 
 type PendingCheck = {
   label: string;
@@ -46,9 +50,17 @@ async function assertFileExists(relativePath: string) {
 }
 
 async function createUploadedMediaDrafts() {
+  await assert.rejects(
+    saveUploadedFiles("property", SELLER_ID, [
+      new File([Buffer.from("phase14-not-an-image")], "phase14-not-an-image.jpg", { type: "image/jpeg" })
+    ]),
+    /valid JPG, PNG, or WebP image/,
+    "Expected invalid image bytes to be rejected before being stored."
+  );
+
   const uploads = await saveUploadedFiles("property", SELLER_ID, [
-    new File([Buffer.from("phase14-cover-image")], "phase14-cover.jpg", { type: "image/jpeg" }),
-    new File([Buffer.from("phase14-panorama-image")], "phase14-panorama.jpg", { type: "image/jpeg" })
+    new File([ONE_PIXEL_PNG], "phase14-cover.png", { type: "image/png" }),
+    new File([ONE_PIXEL_PNG], "phase14-panorama.png", { type: "image/png" })
   ]);
 
   assert.equal(uploads.length, 2, "Expected temporary property uploads to be created.");

@@ -49,6 +49,7 @@ type AssistantResponse = {
   items?: AssistantItem[];
   externalSources?: ExternalSource[];
   externalResearchMode?: "MARKET_CONTEXT" | "NO_LOCAL_RESULTS" | null;
+  externalResearchError?: string | null;
 };
 
 type Message = {
@@ -166,6 +167,8 @@ function logChatResponse(
     console.log("intent", "intent" in data ? data.intent : undefined);
     console.log("items", Array.isArray(data.items) ? data.items.length : 0);
     console.log("externalSources", Array.isArray(data.externalSources) ? data.externalSources.length : 0);
+    console.log("externalResearchMode", "externalResearchMode" in data ? data.externalResearchMode : undefined);
+    console.log("externalResearchError", "externalResearchError" in data ? data.externalResearchError : undefined);
     console.log("suggestions", Array.isArray(data.suggestions) ? data.suggestions : []);
   }
   console.groupEnd();

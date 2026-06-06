@@ -119,6 +119,29 @@ async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: str
   }
 }
 
+function summarizeError(error: unknown) {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") {
+    try {
+      return summarizeError(JSON.parse(error));
+    } catch {
+      return error;
+    }
+  }
+  if (error && typeof error === "object") {
+    const nested = (error as { error?: { code?: unknown; message?: unknown; status?: unknown } }).error;
+    if (nested) {
+      return [nested.code, nested.status, nested.message].filter((value) => value !== undefined && value !== null && value !== "").join(" - ");
+    }
+    try {
+      return JSON.stringify(error);
+    } catch {
+      return String(error);
+    }
+  }
+  return String(error);
+}
+
 function asNumber(value: number | null | undefined) {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
@@ -365,6 +388,19 @@ function buildExternalResearchFallback(language: AiLanguage, externalResearch: E
   return cleaned;
 }
 
+function buildExternalResearchUnavailableReply(language: AiLanguage, reason: string | null) {
+  const suffix =
+    reason && process.env.NODE_ENV !== "production"
+      ? language === "AR"
+        ? `\n\u0627\u0644\u0633\u0628\u0628 \u0627\u0644\u062a\u0642\u0646\u064a: ${reason}`
+        : `\nTechnical reason: ${reason}`
+      : "";
+
+  return language === "AR"
+    ? `\u0644\u0645 \u0623\u062c\u062f \u0646\u062a\u0627\u0626\u062c \u0645\u0648\u062b\u0642\u0629 \u0645\u0637\u0627\u0628\u0642\u0629 \u062f\u0627\u062e\u0644 Cheque & Key. \u062d\u0627\u0648\u0644\u062a \u0627\u0644\u0628\u062d\u062b \u0641\u064a \u0645\u0635\u0627\u062f\u0631 \u062e\u0627\u0631\u062c\u064a\u0629\u060c \u0644\u0643\u0646 \u0628\u062d\u062b \u0627\u0644\u0648\u064a\u0628 \u063a\u064a\u0631 \u0645\u062a\u0627\u062d \u062d\u0627\u0644\u064a\u064b\u0627. \u062c\u0631\u0651\u0628 \u0645\u0631\u0629 \u0623\u062e\u0631\u0649 \u0623\u0648 \u0648\u0633\u0651\u0639 \u0627\u0644\u0645\u064a\u0632\u0627\u0646\u064a\u0629 \u0623\u0648 \u0627\u0644\u0645\u0646\u0637\u0642\u0629.${suffix}`
+    : `I did not find matching verified listings inside Cheque & Key. I tried searching external sources too, but web search is unavailable right now. Try again later, or broaden the budget/location and I can search the platform again.${suffix}`;
+}
+
 function getGroundingSources(response: unknown): ExternalSource[] {
   const candidate = (response as { candidates?: Array<Record<string, unknown>> }).candidates?.[0];
   const metadata = (candidate?.groundingMetadata ?? candidate?.grounding_metadata) as { groundingChunks?: Array<Record<string, unknown>> } | undefined;
@@ -598,6 +634,7 @@ async function buildChatPayload(rawBody: unknown, traceId: string) {
     total: search.total,
     items: search.items
   });
+  let externalResearchError: string | null = null;
   const externalResearch = gemini.configured
     ? await getExternalResearch({
         message: request.message,
@@ -606,12 +643,15 @@ async function buildChatPayload(rawBody: unknown, traceId: string) {
         filters: search.filters,
         useNoLocalResultsFallback
       }).catch((error) => {
+        externalResearchError = summarizeError(error);
         if (process.env.NODE_ENV !== "production") {
-          console.warn(`[AI Chat][${traceId}] external research skipped`, error instanceof Error ? error.message : error);
+          console.warn(`[AI Chat][${traceId}] external research skipped`, externalResearchError);
         }
         return null;
       })
     : null;
+  const externalResearchUnavailable =
+    useNoLocalResultsFallback && !externalResearch && Boolean(externalResearchError);
 
   if (!gemini.configured) {
     const fallback = buildTransparentFallback({
@@ -640,6 +680,7 @@ async function buildChatPayload(rawBody: unknown, traceId: string) {
         items: search.items,
         externalSources: [],
         externalResearchMode: null,
+        externalResearchError: null,
         aiProviderConfigured: false
       })
     };
@@ -676,6 +717,7 @@ async function buildChatPayload(rawBody: unknown, traceId: string) {
     const finalPayload = parseGeminiJson(response.text ?? "");
     const finalIntent = isComparisonRequest(request.message) && search.items.length >= 2 ? "COMPARE" : finalPayload.intent || intent;
     const reply =
+      (externalResearchUnavailable ? buildExternalResearchUnavailableReply(language, externalResearchError) : "") ||
       finalPayload.reply ||
       buildExternalResearchFallback(language, externalResearch) ||
       buildTransparentFallback({
@@ -701,7 +743,8 @@ async function buildChatPayload(rawBody: unknown, traceId: string) {
         total: search.total,
         items: search.items,
         externalSources: externalResearch?.sources ?? [],
-        externalResearchMode: externalResearch?.mode ?? null
+        externalResearchMode: externalResearch?.mode ?? (useNoLocalResultsFallback ? "NO_LOCAL_RESULTS" : null),
+        externalResearchError
       })
     };
   } catch (error) {
@@ -718,7 +761,10 @@ async function buildChatPayload(rawBody: unknown, traceId: string) {
     }
     return {
       response: NextResponse.json({
-        reply: buildExternalResearchFallback(language, externalResearch) || fallback.reply,
+        reply:
+          (externalResearchUnavailable ? buildExternalResearchUnavailableReply(language, externalResearchError) : "") ||
+          buildExternalResearchFallback(language, externalResearch) ||
+          fallback.reply,
         language,
         intent,
         shouldSearch,
@@ -730,7 +776,8 @@ async function buildChatPayload(rawBody: unknown, traceId: string) {
         total: search.total,
         items: search.items,
         externalSources: externalResearch?.sources ?? [],
-        externalResearchMode: externalResearch?.mode ?? null
+        externalResearchMode: externalResearch?.mode ?? (useNoLocalResultsFallback ? "NO_LOCAL_RESULTS" : null),
+        externalResearchError
       })
     };
   }

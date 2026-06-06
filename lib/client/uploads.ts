@@ -5,9 +5,43 @@ export type UploadedFileResult = {
   originalName: string;
 };
 
-export async function uploadFiles(scope: "property" | "avatar" | "community", files: File[]) {
+type UploadScope = "property" | "avatar" | "community";
+type PropertyUploadKind = "IMAGE" | "PANORAMA_360" | "SPIN_360_FRAME";
+
+type UploadFilesOptions = {
+  mediaKind?: PropertyUploadKind;
+};
+
+const SPIN_FRAME_BATCH_SIZE = 12;
+
+function getUploadBatches(scope: UploadScope, files: File[], options?: UploadFilesOptions) {
+  if (scope !== "property" || options?.mediaKind !== "SPIN_360_FRAME") return [files];
+
+  const batches: File[][] = [];
+  for (let index = 0; index < files.length; index += SPIN_FRAME_BATCH_SIZE) {
+    batches.push(files.slice(index, index + SPIN_FRAME_BATCH_SIZE));
+  }
+  return batches;
+}
+
+export async function uploadFiles(scope: UploadScope, files: File[], options?: UploadFilesOptions) {
+  const batches = getUploadBatches(scope, files, options);
+  const uploaded: UploadedFileResult[] = [];
+
+  for (const batch of batches) {
+    if (batch.length === 0) continue;
+    uploaded.push(...(await uploadFilesBatch(scope, batch, options)));
+  }
+
+  return uploaded;
+}
+
+async function uploadFilesBatch(scope: UploadScope, files: File[], options?: UploadFilesOptions) {
   const formData = new FormData();
   formData.set("scope", scope);
+  if (options?.mediaKind) {
+    formData.set("mediaKind", options.mediaKind);
+  }
   for (const file of files) {
     formData.append("files", file);
   }

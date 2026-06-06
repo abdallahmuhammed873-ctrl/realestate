@@ -266,6 +266,14 @@ function shouldKeepFreeTextQuery(normalized: string, structuredKeys: Set<string>
   return !["i want", "i need", "looking for", "find me", "show me", "search for"].some((phrase) => compact.startsWith(phrase));
 }
 
+function hasUnresolvedPlaceHint(normalized: string) {
+  const compact = normalizeCompactText(normalized);
+  const match = compact.match(/\b(?:in|near|around|at)\s+([a-z\u0600-\u06ff][\w\u0600-\u06ff]*)/i);
+  if (!match) return false;
+  const nextWord = match[1]?.toLowerCase();
+  return Boolean(nextWord && !["cash", "installments", "egp"].includes(nextWord));
+}
+
 export function isGreeting(message: string) {
   const compact = normalizeCompactText(message);
   if (GREETING_TOKENS.has(compact)) return true;
@@ -359,7 +367,7 @@ export function extractAiFilters(message: string): ExtractFiltersResult {
   } else if (
     normalizedQuery.split(/\s+/).length >= 4 &&
     !["city", "area", "district", "projectName"].some((key) => structuredKeys.has(key)) &&
-    shouldKeepFreeTextQuery(normalizedQuery, structuredKeys)
+    (shouldKeepFreeTextQuery(normalizedQuery, structuredKeys) || hasUnresolvedPlaceHint(normalizedQuery))
   ) {
     payload.q = normalizedQuery;
   }

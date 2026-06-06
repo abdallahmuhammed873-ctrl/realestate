@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import {
   deleteUploadedFile,
+  isPropertyUploadKind,
   isOwnedUploadPath,
   saveUploadedFiles,
   validateUploadFiles
@@ -22,18 +23,30 @@ export async function POST(request: NextRequest) {
   if (!isUploadScope(scopeValue)) {
     return NextResponse.json({ error: "Invalid upload scope." }, { status: 400 });
   }
+  const mediaKindValue = String(formData.get("mediaKind") ?? "").trim();
+  if (mediaKindValue && (scopeValue !== "property" || !isPropertyUploadKind(mediaKindValue))) {
+    return NextResponse.json({ error: "Invalid property media type." }, { status: 400 });
+  }
+  const mediaKind = mediaKindValue && isPropertyUploadKind(mediaKindValue) ? mediaKindValue : undefined;
 
   if ((scopeValue === "property" || scopeValue === "community") && user.role !== "SELLER") {
     return NextResponse.json({ error: "Seller access required." }, { status: 403 });
   }
 
-  const validation = validateUploadFiles(scopeValue, formData.getAll("files"));
+  const validation = validateUploadFiles(scopeValue, formData.getAll("files"), mediaKind);
   if (!validation.ok) {
     return NextResponse.json({ error: validation.error }, { status: 400 });
   }
 
-  const files = await saveUploadedFiles(scopeValue, user.id, validation.files);
-  return NextResponse.json({ ok: true, files });
+  try {
+    const files = await saveUploadedFiles(scopeValue, user.id, validation.files);
+    return NextResponse.json({ ok: true, files });
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Could not save uploaded files." },
+      { status: 400 }
+    );
+  }
 }
 
 export async function DELETE(request: NextRequest) {

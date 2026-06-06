@@ -8,6 +8,7 @@ const UPLOADS_ROOT = path.join(PUBLIC_ROOT, "uploads");
 const TEMP_ROOT = path.join(UPLOADS_ROOT, "tmp");
 const TEMP_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 const ALLOWED_IMAGE_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const PROPERTY_PANORAMA_MAX_SIZE_BYTES = 20 * 1024 * 1024;
 
 type UploadScope = "property" | "avatar" | "community";
 
@@ -17,6 +18,8 @@ type UploadPolicy = {
   finalDir: (ownerId: string) => string[];
   tempDir?: (ownerId: string) => string[];
 };
+
+type PropertyUploadKind = Extract<PropertyMediaKind, "IMAGE" | "PANORAMA_360" | "SPIN_360_FRAME">;
 
 export type StoredUploadFile = {
   path: string;
@@ -32,6 +35,12 @@ export type PropertyMediaDraft = {
   altText?: string | null;
   sortOrder?: number;
   mimeType?: string | null;
+};
+
+type ValidatedUploadFile = {
+  buffer: Buffer;
+  mimeType: string;
+  originalName: string;
 };
 
 const UPLOAD_POLICIES: Record<UploadScope, UploadPolicy> = {
@@ -79,9 +88,7 @@ function sanitizeFileNamePart(value: string) {
     .slice(0, 40);
 }
 
-function extensionForFile(fileName: string, mimeType: string) {
-  const explicit = path.extname(fileName).toLowerCase();
-  if ([".jpg", ".jpeg", ".png", ".webp"].includes(explicit)) return explicit === ".jpeg" ? ".jpg" : explicit;
+function extensionForMimeType(mimeType: string) {
   if (mimeType === "image/png") return ".png";
   if (mimeType === "image/webp") return ".webp";
   return ".jpg";
@@ -92,6 +99,47 @@ function inferMimeTypeFromPath(filePath: string) {
   if (ext === ".png") return "image/png";
   if (ext === ".webp") return "image/webp";
   return "image/jpeg";
+}
+
+function normalizeImageMimeType(mimeType: string | null | undefined) {
+  const normalized = String(mimeType ?? "").trim().toLowerCase();
+  if (normalized === "image/jpg") return "image/jpeg";
+  return ALLOWED_IMAGE_MIME_TYPES.has(normalized) ? normalized : null;
+}
+
+function inferAllowedMimeTypeFromName(fileName: string) {
+  const ext = path.extname(fileName).toLowerCase();
+  if (ext === ".jpg" || ext === ".jpeg") return "image/jpeg";
+  if (ext === ".png") return "image/png";
+  if (ext === ".webp") return "image/webp";
+  return null;
+}
+
+function detectImageMimeType(buffer: Buffer) {
+  if (buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
+    return "image/jpeg";
+  }
+  if (
+    buffer.length >= 8 &&
+    buffer[0] === 0x89 &&
+    buffer[1] === 0x50 &&
+    buffer[2] === 0x4e &&
+    buffer[3] === 0x47 &&
+    buffer[4] === 0x0d &&
+    buffer[5] === 0x0a &&
+    buffer[6] === 0x1a &&
+    buffer[7] === 0x0a
+  ) {
+    return "image/png";
+  }
+  if (
+    buffer.length >= 12 &&
+    buffer.subarray(0, 4).toString("ascii") === "RIFF" &&
+    buffer.subarray(8, 12).toString("ascii") === "WEBP"
+  ) {
+    return "image/webp";
+  }
+  return null;
 }
 
 function isFile(value: FormDataEntryValue): value is File {
@@ -116,21 +164,34 @@ async function deleteEmptyParents(startPath: string, stopPath: string) {
   }
 }
 
-async function writeFileToDir(file: File, absoluteDir: string, index = 0): Promise<StoredUploadFile> {
+async function validateUploadFileContent(file: File, index = 0): Promise<ValidatedUploadFile> {
   const originalName = file.name || `upload-${index + 1}`;
-  const mimeType = file.type || inferMimeTypeFromPath(originalName);
-  const base = sanitizeFileNamePart(path.basename(originalName, path.extname(originalName))) || "image";
-  const ext = extensionForFile(originalName, mimeType);
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const detectedMimeType = detectImageMimeType(buffer);
+  if (!detectedMimeType) {
+    throw new Error("Uploaded file is not a valid JPG, PNG, or WebP image.");
+  }
+
+  return {
+    buffer,
+    mimeType: detectedMimeType,
+    originalName
+  };
+}
+
+async function writeFileToDir(file: ValidatedUploadFile, absoluteDir: string, index = 0): Promise<StoredUploadFile> {
+  const base = sanitizeFileNamePart(path.basename(file.originalName, path.extname(file.originalName))) || "image";
+  const mimeType = file.mimeType;
+  const ext = extensionForMimeType(mimeType);
   const filename = `${String(index + 1).padStart(2, "0")}-${base}-${randomUUID().slice(0, 8)}${ext}`;
   const absolutePath = path.join(absoluteDir, filename);
-  const buffer = Buffer.from(await file.arrayBuffer());
-  await fs.writeFile(absolutePath, buffer);
+  await fs.writeFile(absolutePath, file.buffer);
 
   return {
     path: toUploadUrl(absolutePath),
-    size: buffer.byteLength,
+    size: file.buffer.byteLength,
     mimeType,
-    originalName
+    originalName: file.originalName
   };
 }
 
@@ -185,9 +246,32 @@ export function getUploadPolicy(scope: UploadScope) {
   return UPLOAD_POLICIES[scope];
 }
 
-export function validateUploadFiles(scope: UploadScope, entries: FormDataEntryValue[]) {
-  const files = entries.filter(isFile);
+function getEffectiveUploadPolicy(scope: UploadScope, mediaKind?: PropertyUploadKind): UploadPolicy {
   const policy = getUploadPolicy(scope);
+  if (scope !== "property" || !mediaKind) return policy;
+  if (mediaKind === "PANORAMA_360") {
+    return {
+      ...policy,
+      maxFileSizeBytes: PROPERTY_PANORAMA_MAX_SIZE_BYTES,
+      maxFileCount: 6
+    };
+  }
+  if (mediaKind === "SPIN_360_FRAME") {
+    return {
+      ...policy,
+      maxFileCount: 12
+    };
+  }
+  return policy;
+}
+
+export function isPropertyUploadKind(value: string): value is PropertyUploadKind {
+  return value === "IMAGE" || value === "PANORAMA_360" || value === "SPIN_360_FRAME";
+}
+
+export function validateUploadFiles(scope: UploadScope, entries: FormDataEntryValue[], mediaKind?: PropertyUploadKind) {
+  const files = entries.filter(isFile);
+  const policy = getEffectiveUploadPolicy(scope, mediaKind);
 
   if (files.length === 0) {
     return { ok: false as const, error: "Please choose at least one image." };
@@ -197,7 +281,7 @@ export function validateUploadFiles(scope: UploadScope, entries: FormDataEntryVa
   }
 
   for (const file of files) {
-    if (!ALLOWED_IMAGE_MIME_TYPES.has(file.type)) {
+    if (!(normalizeImageMimeType(file.type) ?? inferAllowedMimeTypeFromName(file.name))) {
       return { ok: false as const, error: "Only JPG, PNG, and WebP images are allowed." };
     }
     if (file.size > policy.maxFileSizeBytes) {
@@ -216,10 +300,11 @@ export async function saveUploadedFiles(scope: UploadScope, ownerId: string, fil
   const policy = getUploadPolicy(scope);
   const targetSegments = policy.tempDir ? policy.tempDir(ownerId) : policy.finalDir(ownerId);
   const absoluteDir = path.join(UPLOADS_ROOT, ...targetSegments);
+  const validatedFiles = await Promise.all(files.map((file, index) => validateUploadFileContent(file, index)));
   await ensureDir(absoluteDir);
 
   const stored: StoredUploadFile[] = [];
-  for (const [index, file] of files.entries()) {
+  for (const [index, file] of validatedFiles.entries()) {
     stored.push(await writeFileToDir(file, absoluteDir, index));
   }
   return stored;
