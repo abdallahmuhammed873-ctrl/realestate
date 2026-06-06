@@ -49,10 +49,21 @@ const LOCATION_ALIASES: Record<string, [string | null, string | null, string | n
   "الشيخ زايد": ["Giza", "Sheikh Zayed", null],
   اكتوبر: ["Giza", "6th of October", null],
   أكتوبر: ["Giza", "6th of October", null],
-  الساحل: ["North Coast", null, null],
-  "الساحل الشمالي": ["North Coast", null, null],
-  "north coast": ["North Coast", null, null],
-  sahel: ["North Coast", null, null]
+  الساحل: [null, null, null],
+  "الساحل الشمالي": [null, null, null],
+  "north coast": [null, null, null],
+  sahel: [null, null, null],
+  "el gouna": [null, null, null],
+  gouna: [null, null, null]
+};
+
+const KEYWORD_LOCATION_SEARCH_TERMS: Record<string, string> = {
+  الساحل: "north coast",
+  "الساحل الشمالي": "north coast",
+  "north coast": "north coast",
+  sahel: "north coast",
+  "el gouna": "el gouna",
+  gouna: "el gouna"
 };
 
 const AMENITY_ALIASES: Record<string, string> = {
@@ -140,6 +151,19 @@ function containsAny(text: string, tokens: string[]) {
   return tokens.some((token) => text.includes(token));
 }
 
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function containsNormalizedPhrase(text: string, phrase: string) {
+  const normalizedText = normalizeCompactText(text);
+  const normalizedPhrase = normalizeCompactText(phrase);
+  if (!normalizedText || !normalizedPhrase) return false;
+
+  const pattern = new RegExp(`(^|\\s)${escapeRegExp(normalizedPhrase)}($|\\s)`, "u");
+  return pattern.test(normalizedText);
+}
+
 function parseMoney(raw: string) {
   const cleaned = raw.toLowerCase().replaceAll(",", "").replace(/egp|جنيه/g, "").trim();
   const match = cleaned.match(/(\d+(?:\.\d+)?)\s*(m|million|mn|k|thousand)?/);
@@ -155,14 +179,14 @@ function parseMoney(raw: string) {
 function collectTypes(question: string) {
   const matches: string[] = [];
   for (const [canonical, aliases] of Object.entries(PROPERTY_TYPE_ALIASES)) {
-    if (aliases.some((alias) => question.includes(alias))) matches.push(canonical);
+    if (aliases.some((alias) => containsNormalizedPhrase(question, alias))) matches.push(canonical);
   }
   return matches.length > 0 ? matches : undefined;
 }
 
 function collectAmenities(question: string) {
   const amenities = Object.entries(AMENITY_ALIASES)
-    .filter(([alias]) => question.includes(alias))
+    .filter(([alias]) => containsNormalizedPhrase(question, alias))
     .map(([, canonical]) => canonical);
   return Array.from(new Set(amenities));
 }
@@ -185,7 +209,7 @@ function detects360View(question: string) {
 
 function matchAlias(question: string, aliases: Record<string, string>) {
   for (const [alias, canonical] of Object.entries(aliases)) {
-    if (question.includes(alias)) return canonical;
+    if (containsNormalizedPhrase(question, alias)) return canonical;
   }
   return undefined;
 }
@@ -193,7 +217,7 @@ function matchAlias(question: string, aliases: Record<string, string>) {
 function applyLocationAliases(question: string, payload: Record<string, unknown>) {
   const matches = Object.entries(LOCATION_ALIASES).sort((a, b) => b[0].length - a[0].length);
   for (const [alias, [city, area, district]] of matches) {
-    if (!question.includes(alias)) continue;
+    if (!containsNormalizedPhrase(question, alias)) continue;
     if (city) payload.city = city;
     if (area) payload.area = area;
     if (district) payload.district = district;
@@ -274,6 +298,30 @@ function hasUnresolvedPlaceHint(normalized: string) {
   return Boolean(nextWord && !["cash", "installments", "egp"].includes(nextWord));
 }
 
+function hasKeywordOnlyLocationAlias(normalized: string) {
+  return Boolean(findKeywordOnlyLocationAlias(normalized));
+}
+
+function findKeywordOnlyLocationAlias(normalized: string) {
+  const matches = Object.entries(LOCATION_ALIASES).sort((a, b) => b[0].length - a[0].length);
+  const match = matches.find(([alias, [city, area, district]]) => {
+    if (city || area || district) return false;
+    return containsNormalizedPhrase(normalized, alias);
+  });
+  return match ? (KEYWORD_LOCATION_SEARCH_TERMS[match[0]] ?? match[0]) : null;
+}
+
+function hasSpecificSearchTerms(compact: string) {
+  return Boolean(
+    detectTransaction(compact) ||
+      collectTypes(compact)?.length ||
+      Object.keys(LOCATION_ALIASES).some((alias) => containsNormalizedPhrase(compact, alias)) ||
+      Object.keys(PROJECT_ALIASES).some((alias) => containsNormalizedPhrase(compact, alias)) ||
+      /\d/.test(compact) ||
+      detects360View(compact)
+  );
+}
+
 export function isGreeting(message: string) {
   const compact = normalizeCompactText(message);
   if (GREETING_TOKENS.has(compact)) return true;
@@ -282,6 +330,8 @@ export function isGreeting(message: string) {
   if (/^hi+$/.test(englishToken)) return true;
   if (/^hey+$/.test(englishToken)) return true;
   if (/^hel+o+$/.test(englishToken)) return true;
+  const [firstToken] = compact.split(/\s+/);
+  if (firstToken && GREETING_TOKENS.has(firstToken) && !hasSpecificSearchTerms(compact)) return true;
   return false;
 }
 
@@ -326,7 +376,7 @@ export function extractAiFilters(message: string): ExtractFiltersResult {
   if (unitCode) payload.unitCode = unitCode[1]?.toUpperCase();
   if (detects360View(question)) payload.has360View = true;
 
-  if (containsAny(question, ["garden", "حديقة"])) payload.hasGarden = true;
+  if (containsAny(question, ["private garden", "garden area", "حديقة خاصة"])) payload.hasGarden = true;
   if (containsAny(question, ["roof", "روف"])) payload.hasRoof = true;
 
   if (containsAny(question, ["installment", "installments", "تقسيط", "أقساط", "اقساط"])) payload.paymentType = "INSTALLMENTS";
@@ -360,6 +410,7 @@ export function extractAiFilters(message: string): ExtractFiltersResult {
   payload.sort = detectSort(question);
 
   const structuredKeys = new Set(Object.keys(payload).filter((key) => !["page", "pageSize", "sort"].includes(key)));
+  const keywordOnlyLocationAlias = findKeywordOnlyLocationAlias(normalizedQuery);
   if (structuredKeys.size === 0) {
     payload.q = normalizedQuery;
   } else if (structuredKeys.has("unitCode")) {
@@ -367,9 +418,11 @@ export function extractAiFilters(message: string): ExtractFiltersResult {
   } else if (
     normalizedQuery.split(/\s+/).length >= 4 &&
     !["city", "area", "district", "projectName"].some((key) => structuredKeys.has(key)) &&
-    (shouldKeepFreeTextQuery(normalizedQuery, structuredKeys) || hasUnresolvedPlaceHint(normalizedQuery))
+    (shouldKeepFreeTextQuery(normalizedQuery, structuredKeys) ||
+      hasUnresolvedPlaceHint(normalizedQuery) ||
+      hasKeywordOnlyLocationAlias(normalizedQuery))
   ) {
-    payload.q = normalizedQuery;
+    payload.q = keywordOnlyLocationAlias ?? normalizedQuery;
   }
 
   if (structuredKeys.size <= 1) {
@@ -483,29 +536,34 @@ export function isSearchableFilterSet(filters: Partial<AiPropertySearchFilters>)
   ].some((key) => filters[key as keyof AiPropertySearchFilters] !== undefined);
 }
 
-export function relaxAiFilters(filters: AiPropertySearchFilters) {
+export function relaxAiFilters(filters: AiPropertySearchFilters, alreadyRelaxed: readonly string[] = []) {
   const relaxed: Record<string, unknown> = { ...filters };
   const relaxedKeys: string[] = [];
+  const alreadyRelaxedSet = new Set(alreadyRelaxed);
 
   function drop(key: keyof AiPropertySearchFilters) {
-    if (relaxed[key] !== undefined) {
+    if (!alreadyRelaxedSet.has(key) && relaxed[key] !== undefined) {
       delete relaxed[key];
       relaxedKeys.push(key);
     }
   }
 
-  if (relaxed.projectName) drop("projectName");
-  else if (relaxed.district) drop("district");
-  else if (relaxed.area && relaxed.city) drop("area");
-  else if (typeof relaxed.maxPrice === "number") {
-    relaxed.maxPrice = relaxed.maxPrice * 1.2;
-    relaxedKeys.push("maxPrice");
-  } else if (relaxed.type) drop("type");
-  else if (relaxed.paymentType) drop("paymentType");
-  else if (relaxed.minBeds !== undefined || relaxed.maxBeds !== undefined) {
+  if (relaxed.hasGarden !== undefined && !alreadyRelaxedSet.has("hasGarden")) drop("hasGarden");
+  else if (relaxed.hasRoof !== undefined && !alreadyRelaxedSet.has("hasRoof")) drop("hasRoof");
+  else if (relaxed.amenities && !alreadyRelaxedSet.has("amenities")) drop("amenities");
+  else if (
+    (relaxed.minBeds !== undefined || relaxed.maxBeds !== undefined) &&
+    (!alreadyRelaxedSet.has("minBeds") || !alreadyRelaxedSet.has("maxBeds"))
+  ) {
     drop("minBeds");
     drop("maxBeds");
-  } else if (relaxed.transaction) drop("transaction");
+  } else if (relaxed.paymentType && !alreadyRelaxedSet.has("paymentType")) drop("paymentType");
+  else if (relaxed.district && !alreadyRelaxedSet.has("district")) drop("district");
+  else if (relaxed.area && relaxed.city && !relaxed.q && !alreadyRelaxedSet.has("area")) drop("area");
+  else if (typeof relaxed.maxPrice === "number" && !alreadyRelaxedSet.has("maxPrice")) {
+    relaxed.maxPrice = relaxed.maxPrice * 1.2;
+    relaxedKeys.push("maxPrice");
+  }
 
   const parsed = safeParseInternalAiSearchFilters(relaxed);
   return {

@@ -45,6 +45,7 @@ type GroundedPropertyItem = {
   has360View?: boolean;
   hasPanorama360?: boolean;
   hasSpin360?: boolean;
+  amenities?: string[];
   images?: string[];
   listedByName?: string | null;
   listedByCompanyName?: string | null;
@@ -178,6 +179,7 @@ function toGroundedItems(items: PublicPropertyCard[]): GroundedPropertyItem[] {
     has360View: Boolean(item.has360View),
     hasPanorama360: Boolean(item.hasPanorama360),
     hasSpin360: Boolean(item.hasSpin360),
+    amenities: item.amenities,
     images: toCompactDisplayImages(item.images),
     listedByName: item.listedByName,
     listedByCompanyName: item.listedByCompanyName,
@@ -563,8 +565,8 @@ async function runSearchWithRelaxation(filters: AiPropertySearchFilters, traceId
     });
   }
 
-  for (let relaxCount = 0; result.total === 0 && relaxCount < 3; relaxCount += 1) {
-    const relaxed = relaxAiFilters(currentFilters);
+  for (let relaxCount = 0; result.total === 0 && relaxCount < 6; relaxCount += 1) {
+    const relaxed = relaxAiFilters(currentFilters, relaxedFilters);
     if (relaxed.relaxedKeys.length === 0) break;
     currentFilters = relaxed.filters;
     relaxedFilters.push(...relaxed.relaxedKeys);
@@ -715,7 +717,12 @@ async function buildChatPayload(rawBody: unknown, traceId: string) {
     );
 
     const finalPayload = parseGeminiJson(response.text ?? "");
-    const finalIntent = isComparisonRequest(request.message) && search.items.length >= 2 ? "COMPARE" : finalPayload.intent || intent;
+    const finalIntent =
+      intent === "GREETING"
+        ? "GREETING"
+        : isComparisonRequest(request.message) && search.items.length >= 2
+          ? "COMPARE"
+          : finalPayload.intent || intent;
     const reply =
       (externalResearchUnavailable ? buildExternalResearchUnavailableReply(language, externalResearchError) : "") ||
       finalPayload.reply ||

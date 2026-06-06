@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { PrismaClient } from "@prisma/client";
 import { toMobilePropertySearchResponse } from "../../lib/mobile-api.ts";
 import { parseInternalAiSearchFilters, parsePublicSearchFilters, toSearchParams } from "../../lib/search-contract.ts";
+import { extractAiFilters, relaxAiFilters } from "../../lib/server/ai-filters.ts";
 import { loadLocalEnv } from "../../lib/server/load-env.ts";
 import { IMPORTED_INVENTORY_OWNER_ID, upsertImportedInventory } from "../../prisma/import-ai-inventory.ts";
 import { importRuntimeData } from "../../prisma/import-runtime-data.ts";
@@ -54,6 +55,21 @@ async function main() {
   const serialized = toSearchParams({ city: "Cairo", type: ["APARTMENT", "VILLA"], page: 3 });
   assert.match(serialized, /city=Cairo/, "Expected shared contract serializer to keep city");
   assert.match(serialized, /type=APARTMENT%2CVILLA/, "Expected shared contract serializer to keep type lists");
+
+  const noLocalFallbackFilters = extractAiFilters("Find me a waterfront villa in El Gouna under 2 million EGP").filters;
+  assert.equal(noLocalFallbackFilters.q, "el gouna", "Expected AI extraction to keep unresolved location text searchable");
+  assert.deepEqual(noLocalFallbackFilters.type, ["VILLA"], "Expected AI extraction to keep the requested property type");
+  const relaxedNoLocalFallbackFilters = relaxAiFilters(noLocalFallbackFilters);
+  assert.deepEqual(
+    relaxedNoLocalFallbackFilters.relaxedKeys,
+    ["maxPrice"],
+    "Expected AI relaxation to only soften budget before external/no-results fallback"
+  );
+  assert.equal(
+    relaxAiFilters(relaxedNoLocalFallbackFilters.filters, relaxedNoLocalFallbackFilters.relaxedKeys).relaxedKeys.length,
+    0,
+    "Expected AI relaxation to preserve core type/location criteria instead of returning unrelated local properties"
+  );
 
   const searchResult = await searchProperties({ page: 1, pageSize: 10 });
   assert.ok(searchResult.total > 0, "Expected approved properties to be searchable");
