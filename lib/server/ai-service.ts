@@ -145,12 +145,18 @@ function summarizeError(error: unknown) {
   return String(error);
 }
 
-function isGeminiRateLimitError(error: unknown) {
+function isGeminiRetryableProviderError(error: unknown) {
   const details = summarizeError(error).toLowerCase();
   return (
     details.includes("resource_exhausted") ||
+    details.includes("unavailable") ||
     details.includes("\"code\":429") ||
+    details.includes("\"code\":503") ||
     details.includes("code 429") ||
+    details.includes("code 503") ||
+    details.includes("high demand") ||
+    details.includes("temporarily unavailable") ||
+    details.includes("service unavailable") ||
     details.includes("too many requests") ||
     details.includes("quota exceeded") ||
     details.includes("rate limit")
@@ -187,10 +193,10 @@ async function generateContentWithModelFallback(input: {
     } catch (error) {
       lastError = error;
       const nextModel = models[index + 1];
-      if (!nextModel || !isGeminiRateLimitError(error)) throw error;
+      if (!nextModel || !isGeminiRetryableProviderError(error)) throw error;
 
       if (process.env.NODE_ENV !== "production") {
-        console.warn(`[AI Chat][${input.traceId}] ${input.label} rate-limited; retrying fallback model`, {
+        console.warn(`[AI Chat][${input.traceId}] ${input.label} provider unavailable; retrying fallback model`, {
           model,
           nextModel,
           error: summarizeError(error)
@@ -450,16 +456,21 @@ function buildExternalResearchFallback(language: AiLanguage, externalResearch: E
 }
 
 function buildExternalResearchUnavailableReply(language: AiLanguage, reason: string | null) {
-  const suffix =
-    reason && process.env.NODE_ENV !== "production"
+  const details = (reason ?? "").toLowerCase();
+  const reasonLabel =
+    details.includes("resource_exhausted") || details.includes("429") || details.includes("quota") || details.includes("rate limit")
       ? language === "AR"
-        ? `\n\u0627\u0644\u0633\u0628\u0628 \u0627\u0644\u062a\u0642\u0646\u064a: ${reason}`
-        : `\nTechnical reason: ${reason}`
-      : "";
+        ? " \u062d\u062f \u0627\u0633\u062a\u062e\u062f\u0627\u0645 \u0645\u0632\u0648\u062f \u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064a \u0645\u0645\u062a\u0644\u0626 \u062d\u0627\u0644\u064a\u0627."
+        : " The external AI search quota is temporarily full."
+      : details.includes("unavailable") || details.includes("503") || details.includes("high demand")
+        ? language === "AR"
+          ? " \u0645\u0632\u0648\u062f \u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064a \u0645\u0634\u063a\u0648\u0644 \u062d\u0627\u0644\u064a\u0627."
+          : " The external AI search provider is temporarily busy."
+        : "";
 
   return language === "AR"
-    ? `\u0644\u0645 \u0623\u062c\u062f \u0646\u062a\u0627\u0626\u062c \u0645\u0648\u062b\u0642\u0629 \u0645\u0637\u0627\u0628\u0642\u0629 \u062f\u0627\u062e\u0644 Cheque & Key. \u062d\u0627\u0648\u0644\u062a \u0627\u0644\u0628\u062d\u062b \u0641\u064a \u0645\u0635\u0627\u062f\u0631 \u062e\u0627\u0631\u062c\u064a\u0629\u060c \u0644\u0643\u0646 \u0628\u062d\u062b \u0627\u0644\u0648\u064a\u0628 \u063a\u064a\u0631 \u0645\u062a\u0627\u062d \u062d\u0627\u0644\u064a\u064b\u0627. \u062c\u0631\u0651\u0628 \u0645\u0631\u0629 \u0623\u062e\u0631\u0649 \u0623\u0648 \u0648\u0633\u0651\u0639 \u0627\u0644\u0645\u064a\u0632\u0627\u0646\u064a\u0629 \u0623\u0648 \u0627\u0644\u0645\u0646\u0637\u0642\u0629.${suffix}`
-    : `I did not find matching verified listings inside Cheque & Key. I tried searching external sources too, but web search is unavailable right now. Try again later, or broaden the budget/location and I can search the platform again.${suffix}`;
+    ? `\u0644\u0645 \u0623\u062c\u062f \u0646\u062a\u0627\u0626\u062c \u0645\u0648\u062b\u0642\u0629 \u0645\u0637\u0627\u0628\u0642\u0629 \u062f\u0627\u062e\u0644 Cheque & Key. \u062d\u0627\u0648\u0644\u062a \u0627\u0644\u0628\u062d\u062b \u0641\u064a \u0645\u0635\u0627\u062f\u0631 \u062e\u0627\u0631\u062c\u064a\u0629\u060c \u0644\u0643\u0646 \u0628\u062d\u062b \u0627\u0644\u0648\u064a\u0628 \u063a\u064a\u0631 \u0645\u062a\u0627\u062d \u062d\u0627\u0644\u064a\u064b\u0627.${reasonLabel} \u062c\u0631\u0651\u0628 \u0645\u0631\u0629 \u0623\u062e\u0631\u0649 \u0623\u0648 \u0648\u0633\u0651\u0639 \u0627\u0644\u0645\u064a\u0632\u0627\u0646\u064a\u0629 \u0623\u0648 \u0627\u0644\u0645\u0646\u0637\u0642\u0629.`
+    : `I did not find matching verified listings inside Cheque & Key. I tried searching external sources too, but web search is unavailable right now.${reasonLabel} Try again later, or broaden the budget/location and I can search the platform again.`;
 }
 
 function getGroundingSources(response: unknown): ExternalSource[] {
