@@ -25,7 +25,7 @@ export async function getAiServiceHealthCheck(): Promise<ServiceCheck> {
   if (gemini.configured) {
     return {
       status: "ok",
-      details: `${gemini.provider}:${gemini.model}`
+      details: `${gemini.provider}:${gemini.model}${gemini.fallbackModels.length > 0 ? ` fallback=${gemini.fallbackModels.join(",")}` : ""}`
     };
   }
 
@@ -59,6 +59,7 @@ export async function getBackendHealthSnapshot() {
       ...aiService,
       provider: runtime.aiService.provider,
       model: runtime.aiService.model,
+      fallbackModels: runtime.aiService.fallbackModels,
       configured: runtime.aiService.configured
     }
   };

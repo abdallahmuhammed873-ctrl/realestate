@@ -40,9 +40,11 @@ Set the Gemini API key in the Next.js environment before starting the app:
 ```powershell
 $env:GEMINI_API_KEY="your-key"
 $env:GEMINI_MODEL="gemini-3.5-flash"
+$env:GEMINI_FALLBACK_MODELS="gemini-2.5-flash"
 ```
 
 The browser and mobile clients still call Next.js only. Gemini is called server-side from `app/api/ai/*`.
+When the primary model returns a Gemini quota/rate-limit error, the server retries with the configured fallback models in order.
 
 ## Demo URLs
 

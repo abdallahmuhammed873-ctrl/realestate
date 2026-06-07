@@ -15,6 +15,7 @@ export async function GET() {
         status: gemini.configured ? "ok" : "error",
         provider: gemini.provider,
         model: gemini.model,
+        fallbackModels: gemini.fallbackModels,
         details: gemini.configured ? undefined : "GEMINI_API_KEY is not configured."
       }
     },

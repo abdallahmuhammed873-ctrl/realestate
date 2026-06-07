@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { PrismaClient } from "@prisma/client";
 import { toMobilePropertySearchResponse } from "../../lib/mobile-api.ts";
 import { parseInternalAiSearchFilters, parsePublicSearchFilters, toSearchParams } from "../../lib/search-contract.ts";
+import { getGeminiFallbackModels, getGeminiModelCandidates } from "../../lib/server/ai-config.ts";
 import { extractAiFilters, relaxAiFilters } from "../../lib/server/ai-filters.ts";
 import { loadLocalEnv } from "../../lib/server/load-env.ts";
 import { IMPORTED_INVENTORY_OWNER_ID, upsertImportedInventory } from "../../prisma/import-ai-inventory.ts";
@@ -29,6 +30,30 @@ async function resetData() {
 
 async function main() {
   await resetData();
+
+  const originalGeminiModel = process.env.GEMINI_MODEL;
+  const originalGeminiFallbackModel = process.env.GEMINI_FALLBACK_MODEL;
+  const originalGeminiFallbackModels = process.env.GEMINI_FALLBACK_MODELS;
+  try {
+    process.env.GEMINI_MODEL = "gemini-3.5-flash";
+    delete process.env.GEMINI_FALLBACK_MODEL;
+    delete process.env.GEMINI_FALLBACK_MODELS;
+    assert.deepEqual(getGeminiFallbackModels(), ["gemini-2.5-flash"], "Expected Gemini fallback model to default to 2.5 Flash");
+
+    process.env.GEMINI_FALLBACK_MODELS = "gemini-2.5-flash, gemini-2.0-flash, gemini-3.5-flash";
+    assert.deepEqual(
+      getGeminiModelCandidates(),
+      ["gemini-3.5-flash", "gemini-2.5-flash", "gemini-2.0-flash"],
+      "Expected Gemini model candidates to keep primary first and remove duplicate fallback entries"
+    );
+  } finally {
+    if (originalGeminiModel === undefined) delete process.env.GEMINI_MODEL;
+    else process.env.GEMINI_MODEL = originalGeminiModel;
+    if (originalGeminiFallbackModel === undefined) delete process.env.GEMINI_FALLBACK_MODEL;
+    else process.env.GEMINI_FALLBACK_MODEL = originalGeminiFallbackModel;
+    if (originalGeminiFallbackModels === undefined) delete process.env.GEMINI_FALLBACK_MODELS;
+    else process.env.GEMINI_FALLBACK_MODELS = originalGeminiFallbackModels;
+  }
 
   const parsedPublic = parsePublicSearchFilters({
     type: "APARTMENT,VILLA",

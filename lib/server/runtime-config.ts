@@ -86,7 +86,7 @@ export function logServerRuntimeOnce() {
         : "unknown PostgreSQL mode";
 
   console.info(
-    `[runtime] env=${summary.nodeEnv} bind=${summary.backendBinding.host}:${summary.backendBinding.port} networkUrl=${summary.backendUrls.networkUrl ?? "disabled"} db=${summary.database.provider} mode=${dbModeLabel} host=${summary.database.host}:${summary.database.port} database=${summary.database.database} ai=${summary.aiService.provider}:${summary.aiService.model} configured=${summary.aiService.configured} authCookie=${summary.authCookie}`
+    `[runtime] env=${summary.nodeEnv} bind=${summary.backendBinding.host}:${summary.backendBinding.port} networkUrl=${summary.backendUrls.networkUrl ?? "disabled"} db=${summary.database.provider} mode=${dbModeLabel} host=${summary.database.host}:${summary.database.port} database=${summary.database.database} ai=${summary.aiService.provider}:${summary.aiService.model} fallback=${summary.aiService.fallbackModels.join(",") || "none"} configured=${summary.aiService.configured} authCookie=${summary.authCookie}`
   );
 
   if (summary.database.mode !== "local") {

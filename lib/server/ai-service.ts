@@ -17,7 +17,7 @@ import {
   shouldForceGroundedSearch,
   shouldUseExternalResearch
 } from "./ai-filters.ts";
-import { getAiTimeoutMs, getGeminiApiKey, getGeminiModel, getGeminiStatus } from "./ai-config.ts";
+import { getAiTimeoutMs, getGeminiApiKey, getGeminiModelCandidates, getGeminiStatus } from "./ai-config.ts";
 
 type AiIntent = "GREETING" | "CLARIFY" | "SEARCH_RESULTS" | "NO_RESULTS" | "COMPARE" | "GUIDANCE";
 
@@ -70,6 +70,7 @@ type ExternalResearchContext = {
   mode: ExternalResearchMode;
   text: string;
   sources: ExternalSource[];
+  model: string;
 };
 
 const FINAL_RESPONSE_SCHEMA = {
@@ -98,6 +99,7 @@ const FINAL_RESPONSE_SCHEMA = {
 } as const;
 
 let geminiClient: GoogleGenAI | null = null;
+type GeminiGenerateContentRequest = Parameters<ReturnType<typeof getGeminiClient>["models"]["generateContent"]>[0];
 
 function getGeminiClient() {
   const apiKey = getGeminiApiKey();
@@ -141,6 +143,63 @@ function summarizeError(error: unknown) {
     }
   }
   return String(error);
+}
+
+function isGeminiRateLimitError(error: unknown) {
+  const details = summarizeError(error).toLowerCase();
+  return (
+    details.includes("resource_exhausted") ||
+    details.includes("\"code\":429") ||
+    details.includes("code 429") ||
+    details.includes("too many requests") ||
+    details.includes("quota exceeded") ||
+    details.includes("rate limit")
+  );
+}
+
+async function generateContentWithModelFallback(input: {
+  label: string;
+  traceId: string;
+  buildRequest: (model: string) => GeminiGenerateContentRequest;
+}) {
+  const ai = getGeminiClient();
+  const models = getGeminiModelCandidates();
+  let lastError: unknown = null;
+
+  for (let index = 0; index < models.length; index += 1) {
+    const model = models[index]!;
+
+    try {
+      const response = await withTimeout(
+        ai.models.generateContent(input.buildRequest(model)),
+        getAiTimeoutMs(),
+        `${input.label} (${model})`
+      );
+
+      if (index > 0 && process.env.NODE_ENV !== "production") {
+        console.info(`[AI Chat][${input.traceId}] ${input.label} used fallback model`, {
+          model,
+          skippedModels: models.slice(0, index)
+        });
+      }
+
+      return { response, model };
+    } catch (error) {
+      lastError = error;
+      const nextModel = models[index + 1];
+      if (!nextModel || !isGeminiRateLimitError(error)) throw error;
+
+      if (process.env.NODE_ENV !== "production") {
+        console.warn(`[AI Chat][${input.traceId}] ${input.label} rate-limited; retrying fallback model`, {
+          model,
+          nextModel,
+          error: summarizeError(error)
+        });
+      }
+    }
+  }
+
+  throw lastError;
 }
 
 function asNumber(value: number | null | undefined) {
@@ -520,10 +579,11 @@ async function getExternalResearch(input: {
 
   if (!mode) return null;
 
-  const ai = getGeminiClient();
-  const response = await withTimeout(
-    ai.models.generateContent({
-      model: getGeminiModel(),
+  const { response, model } = await generateContentWithModelFallback({
+    label: "Gemini Google Search grounding",
+    traceId: input.traceId,
+    buildRequest: (candidateModel) => ({
+      model: candidateModel,
       contents: buildExternalResearchPrompt({
         message: input.message,
         language: input.language,
@@ -534,21 +594,20 @@ async function getExternalResearch(input: {
         systemInstruction: buildExternalResearchInstruction(input.language, mode),
         tools: [{ googleSearch: {} }]
       }
-    }),
-    getAiTimeoutMs(),
-    "Gemini Google Search grounding"
-  );
+    })
+  });
 
   const text = response.text?.trim() || "";
   if (process.env.NODE_ENV !== "production") {
     console.info(`[AI Chat][${input.traceId}] external research`, {
       mode,
       used: Boolean(text),
+      model,
       sources: getGroundingSources(response).length
     });
   }
 
-  return text ? { mode, text, sources: getGroundingSources(response) } : null;
+  return text ? { mode, text, sources: getGroundingSources(response), model } : null;
 }
 
 async function runSearchWithRelaxation(filters: AiPropertySearchFilters, traceId: string) {
@@ -683,16 +742,19 @@ async function buildChatPayload(rawBody: unknown, traceId: string) {
         externalSources: [],
         externalResearchMode: null,
         externalResearchError: null,
+        externalResearchModel: null,
+        aiModel: null,
         aiProviderConfigured: false
       })
     };
   }
 
   try {
-    const ai = getGeminiClient();
-    const response = await withTimeout(
-      ai.models.generateContent({
-        model: getGeminiModel(),
+    const { response, model } = await generateContentWithModelFallback({
+      label: "Gemini chat generation",
+      traceId,
+      buildRequest: (candidateModel) => ({
+        model: candidateModel,
         contents: buildGeminiPrompt({
           message: request.message,
           language,
@@ -711,10 +773,8 @@ async function buildChatPayload(rawBody: unknown, traceId: string) {
           responseJsonSchema: FINAL_RESPONSE_SCHEMA,
           temperature: 0.35
         }
-      }),
-      getAiTimeoutMs(),
-      "Gemini chat generation"
-    );
+      })
+    });
 
     const finalPayload = parseGeminiJson(response.text ?? "");
     const finalIntent =
@@ -751,7 +811,9 @@ async function buildChatPayload(rawBody: unknown, traceId: string) {
         items: search.items,
         externalSources: externalResearch?.sources ?? [],
         externalResearchMode: externalResearch?.mode ?? (useNoLocalResultsFallback ? "NO_LOCAL_RESULTS" : null),
-        externalResearchError
+        externalResearchError,
+        externalResearchModel: externalResearch?.model ?? null,
+        aiModel: model
       })
     };
   } catch (error) {
@@ -784,7 +846,9 @@ async function buildChatPayload(rawBody: unknown, traceId: string) {
         items: search.items,
         externalSources: externalResearch?.sources ?? [],
         externalResearchMode: externalResearch?.mode ?? (useNoLocalResultsFallback ? "NO_LOCAL_RESULTS" : null),
-        externalResearchError
+        externalResearchError,
+        externalResearchModel: externalResearch?.model ?? null,
+        aiModel: null
       })
     };
   }
