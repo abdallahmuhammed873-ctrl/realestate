@@ -128,7 +128,7 @@ Use `/auth` and choose role:
 5. Configure Gemini:
    - set `GEMINI_API_KEY` in `.env`
    - optional: set `GEMINI_MODEL` (default `gemini-3.5-flash`)
-   - optional: set `GEMINI_FALLBACK_MODELS` as a comma-separated list for quota/rate-limit/high-demand fallback (default `gemini-2.5-flash`)
+   - optional: set `GEMINI_FALLBACK_MODELS` as a comma-separated list for quota/rate-limit/high-demand fallback (default `gemini-2.5-flash,gemini-2.5-flash-lite`)
 6. Start the Next.js app:
    - local laptop only: `npm run dev`
    - same-Wi-Fi demo mode: `npm run dev:network`

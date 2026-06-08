@@ -38,12 +38,16 @@ async function main() {
     process.env.GEMINI_MODEL = "gemini-3.5-flash";
     delete process.env.GEMINI_FALLBACK_MODEL;
     delete process.env.GEMINI_FALLBACK_MODELS;
-    assert.deepEqual(getGeminiFallbackModels(), ["gemini-2.5-flash"], "Expected Gemini fallback model to default to 2.5 Flash");
+    assert.deepEqual(
+      getGeminiFallbackModels(),
+      ["gemini-2.5-flash", "gemini-2.5-flash-lite"],
+      "Expected Gemini fallback models to default to current 2.5 Flash models"
+    );
 
-    process.env.GEMINI_FALLBACK_MODELS = "gemini-2.5-flash, gemini-2.0-flash, gemini-3.5-flash";
+    process.env.GEMINI_FALLBACK_MODELS = "gemini-2.5-flash, gemini-2.5-flash-lite, gemini-3.5-flash";
     assert.deepEqual(
       getGeminiModelCandidates(),
-      ["gemini-3.5-flash", "gemini-2.5-flash", "gemini-2.0-flash"],
+      ["gemini-3.5-flash", "gemini-2.5-flash", "gemini-2.5-flash-lite"],
       "Expected Gemini model candidates to keep primary first and remove duplicate fallback entries"
     );
   } finally {

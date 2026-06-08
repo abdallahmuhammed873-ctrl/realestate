@@ -163,6 +163,11 @@ function isGeminiRetryableProviderError(error: unknown) {
   );
 }
 
+function isGeminiUnavailableModelError(error: unknown) {
+  const details = summarizeError(error).toLowerCase();
+  return details.includes("not_found") || details.includes("\"code\":404") || details.includes("code 404") || details.includes("no longer available");
+}
+
 async function generateContentWithModelFallback(input: {
   label: string;
   traceId: string;
@@ -193,10 +198,11 @@ async function generateContentWithModelFallback(input: {
     } catch (error) {
       lastError = error;
       const nextModel = models[index + 1];
-      if (!nextModel || !isGeminiRetryableProviderError(error)) throw error;
+      const shouldTryNextModel = isGeminiRetryableProviderError(error) || isGeminiUnavailableModelError(error);
+      if (!nextModel || !shouldTryNextModel) throw error;
 
       if (process.env.NODE_ENV !== "production") {
-        console.warn(`[AI Chat][${input.traceId}] ${input.label} provider unavailable; retrying fallback model`, {
+        console.warn(`[AI Chat][${input.traceId}] ${input.label} retrying fallback model`, {
           model,
           nextModel,
           error: summarizeError(error)

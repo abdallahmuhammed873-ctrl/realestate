@@ -16,7 +16,7 @@ function parseModelList(value: string | undefined) {
 export function getGeminiFallbackModels() {
   const primaryModel = getGeminiModel();
   const configuredFallbacks = parseModelList(process.env.GEMINI_FALLBACK_MODELS || process.env.GEMINI_FALLBACK_MODEL);
-  const fallbackModels = configuredFallbacks.length > 0 ? configuredFallbacks : ["gemini-2.5-flash"];
+  const fallbackModels = configuredFallbacks.length > 0 ? configuredFallbacks : ["gemini-2.5-flash", "gemini-2.5-flash-lite"];
   const seen = new Set([primaryModel]);
 
   return fallbackModels.filter((model) => {
