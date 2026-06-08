@@ -82,17 +82,28 @@ const CHAT_DEBUG_ENABLED = process.env.NODE_ENV !== "production";
 
 function normalizeAssistantReply(content: string) {
   return content
-    .replaceAll("**", "")
+    .replace(/\\r\\n/g, "\n")
+    .replace(/\\n/g, "\n")
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .replace(/^\s*[*\u2022]\s+/gm, "- ")
     .replace(/(\d+\.\s)/g, "\n$1")
-    .replace(/\s+\*\s/g, "\n- ")
     .replace(/Note that/gi, "\nNote:")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
 }
 
+function getSourceHost(uri: string) {
+  try {
+    return new URL(uri).hostname.replace(/^www\./i, "");
+  } catch {
+    return uri;
+  }
+}
+
 function sanitizeExternalSources(values: unknown): ExternalSource[] {
   if (!Array.isArray(values)) return [];
-  return values
+  const sources = values
     .map((value) => {
       if (!value || typeof value !== "object") return null;
       const source = value as Partial<ExternalSource>;
@@ -101,8 +112,136 @@ function sanitizeExternalSources(values: unknown): ExternalSource[] {
       if (!title || !/^https?:\/\//i.test(uri)) return null;
       return { title, uri };
     })
-    .filter((source): source is ExternalSource => Boolean(source))
-    .slice(0, 5);
+    .filter((source): source is ExternalSource => Boolean(source));
+
+  return Array.from(new Map(sources.map((source) => [source.uri, source])).values()).slice(0, 5);
+}
+
+type MessageBlock =
+  | { type: "paragraph"; text: string }
+  | { type: "ordered"; items: string[] }
+  | { type: "unordered"; items: string[] };
+
+function parseMessageBlocks(content: string): MessageBlock[] {
+  const blocks: MessageBlock[] = [];
+  let paragraph: string[] = [];
+  let listType: "ordered" | "unordered" | null = null;
+  let listItems: string[] = [];
+
+  function flushParagraph() {
+    if (paragraph.length === 0) return;
+    blocks.push({ type: "paragraph", text: paragraph.join(" ") });
+    paragraph = [];
+  }
+
+  function flushList() {
+    if (!listType || listItems.length === 0) return;
+    blocks.push({ type: listType, items: listItems });
+    listType = null;
+    listItems = [];
+  }
+
+  for (const rawLine of content.split("\n")) {
+    const line = rawLine.trim();
+    if (!line) {
+      flushParagraph();
+      flushList();
+      continue;
+    }
+
+    const unordered = line.match(/^[-*]\s+(.+)$/);
+    if (unordered) {
+      flushParagraph();
+      if (listType !== "unordered") flushList();
+      listType = "unordered";
+      listItems.push(unordered[1]!.trim());
+      continue;
+    }
+
+    const ordered = line.match(/^\d+\.\s+(.+)$/);
+    if (ordered) {
+      flushParagraph();
+      if (listType !== "ordered") flushList();
+      listType = "ordered";
+      listItems.push(ordered[1]!.trim());
+      continue;
+    }
+
+    flushList();
+    paragraph.push(line);
+  }
+
+  flushParagraph();
+  flushList();
+  return blocks;
+}
+
+function renderInlineText(text: string) {
+  const parts = text.split(/(\*\*[^*]+\*\*|\[[^\]]+\]\(https?:\/\/[^)]+\)|https?:\/\/[^\s)]+)/g);
+
+  return parts.map((part, index) => {
+    const bold = part.match(/^\*\*([^*]+)\*\*$/);
+    if (bold) return <strong key={index}>{bold[1]}</strong>;
+
+    const markdownLink = part.match(/^\[([^\]]+)\]\((https?:\/\/[^)]+)\)$/);
+    if (markdownLink) {
+      return (
+        <a key={index} href={markdownLink[2]} target="_blank" rel="noreferrer" className="font-semibold text-[var(--brand-strong)] underline underline-offset-2">
+          {markdownLink[1]}
+        </a>
+      );
+    }
+
+    if (/^https?:\/\//i.test(part)) {
+      return (
+        <a key={index} href={part} target="_blank" rel="noreferrer" className="font-semibold text-[var(--brand-strong)] underline underline-offset-2">
+          {getSourceHost(part)}
+        </a>
+      );
+    }
+
+    return part;
+  });
+}
+
+function AssistantMessageContent({ content }: { content: string }) {
+  const blocks = parseMessageBlocks(content);
+
+  return (
+    <div className="space-y-2 leading-6">
+      {blocks.map((block, index) => {
+        if (block.type === "ordered") {
+          return (
+            <ol key={index} className="list-decimal space-y-1.5 ps-5">
+              {block.items.map((item, itemIndex) => (
+                <li key={itemIndex} className="ps-1">
+                  {renderInlineText(item)}
+                </li>
+              ))}
+            </ol>
+          );
+        }
+
+        if (block.type === "unordered") {
+          return (
+            <ul key={index} className="list-disc space-y-1.5 ps-5 marker:text-[var(--brand-strong)]">
+              {block.items.map((item, itemIndex) => (
+                <li key={itemIndex} className="ps-1">
+                  {renderInlineText(item)}
+                </li>
+              ))}
+            </ul>
+          );
+        }
+
+        return (
+          <p key={index} className="break-words">
+            {renderInlineText(block.text)}
+          </p>
+        );
+      })}
+    </div>
+  );
 }
 
 function formatFilterKey(key: string, language: "en" | "ar") {
@@ -321,7 +460,7 @@ export function ChatbotDrawer() {
                   <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.16em] opacity-70">
                     {message.role === "assistant" ? t("assistant") : t("you")}
                   </p>
-                  <p className="whitespace-pre-line leading-6">{message.content}</p>
+                  <AssistantMessageContent content={message.content} />
 
                   {message.role === "assistant" && message.relaxedFilters && message.relaxedFilters.length > 0 ? (
                     <p className="mt-2 text-xs text-muted">
@@ -399,16 +538,22 @@ export function ChatbotDrawer() {
                       <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-soft">
                         {language === "ar" ? "\u0645\u0635\u0627\u062f\u0631 \u062e\u0627\u0631\u062c\u064a\u0629" : "External sources"}
                       </p>
-                      <div className="flex flex-wrap gap-1.5">
+                      <div className="space-y-1.5">
                         {message.externalSources.map((source) => (
                           <a
                             key={source.uri}
                             href={source.uri}
                             target="_blank"
                             rel="noreferrer"
-                            className="max-w-full rounded-full bg-[var(--brand-soft)] px-3 py-1.5 text-xs font-medium text-[var(--brand-strong)] hover:opacity-90"
+                            className="block rounded-xl border theme-divider bg-[var(--surface-soft)] px-3 py-2 text-xs hover:bg-[var(--surface-strong)]"
                           >
-                            <span className="line-clamp-1">{source.title}</span>
+                            <span className="flex items-center justify-between gap-2">
+                              <span className="line-clamp-1 font-semibold text-[var(--brand-strong)]">{source.title}</span>
+                              <span className="shrink-0 rounded-full bg-[var(--surface)] px-2 py-0.5 text-[10px] font-semibold text-muted">
+                                Open
+                              </span>
+                            </span>
+                            <span className="mt-0.5 block truncate text-[11px] text-muted">{getSourceHost(source.uri)}</span>
                           </a>
                         ))}
                       </div>
