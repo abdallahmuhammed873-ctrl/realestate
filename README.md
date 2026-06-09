@@ -8,6 +8,7 @@ Next.js App Router marketplace inspired by OLX/Dubizzle browsing and Property Fi
 - Tailwind CSS (shadcn-style reusable UI primitives)
 - Prisma + PostgreSQL for runtime platform data
 - Google Gemini via the Next.js server for grounded AI search, comparison, and answer generation
+- Gemini Live voice sessions through short-lived server-issued tokens
 
 ## Features
 
@@ -27,10 +28,12 @@ Next.js App Router marketplace inspired by OLX/Dubizzle browsing and Property Fi
 - Appointment booking flow + notification stub response
 - Saved search alerts
 - EN/AR-ready chatbot drawer via `POST /api/ai/chat`
+- Live voice assistant in the chatbot drawer via Gemini Live
 - Internal AI data path:
   - Next.js extracts filters, searches PostgreSQL-backed listings, and calls Gemini server-side
   - AI responses return real property cards from canonical platform data
   - Optional Gemini Google Search grounding is used for explicit external market-context requests and no-local-results fallback
+  - Browser voice sessions use `/api/ai/live/session` ephemeral tokens and `/api/ai/live/tool` for grounded platform/external search
 - Responsive UX:
   - mobile bottom nav
   - mobile filters bottom sheet
@@ -129,6 +132,7 @@ Use `/auth` and choose role:
    - set `GEMINI_API_KEY` in `.env`
    - optional: set `GEMINI_MODEL` (default `gemini-3.5-flash`)
    - optional: set `GEMINI_FALLBACK_MODELS` as a comma-separated list for quota/rate-limit/high-demand fallback (default `gemini-2.5-flash,gemini-2.5-flash-lite`)
+   - optional: set `GEMINI_LIVE_MODEL`, `GEMINI_LIVE_VOICE`, and `GEMINI_LIVE_TOKEN_MINUTES` for the live voice assistant
 6. Start the Next.js app:
    - local laptop only: `npm run dev`
    - same-Wi-Fi demo mode: `npm run dev:network`
@@ -149,6 +153,7 @@ Use `/auth` and choose role:
 - Prisma is the primary schema and migration path for runtime data changes.
 - Public listing visibility is enforced by repository-level status check (`APPROVED` only).
 - The AI assistant reads shared platform data directly through Next.js service modules and no longer depends on Python/Ollama.
+- The live voice assistant uses Gemini Live with ephemeral tokens; the browser never receives the long-lived Gemini API key.
 - Mobile and browser clients should talk to the Next.js backend only. PostgreSQL is intended to stay backend-only on the laptop for the graduation demo.
 - Web auth still uses the current session-cookie flow, while mobile-ready `/api/v1/*` routes now use a signed bearer token issued by `POST /api/v1/auth/login`.
 - `GET /api/health` is the main laptop-demo readiness endpoint for backend, database, and AI checks.

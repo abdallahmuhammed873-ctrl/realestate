@@ -35,12 +35,27 @@ export function getAiTimeoutMs() {
   return Number.isFinite(configured) && configured > 0 ? configured : 60_000;
 }
 
+export function getGeminiLiveModel() {
+  return process.env.GEMINI_LIVE_MODEL?.trim() || "gemini-2.5-flash-live-preview";
+}
+
+export function getGeminiLiveVoice() {
+  return process.env.GEMINI_LIVE_VOICE?.trim() || "Kore";
+}
+
+export function getGeminiLiveTokenMinutes() {
+  const configured = Number(process.env.GEMINI_LIVE_TOKEN_MINUTES);
+  return Number.isFinite(configured) && configured > 0 ? Math.min(configured, 60) : 30;
+}
+
 export function getGeminiStatus() {
   const apiKey = getGeminiApiKey();
   return {
     configured: apiKey.length > 0,
     provider: "google-gemini",
     model: getGeminiModel(),
-    fallbackModels: getGeminiFallbackModels()
+    fallbackModels: getGeminiFallbackModels(),
+    liveModel: getGeminiLiveModel(),
+    liveVoice: getGeminiLiveVoice()
   };
 }

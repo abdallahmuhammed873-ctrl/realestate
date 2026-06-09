@@ -5,6 +5,7 @@ import { useLanguage } from "@/components/layout/language-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getPropertyCoverImage } from "@/lib/property-images";
+import { LiveVoiceAssistant } from "./live-voice-assistant";
 
 type ChatRole = "user" | "assistant";
 
@@ -594,6 +595,13 @@ export function ChatbotDrawer() {
           </div>
 
           <div className="border-t theme-divider bg-[var(--surface)] px-3 py-2.5">
+            <div className="mb-2">
+              <LiveVoiceAssistant
+                language={language}
+                disabled={sending}
+                onChatMessage={(message) => setMessages((prev) => [...prev, message])}
+              />
+            </div>
             <p className="mb-2 text-xs text-muted">{t("assistantInputHint")}</p>
             <Input
               value={input}
