@@ -91,7 +91,15 @@ const PLATFORM_TOOL_NAME = "search_platform_properties";
 const EXTERNAL_TOOL_NAME = "search_external_market";
 const INPUT_SAMPLE_RATE = 16_000;
 const OUTPUT_SAMPLE_RATE = 24_000;
+const INPUT_CHUNK_MS = 100;
+const INPUT_CHUNK_SAMPLES = Math.round((INPUT_SAMPLE_RATE * INPUT_CHUNK_MS) / 1000);
 const MIC_WORKLET_NAME = "gemini-live-mic-input";
+const SPEECH_RMS_THRESHOLD = 0.012;
+const SPEECH_START_CHUNKS = 2;
+const SPEECH_SILENCE_CHUNKS = Math.ceil(800 / INPUT_CHUNK_MS);
+const SPEECH_PREBUFFER_CHUNKS = 3;
+const MIC_LEVEL_SCALE = 0.12;
+const MIC_LEVEL_HEARING_THRESHOLD = SPEECH_RMS_THRESHOLD / MIC_LEVEL_SCALE;
 
 const COPY = {
   en: {
@@ -105,6 +113,7 @@ const COPY = {
     speaking: "Speaking",
     stopping: "Stopping",
     error: "Voice unavailable",
+    hearing: "Hearing you",
     user: "You",
     assistant: "Assistant",
     cardsReady: "Results ready",
@@ -124,6 +133,7 @@ const COPY = {
     speaking: "يتحدث",
     stopping: "جاري الإيقاف",
     error: "الصوت غير متاح",
+    hearing: "أسمعك",
     user: "أنت",
     assistant: "المساعد",
     cardsReady: "النتائج جاهزة",
@@ -139,12 +149,14 @@ function normalizeTranscript(value: string) {
 }
 
 function mergeTranscript(previous: string, next: string) {
-  const cleaned = next.trim();
-  if (!cleaned) return previous;
-  if (!previous) return cleaned;
-  if (cleaned.startsWith(previous)) return cleaned;
-  if (previous.endsWith(cleaned)) return previous;
-  return `${previous}${previous.endsWith(" ") ? "" : " "}${cleaned}`;
+  const normalized = next.replace(/\s+/g, " ");
+  const trimmed = normalized.trim();
+  if (!trimmed) return previous;
+  if (!previous) return normalized.trimStart();
+  if (trimmed.startsWith(previous)) return trimmed;
+  if (previous.endsWith(trimmed)) return previous;
+
+  return `${previous}${normalized}`.replace(/\s+/g, " ").trimStart();
 }
 
 function normalizeAssistantReply(content: string) {
@@ -218,6 +230,15 @@ function resampleToRate(input: Float32Array, inputRate: number, outputRate: numb
   return output;
 }
 
+function getRms(samples: Float32Array) {
+  if (samples.length === 0) return 0;
+  let sum = 0;
+  for (let index = 0; index < samples.length; index += 1) {
+    sum += samples[index]! * samples[index]!;
+  }
+  return Math.sqrt(sum / samples.length);
+}
+
 function float32ToPcm16Base64(samples: Float32Array, inputRate: number) {
   const resampled = resampleToRate(samples, inputRate, INPUT_SAMPLE_RATE);
   const bytes = new Uint8Array(resampled.length * 2);
@@ -269,6 +290,8 @@ export function LiveVoiceAssistant({ language, disabled, onChatMessage }: LiveVo
   const [voiceName, setVoiceName] = useState("");
   const [resultCount, setResultCount] = useState(0);
   const [sourceCount, setSourceCount] = useState(0);
+  const [micLevel, setMicLevel] = useState(0);
+  const [speechActive, setSpeechActive] = useState(false);
 
   const sessionRef = useRef<Session | null>(null);
   const micStreamRef = useRef<MediaStream | null>(null);
@@ -291,6 +314,13 @@ export function LiveVoiceAssistant({ language, disabled, onChatMessage }: LiveVo
   const turnActiveRef = useRef(false);
   const stoppedRef = useRef(true);
   const liveReadyRef = useRef(false);
+  const micBufferRef = useRef<Float32Array[]>([]);
+  const micBufferSamplesRef = useRef(0);
+  const lastMicLevelUpdateRef = useRef(0);
+  const speechActiveRef = useRef(false);
+  const activeSpeechChunksRef = useRef(0);
+  const silenceChunksRef = useRef(0);
+  const preSpeechChunksRef = useRef<Float32Array[]>([]);
 
   const appendSources = useCallback((sources: ExternalSource[]) => {
     if (sources.length === 0) return;
@@ -395,6 +425,146 @@ export function LiveVoiceAssistant({ language, disabled, onChatMessage }: LiveVo
     source.start(startTime);
   }, []);
 
+  const getLiveSession = useCallback(() => {
+    const session = sessionRef.current;
+    if (!session || !liveReadyRef.current || stoppedRef.current) {
+      return null;
+    }
+    return session;
+  }, []);
+
+  const resetSpeechDetection = useCallback(() => {
+    speechActiveRef.current = false;
+    activeSpeechChunksRef.current = 0;
+    silenceChunksRef.current = 0;
+    preSpeechChunksRef.current = [];
+    setSpeechActive(false);
+  }, []);
+
+  const sendActivityStart = useCallback(() => {
+    const session = getLiveSession();
+    if (!session) return false;
+    try {
+      session.sendRealtimeInput({ activityStart: {} });
+      speechActiveRef.current = true;
+      silenceChunksRef.current = 0;
+      clearPlayback();
+      setSpeechActive(true);
+      setStatus("listening");
+      return true;
+    } catch {
+      liveReadyRef.current = false;
+      return false;
+    }
+  }, [clearPlayback, getLiveSession]);
+
+  const sendActivityEnd = useCallback(() => {
+    const session = getLiveSession();
+    if (!session || !speechActiveRef.current) return false;
+    try {
+      session.sendRealtimeInput({ activityEnd: {} });
+      resetSpeechDetection();
+      if (!stoppedRef.current) setStatus("thinking");
+      return true;
+    } catch {
+      liveReadyRef.current = false;
+      return false;
+    }
+  }, [getLiveSession, resetSpeechDetection]);
+
+  const sendPcm16Chunk = useCallback((samples16k: Float32Array) => {
+    if (samples16k.length === 0) {
+      return false;
+    }
+    const session = getLiveSession();
+    if (!session) return false;
+
+    const base64 = float32ToPcm16Base64(samples16k, INPUT_SAMPLE_RATE);
+    try {
+      session.sendRealtimeInput({
+        audio: {
+          data: base64,
+          mimeType: "audio/pcm;rate=16000"
+        }
+      });
+      return true;
+    } catch {
+      liveReadyRef.current = false;
+      return false;
+    }
+  }, [getLiveSession]);
+
+  const dequeueMicChunk = useCallback((size: number) => {
+    const output = new Float32Array(size);
+    let offset = 0;
+
+    while (offset < size && micBufferRef.current.length > 0) {
+      const segment = micBufferRef.current[0]!;
+      const take = Math.min(segment.length, size - offset);
+      output.set(segment.subarray(0, take), offset);
+      offset += take;
+
+      if (take === segment.length) {
+        micBufferRef.current.shift();
+      } else {
+        micBufferRef.current[0] = segment.subarray(take);
+      }
+      micBufferSamplesRef.current -= take;
+    }
+
+    return output;
+  }, []);
+
+  const processMicChunk = useCallback(
+    (chunk: Float32Array) => {
+      const hasSpeech = getRms(chunk) >= SPEECH_RMS_THRESHOLD;
+
+      if (!speechActiveRef.current) {
+        preSpeechChunksRef.current.push(chunk);
+        while (preSpeechChunksRef.current.length > SPEECH_PREBUFFER_CHUNKS) {
+          preSpeechChunksRef.current.shift();
+        }
+        activeSpeechChunksRef.current = hasSpeech ? activeSpeechChunksRef.current + 1 : 0;
+
+        if (activeSpeechChunksRef.current < SPEECH_START_CHUNKS) {
+          return true;
+        }
+
+        if (!sendActivityStart()) return false;
+
+        const bufferedChunks = preSpeechChunksRef.current;
+        preSpeechChunksRef.current = [];
+        for (const bufferedChunk of bufferedChunks) {
+          if (!sendPcm16Chunk(bufferedChunk)) return false;
+        }
+        return true;
+      }
+
+      if (!sendPcm16Chunk(chunk)) return false;
+
+      if (hasSpeech) {
+        silenceChunksRef.current = 0;
+      } else {
+        silenceChunksRef.current += 1;
+      }
+
+      if (silenceChunksRef.current >= SPEECH_SILENCE_CHUNKS) {
+        return sendActivityEnd();
+      }
+
+      return true;
+    },
+    [sendActivityEnd, sendActivityStart, sendPcm16Chunk]
+  );
+
+  const flushMicBuffer = useCallback(() => {
+    if (micBufferSamplesRef.current <= 0) return;
+    const remaining = dequeueMicChunk(micBufferSamplesRef.current);
+    micBufferRef.current = [];
+    micBufferSamplesRef.current = 0;
+    if (speechActiveRef.current) sendPcm16Chunk(remaining);
+  }, [dequeueMicChunk, sendPcm16Chunk]);
+
   const teardownMediaResources = useCallback(() => {
     workletNodeRef.current?.disconnect();
     workletNodeRef.current?.port.close();
@@ -415,12 +585,16 @@ export function LiveVoiceAssistant({ language, disabled, onChatMessage }: LiveVo
     const inputContext = inputContextRef.current;
     inputContextRef.current = null;
     void inputContext?.close().catch(() => undefined);
+    micBufferRef.current = [];
+    micBufferSamplesRef.current = 0;
+    resetSpeechDetection();
+    setMicLevel(0);
 
     clearPlayback();
     const outputContext = outputContextRef.current;
     outputContextRef.current = null;
     void outputContext?.close().catch(() => undefined);
-  }, [clearPlayback]);
+  }, [clearPlayback, resetSpeechDetection]);
 
   const handleToolOutput = useCallback((output: LiveToolOutput) => {
     beginTurn();
@@ -456,6 +630,7 @@ export function LiveVoiceAssistant({ language, disabled, onChatMessage }: LiveVo
           body: JSON.stringify({
             name: call.name,
             args: call.args ?? {},
+            fallbackQuery: normalizeTranscript(userTranscriptRef.current),
             language: apiLanguage
           })
         });
@@ -549,30 +724,26 @@ export function LiveVoiceAssistant({ language, disabled, onChatMessage }: LiveVo
   );
 
   const sendMicSamples = useCallback((samples: Float32Array, sampleRate: number) => {
-    const session = sessionRef.current;
-    const websocket = session?.conn as WebSocket | undefined;
-    if (
-      !session ||
-      !websocket ||
-      websocket.readyState !== WebSocket.OPEN ||
-      !liveReadyRef.current ||
-      stoppedRef.current ||
-      samples.length === 0
-    ) {
+    if (!liveReadyRef.current || stoppedRef.current || samples.length === 0) {
       return;
     }
-    const base64 = float32ToPcm16Base64(samples, sampleRate);
-    try {
-      session.sendRealtimeInput({
-        audio: {
-          data: base64,
-          mimeType: "audio/pcm;rate=16000"
-        }
-      });
-    } catch {
-      liveReadyRef.current = false;
+
+    const rms = getRms(samples);
+    const now = performance.now();
+    if (now - lastMicLevelUpdateRef.current > 120) {
+      lastMicLevelUpdateRef.current = now;
+      setMicLevel(Math.min(1, rms / MIC_LEVEL_SCALE));
     }
-  }, []);
+
+    const resampled = resampleToRate(samples, sampleRate, INPUT_SAMPLE_RATE);
+    micBufferRef.current.push(resampled);
+    micBufferSamplesRef.current += resampled.length;
+
+    while (micBufferSamplesRef.current >= INPUT_CHUNK_SAMPLES) {
+      const chunk = dequeueMicChunk(INPUT_CHUNK_SAMPLES);
+      if (!processMicChunk(chunk)) break;
+    }
+  }, [dequeueMicChunk, processMicChunk]);
 
   const startMicProcessing = useCallback(
     async (stream: MediaStream) => {
@@ -632,14 +803,10 @@ export function LiveVoiceAssistant({ language, disabled, onChatMessage }: LiveVo
   const stop = useCallback(async () => {
     if (status === "idle" && !sessionRef.current && !micStreamRef.current && !inputContextRef.current && !outputContextRef.current) return;
     setStatus("stopping");
+    flushMicBuffer();
+    sendActivityEnd();
     stoppedRef.current = true;
     liveReadyRef.current = false;
-
-    try {
-      sessionRef.current?.sendRealtimeInput({ audioStreamEnd: true });
-    } catch {
-      // The websocket may already be closed.
-    }
 
     try {
       sessionRef.current?.close();
@@ -654,7 +821,7 @@ export function LiveVoiceAssistant({ language, disabled, onChatMessage }: LiveVo
     commitAssistantTurn();
     resetTurnState();
     setStatus("idle");
-  }, [commitAssistantTurn, commitUserTranscript, resetTurnState, status, teardownMediaResources]);
+  }, [commitAssistantTurn, commitUserTranscript, flushMicBuffer, resetTurnState, sendActivityEnd, status, teardownMediaResources]);
 
   const start = useCallback(async () => {
     if (disabled || status === "connecting" || status === "listening" || status === "thinking" || status === "speaking") return;
@@ -662,6 +829,10 @@ export function LiveVoiceAssistant({ language, disabled, onChatMessage }: LiveVo
     setStatus("connecting");
     stoppedRef.current = false;
     liveReadyRef.current = false;
+    micBufferRef.current = [];
+    micBufferSamplesRef.current = 0;
+    resetSpeechDetection();
+    setMicLevel(0);
     resetTurnState();
 
     try {
@@ -737,7 +908,7 @@ export function LiveVoiceAssistant({ language, disabled, onChatMessage }: LiveVo
       await stop();
       setStatus("error");
     }
-  }, [apiLanguage, copy.fallbackError, copy.micError, disabled, handleLiveMessage, resetTurnState, startMicProcessing, status, stop]);
+  }, [apiLanguage, copy.fallbackError, copy.micError, disabled, handleLiveMessage, resetSpeechDetection, resetTurnState, startMicProcessing, status, stop]);
 
   useEffect(() => {
     return () => {
@@ -756,6 +927,7 @@ export function LiveVoiceAssistant({ language, disabled, onChatMessage }: LiveVo
   }, []);
 
   const active = status === "connecting" || status === "listening" || status === "thinking" || status === "speaking";
+  const hearing = active && (speechActive || micLevel >= MIC_LEVEL_HEARING_THRESHOLD);
   const statusLabel =
     status === "idle"
       ? copy.ready
@@ -780,7 +952,7 @@ export function LiveVoiceAssistant({ language, disabled, onChatMessage }: LiveVo
             <p className="text-xs font-semibold">{copy.liveVoice}</p>
             {voiceName ? <span className="hidden text-[11px] text-muted sm:inline">{voiceName}</span> : null}
           </div>
-          <p className="mt-0.5 text-[11px] text-muted">{statusLabel}</p>
+          <p className="mt-0.5 text-[11px] text-muted">{hearing ? copy.hearing : statusLabel}</p>
         </div>
         <button
           type="button"
@@ -817,6 +989,15 @@ export function LiveVoiceAssistant({ language, disabled, onChatMessage }: LiveVo
             {resultCount > 0 ? <span className="status-positive rounded-full px-2 py-0.5 text-[10px] font-semibold">{copy.cardsReady}</span> : null}
             {sourceCount > 0 ? <span className="status-brand rounded-full px-2 py-0.5 text-[10px] font-semibold">{copy.sourcesReady}</span> : null}
           </div>
+        </div>
+      ) : null}
+
+      {active ? (
+        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[var(--surface)]">
+          <div
+            className="h-full rounded-full bg-[var(--brand)] transition-[width] duration-100"
+            style={{ width: `${Math.max(6, Math.round(micLevel * 100))}%` }}
+          />
         </div>
       ) : null}
 

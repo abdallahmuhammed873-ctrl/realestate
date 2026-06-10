@@ -1,4 +1,4 @@
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, Type } from "@google/genai";
 import type { FunctionDeclaration, LiveConnectConfig } from "@google/genai";
 import type { AiLanguage, AiPropertySearchFilters } from "../ai-contract";
 import type { PublicPropertyCard } from "../types";
@@ -91,13 +91,12 @@ const AUDIO_RESPONSE_MODALITIES = ["AUDIO"] as LiveConnectConfig["responseModali
 const platformSearchDeclaration: FunctionDeclaration = {
   name: LIVE_PLATFORM_SEARCH_TOOL_NAME,
   description:
-    "Search verified Cheque & Key platform listings. Call this before recommending any platform property, price, availability, 360 tour, payment plan, or comparison.",
-  parametersJsonSchema: {
-    type: "object",
-    additionalProperties: false,
+    "Search verified Cheque & Key platform listings. Required before answering any property request, recommendation, price, availability, 360 tour, payment plan, or comparison.",
+  parameters: {
+    type: Type.OBJECT,
     properties: {
       query: {
-        type: "string",
+        type: Type.STRING,
         description: "The user's property request in natural language, including location, budget, deal type, bedrooms, 360 tour needs, or project names."
       }
     },
@@ -109,12 +108,11 @@ const externalMarketDeclaration: FunctionDeclaration = {
   name: LIVE_EXTERNAL_MARKET_TOOL_NAME,
   description:
     "Search external public real estate sources when Cheque & Key has no matching verified listings or when the user explicitly asks for off-platform, online, market, or outside-website options. Return source-backed findings only.",
-  parametersJsonSchema: {
-    type: "object",
-    additionalProperties: false,
+  parameters: {
+    type: Type.OBJECT,
     properties: {
       query: {
-        type: "string",
+        type: Type.STRING,
         description: "The exact external real estate question to research, including location, budget, and property type."
       }
     },
@@ -436,9 +434,10 @@ export function buildLiveAssistantSystemInstruction(language: AiLanguage) {
   return [
     "You are Cheque & Key's live real estate voice assistant.",
     "Keep spoken answers friendly, concise, and useful. Use short sentences that sound natural aloud.",
+    "For property search, listing, recommendation, comparison, price, availability, payment, location, or 360-tour requests, your next response must be a function call, not a spoken answer.",
     "For any Cheque & Key property recommendation, price, availability, location, payment plan, 360 tour, or comparison, call search_platform_properties first.",
     "Use platform tool results as the only source of truth for verified Cheque & Key listings.",
-    "Never invent platform properties, prices, projects, seller names, availability, or 360 tour status.",
+    "Never answer property requests from memory. Never invent platform properties, prices, projects, seller names, availability, or 360 tour status.",
     "If platform results are broadened, briefly say which constraints were relaxed.",
     "If platform results are empty and the user asked for off-platform, online, outside-website, external, market, or alternative options, call search_external_market.",
     "If platform results are empty and the user's criteria are specific, you may call search_external_market and clearly say the findings are off-platform and not verified by Cheque & Key.",
@@ -467,7 +466,7 @@ export function buildLiveConnectConfig(language: AiLanguage, voiceName = getGemi
     outputAudioTranscription: {},
     realtimeInputConfig: {
       automaticActivityDetection: {
-        disabled: false
+        disabled: true
       }
     }
   };

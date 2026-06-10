@@ -12,14 +12,16 @@ const liveToolRequestSchema = z
   .object({
     name: z.enum([LIVE_PLATFORM_SEARCH_TOOL_NAME, LIVE_EXTERNAL_MARKET_TOOL_NAME]),
     args: z.record(z.unknown()).optional(),
+    fallbackQuery: z.string().optional(),
     language: aiLanguageSchema.optional()
   })
   .strict();
 
-function getToolQuery(args: Record<string, unknown> | undefined) {
+function getToolQuery(args: Record<string, unknown> | undefined, fallbackQuery: string | undefined) {
   const query = typeof args?.query === "string" ? args.query.trim() : "";
-  if (!query) throw new Error("The live assistant tool call did not include a query.");
-  return query;
+  const fallback = typeof fallbackQuery === "string" ? fallbackQuery.trim() : "";
+  if (!query && !fallback) throw new Error("The live assistant tool call did not include a query.");
+  return query || fallback;
 }
 
 export async function POST(req: NextRequest) {
@@ -37,7 +39,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const query = getToolQuery(parsed.data.args);
+    const query = getToolQuery(parsed.data.args, parsed.data.fallbackQuery);
     const language = parsed.data.language ?? "EN";
     const output =
       parsed.data.name === LIVE_PLATFORM_SEARCH_TOOL_NAME
