@@ -36,7 +36,7 @@ export function getAiTimeoutMs() {
 }
 
 export function getGeminiLiveModel() {
-  return process.env.GEMINI_LIVE_MODEL?.trim() || "gemini-2.5-flash-live-preview";
+  return process.env.GEMINI_LIVE_MODEL?.trim() || "gemini-2.5-flash-native-audio-preview-12-2025";
 }
 
 export function getGeminiLiveVoice() {

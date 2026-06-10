@@ -62,6 +62,49 @@ async function runToolCall(call: FunctionCall) {
   };
 }
 
+async function runLiveHandshake(sessionInfo: LiveSessionSmoke) {
+  const ai = new GoogleGenAI({
+    apiKey: sessionInfo.token,
+    httpOptions: { apiVersion: "v1alpha" }
+  });
+  let liveSession: Session | null = null;
+
+  return await new Promise<{ setupComplete: boolean; model: string }>(async (resolve, reject) => {
+    const timeout = setTimeout(() => {
+      liveSession?.close();
+      reject(new Error("Gemini Live websocket setup timed out."));
+    }, 15_000);
+
+    try {
+      liveSession = await ai.live.connect({
+        model: sessionInfo.model,
+        config: sessionInfo.config,
+        callbacks: {
+          onmessage: (message) => {
+            if (!message.setupComplete) return;
+            clearTimeout(timeout);
+            liveSession?.close();
+            resolve({ setupComplete: true, model: sessionInfo.model });
+          },
+          onerror: (event) => {
+            clearTimeout(timeout);
+            const message = event && typeof event === "object" && "message" in event ? String(event.message) : "Gemini Live websocket error.";
+            reject(new Error(message));
+          },
+          onclose: (event) => {
+            clearTimeout(timeout);
+            reject(new Error(`Gemini Live websocket closed before setup: ${event.code} ${event.reason || ""}`.trim()));
+          }
+        }
+      });
+    } catch (error) {
+      clearTimeout(timeout);
+      liveSession?.close();
+      reject(error);
+    }
+  });
+}
+
 async function runLiveTextTurn(sessionInfo: LiveSessionSmoke) {
   const ai = new GoogleGenAI({
     apiKey: sessionInfo.token,
@@ -132,7 +175,10 @@ async function runLiveTextTurn(sessionInfo: LiveSessionSmoke) {
               });
             }
           },
-          onerror: (event) => reject(event instanceof ErrorEvent ? new Error(event.message) : event),
+          onerror: (event) => {
+            const message = event && typeof event === "object" && "message" in event ? String(event.message) : "Gemini Live websocket error.";
+            reject(new Error(message));
+          },
           onclose: () => undefined
         }
       });
@@ -165,11 +211,19 @@ async function main() {
     expiresAt: session.expiresAt
   });
 
+  const handshake = await runLiveHandshake({
+    token: session.token,
+    model: session.model,
+    config: session.config
+  });
+  console.log("liveHandshake", handshake);
+
   if (process.env.GEMINI_LIVE_SMOKE_TURN === "1") {
+    const turnSession = await createLiveEphemeralSession("EN");
     const liveTurn = await runLiveTextTurn({
-      token: session.token,
-      model: session.model,
-      config: session.config
+      token: turnSession.token,
+      model: turnSession.model,
+      config: turnSession.config
     });
     console.log("liveTurn", liveTurn);
   } else {

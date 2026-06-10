@@ -290,6 +290,7 @@ export function LiveVoiceAssistant({ language, disabled, onChatMessage }: LiveVo
   const turnFilterLabelsRef = useRef<string[]>([]);
   const turnActiveRef = useRef(false);
   const stoppedRef = useRef(true);
+  const liveReadyRef = useRef(false);
 
   const appendSources = useCallback((sources: ExternalSource[]) => {
     if (sources.length === 0) return;
@@ -394,6 +395,33 @@ export function LiveVoiceAssistant({ language, disabled, onChatMessage }: LiveVo
     source.start(startTime);
   }, []);
 
+  const teardownMediaResources = useCallback(() => {
+    workletNodeRef.current?.disconnect();
+    workletNodeRef.current?.port.close();
+    workletGainRef.current?.disconnect();
+    scriptProcessorRef.current?.disconnect();
+    inputSourceRef.current?.disconnect();
+
+    micStreamRef.current?.getTracks().forEach((track) => track.stop());
+    micStreamRef.current = null;
+    workletNodeRef.current = null;
+    workletGainRef.current = null;
+    scriptProcessorRef.current = null;
+    inputSourceRef.current = null;
+
+    if (workletUrlRef.current) URL.revokeObjectURL(workletUrlRef.current);
+    workletUrlRef.current = null;
+
+    const inputContext = inputContextRef.current;
+    inputContextRef.current = null;
+    void inputContext?.close().catch(() => undefined);
+
+    clearPlayback();
+    const outputContext = outputContextRef.current;
+    outputContextRef.current = null;
+    void outputContext?.close().catch(() => undefined);
+  }, [clearPlayback]);
+
   const handleToolOutput = useCallback((output: LiveToolOutput) => {
     beginTurn();
 
@@ -466,7 +494,10 @@ export function LiveVoiceAssistant({ language, disabled, onChatMessage }: LiveVo
 
   const handleLiveMessage = useCallback(
     (message: LiveServerMessage) => {
-      if (message.setupComplete && !stoppedRef.current) setStatus("listening");
+      if (message.setupComplete && !stoppedRef.current) {
+        liveReadyRef.current = true;
+        setStatus("listening");
+      }
       if (message.serverContent?.interrupted) {
         clearPlayback();
         assistantTranscriptRef.current = "";
@@ -519,14 +550,28 @@ export function LiveVoiceAssistant({ language, disabled, onChatMessage }: LiveVo
 
   const sendMicSamples = useCallback((samples: Float32Array, sampleRate: number) => {
     const session = sessionRef.current;
-    if (!session || stoppedRef.current || samples.length === 0) return;
+    const websocket = session?.conn as WebSocket | undefined;
+    if (
+      !session ||
+      !websocket ||
+      websocket.readyState !== WebSocket.OPEN ||
+      !liveReadyRef.current ||
+      stoppedRef.current ||
+      samples.length === 0
+    ) {
+      return;
+    }
     const base64 = float32ToPcm16Base64(samples, sampleRate);
-    session.sendRealtimeInput({
-      audio: {
-        data: base64,
-        mimeType: "audio/pcm;rate=16000"
-      }
-    });
+    try {
+      session.sendRealtimeInput({
+        audio: {
+          data: base64,
+          mimeType: "audio/pcm;rate=16000"
+        }
+      });
+    } catch {
+      liveReadyRef.current = false;
+    }
   }, []);
 
   const startMicProcessing = useCallback(
@@ -588,6 +633,7 @@ export function LiveVoiceAssistant({ language, disabled, onChatMessage }: LiveVo
     if (status === "idle" && !sessionRef.current && !micStreamRef.current && !inputContextRef.current && !outputContextRef.current) return;
     setStatus("stopping");
     stoppedRef.current = true;
+    liveReadyRef.current = false;
 
     try {
       sessionRef.current?.sendRealtimeInput({ audioStreamEnd: true });
@@ -602,39 +648,20 @@ export function LiveVoiceAssistant({ language, disabled, onChatMessage }: LiveVo
     }
     sessionRef.current = null;
 
-    workletNodeRef.current?.disconnect();
-    workletNodeRef.current?.port.close();
-    workletGainRef.current?.disconnect();
-    scriptProcessorRef.current?.disconnect();
-    inputSourceRef.current?.disconnect();
-
-    micStreamRef.current?.getTracks().forEach((track) => track.stop());
-    micStreamRef.current = null;
-    workletNodeRef.current = null;
-    workletGainRef.current = null;
-    scriptProcessorRef.current = null;
-    inputSourceRef.current = null;
-
-    if (workletUrlRef.current) URL.revokeObjectURL(workletUrlRef.current);
-    workletUrlRef.current = null;
-
-    await inputContextRef.current?.close().catch(() => undefined);
-    inputContextRef.current = null;
-    clearPlayback();
-    await outputContextRef.current?.close().catch(() => undefined);
-    outputContextRef.current = null;
+    teardownMediaResources();
 
     commitUserTranscript();
     commitAssistantTurn();
     resetTurnState();
     setStatus("idle");
-  }, [clearPlayback, commitAssistantTurn, commitUserTranscript, resetTurnState, status]);
+  }, [commitAssistantTurn, commitUserTranscript, resetTurnState, status, teardownMediaResources]);
 
   const start = useCallback(async () => {
     if (disabled || status === "connecting" || status === "listening" || status === "thinking" || status === "speaking") return;
     setError("");
     setStatus("connecting");
     stoppedRef.current = false;
+    liveReadyRef.current = false;
     resetTurnState();
 
     try {
@@ -675,16 +702,30 @@ export function LiveVoiceAssistant({ language, disabled, onChatMessage }: LiveVo
         config: data.config,
         callbacks: {
           onopen: () => {
-            if (!stoppedRef.current) setStatus("listening");
+            if (!stoppedRef.current) setStatus("connecting");
           },
           onmessage: handleLiveMessage,
           onerror: (event) => {
             const message = event instanceof ErrorEvent ? event.message : copy.fallbackError;
+            liveReadyRef.current = false;
+            if (!stoppedRef.current) {
+              stoppedRef.current = true;
+              sessionRef.current = null;
+              teardownMediaResources();
+            }
             setError(message || copy.fallbackError);
             setStatus("error");
           },
-          onclose: () => {
-            if (!stoppedRef.current) setStatus("idle");
+          onclose: (event) => {
+            liveReadyRef.current = false;
+            if (!stoppedRef.current) {
+              stoppedRef.current = true;
+              sessionRef.current = null;
+              teardownMediaResources();
+              const details = event.reason ? ` (${event.code}: ${event.reason})` : event.code ? ` (${event.code})` : "";
+              setError(`${copy.fallbackError}${details}`);
+              setStatus("error");
+            }
           }
         }
       });
@@ -701,6 +742,7 @@ export function LiveVoiceAssistant({ language, disabled, onChatMessage }: LiveVo
   useEffect(() => {
     return () => {
       stoppedRef.current = true;
+      liveReadyRef.current = false;
       try {
         sessionRef.current?.close();
       } catch {
