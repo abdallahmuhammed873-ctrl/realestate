@@ -25,6 +25,7 @@ export function ResultsToolbar({ total }: { total: number }) {
           onChange={(e) => {
             const next = new URLSearchParams(params.toString());
             next.set("sort", e.target.value);
+            next.set("page", "1");
             router.push(`${pathname}?${next.toString()}`);
           }}
         >

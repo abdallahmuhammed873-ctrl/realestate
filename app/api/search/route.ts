@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { searchProperties } from "@/lib/repository";
 import { safeParsePublicSearchFilters } from "@/lib/search-contract";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function GET(req: NextRequest) {
   const rawFilters = Object.fromEntries(req.nextUrl.searchParams.entries());
   const parsed = safeParsePublicSearchFilters(rawFilters);
@@ -15,5 +18,9 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  return NextResponse.json(await searchProperties(parsed.data));
+  return NextResponse.json(await searchProperties(parsed.data), {
+    headers: {
+      "Cache-Control": "no-store"
+    }
+  });
 }

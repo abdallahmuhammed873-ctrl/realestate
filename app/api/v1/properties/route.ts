@@ -3,6 +3,9 @@ import { getRequestOrigin, toMobilePropertySearchResponse } from "@/lib/mobile-a
 import { searchProperties } from "@/lib/repository";
 import { safeParsePublicSearchFilters } from "@/lib/search-contract";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function GET(req: NextRequest) {
   const rawFilters = Object.fromEntries(req.nextUrl.searchParams.entries());
   const parsed = safeParsePublicSearchFilters(rawFilters);
@@ -17,5 +20,9 @@ export async function GET(req: NextRequest) {
   }
 
   const result = await searchProperties(parsed.data);
-  return NextResponse.json(toMobilePropertySearchResponse(result, getRequestOrigin(req)));
+  return NextResponse.json(toMobilePropertySearchResponse(result, getRequestOrigin(req)), {
+    headers: {
+      "Cache-Control": "no-store"
+    }
+  });
 }

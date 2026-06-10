@@ -39,7 +39,7 @@ export function FiltersPanel() {
   const amenities = (current.get("amenities") ?? "").split(",").filter(Boolean);
 
   function apply(nextParams: URLSearchParams) {
-    if (!nextParams.get("page")) nextParams.set("page", "1");
+    nextParams.set("page", "1");
     router.push(`${pathname}?${nextParams.toString()}`);
   }
 

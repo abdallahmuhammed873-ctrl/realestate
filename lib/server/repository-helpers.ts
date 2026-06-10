@@ -497,6 +497,10 @@ function currentPrice(item: PublicPropertyCard) {
   return item.transaction === "RENT" ? item.rentPrice ?? 0 : item.price ?? 0;
 }
 
+function compareById(a: PublicPropertyCard, b: PublicPropertyCard) {
+  return a.id.localeCompare(b.id);
+}
+
 export function toPublicPropertyCard(property: PropertyWithCardRelations): PublicPropertyCard {
   const propertyModel = mapProperty(property)!;
   const seller = property.listing.user;
@@ -542,7 +546,7 @@ export async function loadPublicPropertyCards(filters: SearchFilters = {}) {
 }
 
 export async function searchPropertyCards(filters: SearchFilters) {
-  const page = Math.max(1, filters.page ?? 1);
+  const requestedPage = Math.max(1, filters.page ?? 1);
   const pageSize = Math.max(1, Math.min(40, filters.pageSize ?? 20));
   let items = await loadPublicPropertyCards(filters);
 
@@ -567,22 +571,26 @@ export async function searchPropertyCards(filters: SearchFilters) {
 
   const sort = filters.sort ?? "FEATURED";
   items.sort((a, b) => {
-    if (sort === "FEATURED") return Number(b.goodDeal) - Number(a.goodDeal) || currentPrice(a) - currentPrice(b);
-    if (sort === "NEWEST") return Date.parse(b.createdAt) - Date.parse(a.createdAt);
-    if (sort === "PRICE_ASC") return currentPrice(a) - currentPrice(b);
-    if (sort === "PRICE_DESC") return currentPrice(b) - currentPrice(a);
-    if (sort === "AREA_DESC") return b.areaSqm - a.areaSqm;
-    if (sort === "DISTANCE_ASC") return (a.distanceKm ?? 9999) - (b.distanceKm ?? 9999);
-    return 0;
+    if (sort === "FEATURED") {
+      return Number(b.goodDeal) - Number(a.goodDeal) || currentPrice(a) - currentPrice(b) || compareById(a, b);
+    }
+    if (sort === "NEWEST") return Date.parse(b.createdAt) - Date.parse(a.createdAt) || compareById(a, b);
+    if (sort === "PRICE_ASC") return currentPrice(a) - currentPrice(b) || compareById(a, b);
+    if (sort === "PRICE_DESC") return currentPrice(b) - currentPrice(a) || compareById(a, b);
+    if (sort === "AREA_DESC") return b.areaSqm - a.areaSqm || compareById(a, b);
+    if (sort === "DISTANCE_ASC") return (a.distanceKm ?? 9999) - (b.distanceKm ?? 9999) || compareById(a, b);
+    return compareById(a, b);
   });
 
   const total = items.length;
-  const start = (page - 1) * pageSize;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const page = Math.min(requestedPage, totalPages);
+  const offset = (page - 1) * pageSize;
   return {
     total,
     page,
     pageSize,
-    items: items.slice(start, start + pageSize)
+    items: items.slice(offset, offset + pageSize)
   };
 }
 

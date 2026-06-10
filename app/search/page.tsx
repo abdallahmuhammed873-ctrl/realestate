@@ -7,6 +7,9 @@ import { t } from "@/lib/i18n";
 import { searchProperties } from "@/lib/repository";
 import { parseSearchParams } from "@/lib/utils";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export default async function SearchPage({
   searchParams
 }: {

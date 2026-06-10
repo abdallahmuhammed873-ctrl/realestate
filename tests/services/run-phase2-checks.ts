@@ -103,9 +103,41 @@ async function main() {
   const searchResult = await searchProperties({ page: 1, pageSize: 10 });
   assert.ok(searchResult.total > 0, "Expected approved properties to be searchable");
   assert.ok(searchResult.items.every((item) => item.listingStatus === "APPROVED"));
+  const searchResultPage2 = await searchProperties({ page: 2, pageSize: 10 });
+  if (searchResult.total > searchResult.pageSize) {
+    assert.equal(searchResultPage2.page, 2, "Expected search pagination to preserve the requested page");
+    assert.notDeepEqual(
+      searchResult.items.map((item) => item.id),
+      searchResultPage2.items.map((item) => item.id),
+      "Expected search page 2 to return a different property slice than page 1"
+    );
+  }
 
   const propertyId = searchResult.items[0]?.id;
   assert.ok(propertyId, "Expected at least one searchable property");
+  const sampleProperty = searchResult.items[0]!;
+  const outOfRangeFilteredPage = await searchProperties({
+    transaction: sampleProperty.transaction,
+    type: [sampleProperty.type],
+    page: 1000,
+    pageSize: 20
+  });
+  assert.ok(outOfRangeFilteredPage.total > 0, "Expected sample transaction/type filters to find properties");
+  assert.ok(
+    outOfRangeFilteredPage.items.length > 0,
+    "Expected filtered search to clamp out-of-range pages instead of returning an empty result page"
+  );
+  assert.ok(
+    outOfRangeFilteredPage.items.every(
+      (item) => item.transaction === sampleProperty.transaction && item.type === sampleProperty.type
+    ),
+    "Expected filtered search items to match the selected transaction and property type"
+  );
+  assert.equal(
+    outOfRangeFilteredPage.page,
+    Math.max(1, Math.ceil(outOfRangeFilteredPage.total / outOfRangeFilteredPage.pageSize)),
+    "Expected filtered search to report the clamped page"
+  );
 
   let savedFavorite = await toggleFavorite("u-buyer-1", propertyId);
   if (!savedFavorite.saved) {
