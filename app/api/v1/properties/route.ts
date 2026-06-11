@@ -5,6 +5,7 @@ import { safeParsePublicSearchFilters } from "@/lib/search-contract";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
+export const fetchCache = "force-no-store";
 
 export async function GET(req: NextRequest) {
   const rawFilters = Object.fromEntries(req.nextUrl.searchParams.entries());
@@ -22,7 +23,9 @@ export async function GET(req: NextRequest) {
   const result = await searchProperties(parsed.data);
   return NextResponse.json(toMobilePropertySearchResponse(result, getRequestOrigin(req)), {
     headers: {
-      "Cache-Control": "no-store"
+      "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+      Expires: "0",
+      Pragma: "no-cache"
     }
   });
 }

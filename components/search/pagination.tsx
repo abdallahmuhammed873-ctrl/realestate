@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useLanguage } from "@/components/layout/language-provider";
 import { Button } from "@/components/ui/button";
@@ -54,15 +53,16 @@ export function Pagination({ page, pageSize, total }: { page: number; pageSize: 
           {t("prev")}
         </Button>
       ) : (
-        <Link
+        <a
           className={cn(
             linkClassName,
             "theme-divider bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--surface-soft)]"
           )}
           href={hrefFor(page - 1)}
+          aria-label={t("prev")}
         >
           {t("prev")}
-        </Link>
+        </a>
       )}
 
       <div className="flex flex-wrap items-center justify-center gap-1">
@@ -80,16 +80,17 @@ export function Pagination({ page, pageSize, total }: { page: number; pageSize: 
               {item}
             </span>
           ) : (
-            <Link
+            <a
               key={item}
               className={cn(
                 linkClassName,
                 "theme-divider bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--surface-soft)]"
               )}
               href={hrefFor(item)}
+              aria-label={t("pageXofY", { page: item, pages })}
             >
               {item}
-            </Link>
+            </a>
           )
         )}
       </div>
@@ -103,15 +104,16 @@ export function Pagination({ page, pageSize, total }: { page: number; pageSize: 
           {t("next")}
         </Button>
       ) : (
-        <Link
+        <a
           className={cn(
             linkClassName,
             "theme-divider bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--surface-soft)]"
           )}
           href={hrefFor(page + 1)}
+          aria-label={t("next")}
         >
           {t("next")}
-        </Link>
+        </a>
       )}
     </div>
   );

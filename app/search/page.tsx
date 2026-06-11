@@ -9,6 +9,7 @@ import { parseSearchParams } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
+export const fetchCache = "force-no-store";
 
 export default async function SearchPage({
   searchParams
@@ -19,6 +20,7 @@ export default async function SearchPage({
   const language = await getRequestLanguage();
   const filters = parseSearchParams(resolved);
   const result = await searchProperties(filters);
+  const resultKey = `search-results-page-${result.page}-${result.items.map((property) => property.id).join("-")}`;
 
   return (
     <div className="grid gap-4 md:grid-cols-[290px,1fr]">
@@ -28,7 +30,7 @@ export default async function SearchPage({
         {result.items.length === 0 ? (
           <div className="surface-card text-muted rounded-2xl p-8 text-center">{t(language, "noResultsMatched")}</div>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <div key={resultKey} className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {result.items.map((property) => (
               <PropertyCard key={property.id} property={property} language={language} />
             ))}
