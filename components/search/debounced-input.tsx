@@ -15,11 +15,27 @@ export function DebouncedInput({
   onDebouncedChange: (value: string) => void;
 }) {
   const [value, setValue] = useState(initialValue);
+  const [changedByUser, setChangedByUser] = useState(false);
 
   useEffect(() => {
+    setValue(initialValue);
+    setChangedByUser(false);
+  }, [initialValue]);
+
+  useEffect(() => {
+    if (!changedByUser) return;
     const timer = setTimeout(() => onDebouncedChange(value), delay);
     return () => clearTimeout(timer);
-  }, [value, delay, onDebouncedChange]);
+  }, [value, delay, onDebouncedChange, changedByUser]);
 
-  return <Input value={value} placeholder={placeholder} onChange={(e) => setValue(e.target.value)} />;
+  return (
+    <Input
+      value={value}
+      placeholder={placeholder}
+      onChange={(e) => {
+        setChangedByUser(true);
+        setValue(e.target.value);
+      }}
+    />
+  );
 }
