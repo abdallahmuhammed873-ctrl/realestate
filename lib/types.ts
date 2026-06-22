@@ -101,6 +101,9 @@ export type Listing = {
   adminNotes?: string | null;
   reviewedBy?: string | null;
   reviewedAt?: string | null;
+  soldAt?: string | null;
+  soldById?: string | null;
+  soldSnapshot?: unknown;
   createdAt: string;
   updatedAt: string;
 };

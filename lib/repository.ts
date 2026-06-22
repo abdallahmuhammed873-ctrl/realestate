@@ -5,3 +5,6 @@ export * from "./services/appointment-service.ts";
 export * from "./services/community-service.ts";
 export * from "./services/notification-service.ts";
 export * from "./services/ai-read-service.ts";
+export * from "./services/price-estimator-service.ts";
+export * from "./services/analytics-service.ts";
+export * from "./services/investment-planner-service.ts";

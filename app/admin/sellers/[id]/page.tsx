@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { AdminCommunityPostsManager } from "@/components/admin/community-posts-manager";
+import { CommunityFeed } from "@/components/community/community-feed";
 import { Card } from "@/components/ui/card";
 import { requireRole } from "@/lib/auth";
-import { getLanguageDirection } from "@/lib/i18n";
+import { getLanguageDirection, t } from "@/lib/i18n";
 import { getRequestLanguage } from "@/lib/i18n-server";
-import { getUserById, listSellerCommunityListingsForAdmin, listSellerCommunityPostsForAdmin, listSellerListingsForAdmin } from "@/lib/repository";
+import { getUserById, listSellerCommunityListings, listSellerCommunityPosts, listSellerListingsForAdmin } from "@/lib/repository";
 
 function StatusBadge({ status }: { status: "DRAFT" | "PENDING" | "APPROVED" | "REJECTED" }) {
   if (status === "APPROVED") return <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700">Approved</span>;
@@ -18,15 +18,17 @@ export default async function AdminSellerProfilePage({ params }: { params: Promi
   const language = await getRequestLanguage();
   const direction = getLanguageDirection(language);
   const user = await requireRole(["ADMIN"]);
-  if (!user) redirect("/admin/login");
+  if (!user) redirect("/auth");
   const { id } = await params;
 
   const seller = await getUserById(id);
   if (!seller || seller.role !== "SELLER" || seller.isCompanyAccount || seller.companyOwnerId) redirect("/admin/sellers");
 
   const listings = await listSellerListingsForAdmin(seller.id);
-  const posts = await listSellerCommunityPostsForAdmin(seller.id);
-  const communityListings = await listSellerCommunityListingsForAdmin(seller.id);
+  const [posts, communityListings] = await Promise.all([
+    listSellerCommunityPosts(seller.id, user.id),
+    listSellerCommunityListings(seller.id, user.id)
+  ]);
 
   const byStatus = {
     total: listings.length,
@@ -108,7 +110,20 @@ export default async function AdminSellerProfilePage({ params }: { params: Promi
         )}
       </Card>
 
-      <AdminCommunityPostsManager initialPosts={posts} initialListingPosts={communityListings} />
+      <section className="space-y-3">
+        <h2 className="text-xl font-bold">{t(language, "myPosts")}</h2>
+        <CommunityFeed
+          initialPosts={posts}
+          listings={communityListings}
+          viewer={{ id: user.id, role: user.role, canCreatePost: false }}
+          showListings
+          showCreatePost={false}
+          listingSectionTitle={t(language, "propertyPosts")}
+          emptyListingsMessage={null}
+          emptyPostsMessage={t(language, "noCommunityPostsYet")}
+          postsRefreshUrl={`/api/community/users/${encodeURIComponent(seller.id)}/posts`}
+        />
+      </section>
     </div>
   );
 }

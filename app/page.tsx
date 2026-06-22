@@ -5,13 +5,14 @@ import { PropertyCard } from "@/components/property/property-card";
 import { getCurrentUser } from "@/lib/auth";
 import { getRequestLanguage } from "@/lib/i18n-server";
 import { t, translateLocation, translateTransaction } from "@/lib/i18n";
+import { getPropertyCoverImage } from "@/lib/property-images";
 import { getRecommendations, listNotifications, searchProperties } from "@/lib/repository";
 
 export default async function HomePage() {
   const language = await getRequestLanguage();
   const topPriced = await searchProperties({ sort: "PRICE_DESC", pageSize: 3, page: 1 });
   const featured = await searchProperties({ sort: "FEATURED", pageSize: 6, page: 1 });
-  const heroImages = topPriced.items.map((p) => p.images?.[0]).filter(Boolean);
+  const heroImages = topPriced.items.map((property) => getPropertyCoverImage(property.images, property.media));
   const rec = await getRecommendations("u-buyer-1");
   const user = await getCurrentUser();
   const notifications = user ? await listNotifications(user.id) : [];

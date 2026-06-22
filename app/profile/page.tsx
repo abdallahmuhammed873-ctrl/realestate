@@ -1,8 +1,11 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
-import { getUserById, listSellerDashboard } from "@/lib/repository";
+import {
+  getUserById,
+  listSellerCommunityListings,
+  listSellerCommunityPosts
+} from "@/lib/repository";
 import { ProfileClient } from "@/app/profile/profile-client";
-import { getPropertyCoverImage } from "@/lib/property-images";
 
 export default async function ProfilePage() {
   const user = await getCurrentUser();
@@ -10,21 +13,16 @@ export default async function ProfilePage() {
   const companyOwner = user.companyOwnerId ? await getUserById(user.companyOwnerId) : null;
   const companyName = companyOwner?.name ?? (user.isCompanyAccount ? user.name : undefined);
 
-  const sellerListings =
+  const [communityPosts, communityListings] =
     user.role === "SELLER"
-      ? (await listSellerDashboard(user.id))
-          .detailed.filter((x) => Boolean(x.property))
-          .map(({ listing, property, seller }) => ({
-            listingId: listing.id,
-            status: listing.status,
-            title: property!.title,
-            description: property!.description,
-            imageUrl: getPropertyCoverImage(property!.images),
-            updatedAt: listing.updatedAt,
-            createdByName: seller?.name ?? "Seller",
-            isCompanyUser: Boolean(seller?.companyOwnerId)
-          }))
-      : [];
+      ? await Promise.all([listSellerCommunityPosts(user.id, user.id), listSellerCommunityListings(user.id, user.id)])
+      : [[], []];
 
-  return <ProfileClient user={{ ...user, companyName }} sellerListings={sellerListings} />;
+  return (
+    <ProfileClient
+      user={{ ...user, companyName }}
+      communityPosts={communityPosts}
+      communityListings={communityListings}
+    />
+  );
 }

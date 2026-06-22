@@ -2,6 +2,7 @@ import type { SearchFilters } from "../types.ts";
 import { parsePublicSearchFilters } from "../search-contract.ts";
 import { mapProperty, searchPropertyCards, toPublicPropertyCard } from "../server/repository-helpers.ts";
 import { prisma } from "../server/prisma.ts";
+import { trackAnalyticsEvent } from "./analytics-service.ts";
 
 export async function searchProperties(filters: SearchFilters) {
   return searchPropertyCards(parsePublicSearchFilters(filters));
@@ -11,7 +12,7 @@ export async function getPublicPropertyById(id: string) {
   const property = await prisma.property.findFirst({
     where: {
       id,
-      listing: { status: "APPROVED" }
+      listing: { status: "APPROVED", soldAt: null }
     },
     include: {
       media: { orderBy: { sortOrder: "asc" } },
@@ -80,7 +81,7 @@ export async function listFavorites(userId: string) {
   });
 
   return favorites
-    .filter((favorite) => favorite.property.listing.status === "APPROVED")
+    .filter((favorite) => favorite.property.listing.status === "APPROVED" && !favorite.property.listing.soldAt)
     .map((favorite) => toPublicPropertyCard(favorite.property));
 }
 
@@ -97,6 +98,11 @@ export async function toggleFavorite(userId: string, propertyId: string) {
       userId,
       propertyId
     }
+  });
+  await trackAnalyticsEvent({
+    userId,
+    propertyId,
+    eventType: "PROPERTY_FAVORITE"
   });
   return { saved: true };
 }

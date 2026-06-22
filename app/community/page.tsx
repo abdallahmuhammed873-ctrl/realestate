@@ -38,6 +38,7 @@ export default async function CommunityPage({
         initialPosts={posts}
         listings={listings}
         focus={focus}
+        postsRefreshUrl={!focus ? "/api/community" : undefined}
         viewer={
           user
             ? {

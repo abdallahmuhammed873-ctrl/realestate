@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test, { beforeEach } from "node:test";
 import { PrismaClient } from "@prisma/client";
+import { PROPERTY_IMAGE_FALLBACK, getPropertyCoverImage } from "../../lib/property-images.ts";
 import { loadLocalEnv } from "../../lib/server/load-env.ts";
 import { toMobilePropertySearchResponse } from "../../lib/mobile-api.ts";
 import { IMPORTED_INVENTORY_OWNER_ID, upsertImportedInventory } from "../../prisma/import-ai-inventory.ts";
@@ -21,6 +22,8 @@ import {
 loadLocalEnv();
 
 const prisma = new PrismaClient();
+const SAMPLE_IMAGE_PATH = "/samples/360/sample-360-panorama-cover.png";
+const SAMPLE_PANORAMA_PATH = "/samples/360/sample-360-bedroom-panorama.png";
 
 beforeEach(async () => {
   await importRuntimeData(prisma);
@@ -104,13 +107,13 @@ test("seller listing submission and admin approval use the database-backed flow"
       paymentType: "CASH",
       completionStatus: "READY",
       amenities: ["Parking"],
-      images: ["/test.jpg"],
+      images: [SAMPLE_IMAGE_PATH],
       media: [
         {
           id: "draft-photo",
           propertyId: "draft-property",
           kind: "IMAGE",
-          path: "/test.jpg",
+          path: SAMPLE_IMAGE_PATH,
           label: "Cover Photo",
           altText: "Front elevation",
           sortOrder: 0,
@@ -122,7 +125,7 @@ test("seller listing submission and admin approval use the database-backed flow"
           id: "draft-panorama",
           propertyId: "draft-property",
           kind: "PANORAMA_360",
-          path: "/tour-360.jpg",
+          path: SAMPLE_PANORAMA_PATH,
           label: "Living Room Tour",
           altText: "360 living room panorama",
           sortOrder: 1,
@@ -136,7 +139,7 @@ test("seller listing submission and admin approval use the database-backed flow"
 
   assert.ok(created);
   assert.equal(created?.listing.status, "PENDING");
-  assert.deepEqual(created?.property.images, ["/test.jpg"]);
+  assert.deepEqual(created?.property.images, [SAMPLE_IMAGE_PATH]);
   assert.equal(created?.property.media?.length, 2);
   assert.equal(created?.property.media?.[1]?.kind, "PANORAMA_360");
   assert.equal(created?.property.media?.[1]?.label, "Living Room Tour");
@@ -147,6 +150,46 @@ test("seller listing submission and admin approval use the database-backed flow"
   const searchResult = await searchProperties({ q: "Phase 2 Service Test Listing", page: 1, pageSize: 10 });
   assert.ok(searchResult.items.some((item) => item.id === created?.property.id));
   await updateListingStatus(created!.listing.id, "REJECTED", "u-admin-1", "Service test cleanup");
+});
+
+test("keyword search matches individual words across searchable property fields", async () => {
+  const created = await createOrUpdateSellerListing({
+    sellerId: "u-seller-1",
+    feesPaid: true,
+    property: {
+      title: "Azure Bay Residence",
+      description: "Sea view apartment for family living",
+      transaction: "BUY",
+      type: "APARTMENT",
+      price: 5200000,
+      rentPrice: null,
+      currency: "EGP",
+      bedrooms: 3,
+      bathrooms: 2,
+      areaSqm: 175,
+      lat: 30.0444,
+      lng: 31.2357,
+      address: "Keyword Test Address",
+      city: "Cairo",
+      area: "New Cairo",
+      district: "South Investors",
+      furnishing: "SEMI",
+      paymentType: "CASH",
+      completionStatus: "READY",
+      amenities: ["Parking"],
+      images: [SAMPLE_IMAGE_PATH]
+    }
+  });
+
+  await updateListingStatus(created!.listing.id, "APPROVED", "u-admin-1", "Keyword test approval");
+
+  const crossFieldSearch = await searchProperties({ q: "Azure apartment", page: 1, pageSize: 10 });
+  assert.ok(crossFieldSearch.items.some((item) => item.id === created?.property.id));
+
+  const districtWordSearch = await searchProperties({ q: "Investors", page: 1, pageSize: 10 });
+  assert.ok(districtWordSearch.items.some((item) => item.id === created?.property.id));
+
+  await updateListingStatus(created!.listing.id, "REJECTED", "u-admin-1", "Keyword test cleanup");
 });
 
 test("approval state gates website search, mobile api results, and AI retrieval together", async () => {
@@ -179,7 +222,7 @@ test("approval state gates website search, mobile api results, and AI retrieval 
       paymentType: "CASH",
       completionStatus: "READY",
       amenities: ["Parking", "Clubhouse"],
-      images: ["/phase13-cover.jpg"]
+      images: [SAMPLE_IMAGE_PATH]
     }
   });
 
@@ -219,6 +262,47 @@ test("approval state gates website search, mobile api results, and AI retrieval 
 
   const aiRejectedBody = await searchAiReadableProperties({ q: listingTitle, page: 1, pageSize: 10 });
   assert.ok(aiRejectedBody.items.every((item: { id: string }) => item.id !== created?.property.id));
+});
+
+test("seed-style local property images stay visible in API results", async () => {
+  const created = await createOrUpdateSellerListing({
+    sellerId: "u-seller-1",
+    feesPaid: true,
+    property: {
+      title: "Missing Local Image Fallback Test",
+      description: "Verifies missing local image paths do not render as broken images",
+      transaction: "BUY",
+      type: "APARTMENT",
+      price: 3000000,
+      rentPrice: null,
+      currency: "EGP",
+      bedrooms: 2,
+      bathrooms: 1,
+      areaSqm: 120,
+      lat: 30.0444,
+      lng: 31.2357,
+      address: "Fallback Test Address",
+      city: "Cairo",
+      area: "New Cairo",
+      district: "Lotus",
+      furnishing: "SEMI",
+      paymentType: "CASH",
+      completionStatus: "READY",
+      amenities: ["Parking"],
+      images: ["/seed/properties/missing/image_1.jpg"]
+    }
+  });
+
+  await updateListingStatus(created!.listing.id, "APPROVED", "u-admin-1", "Fallback test approval");
+
+  const searchResult = await searchProperties({ q: "Missing Local Image Fallback Test", page: 1, pageSize: 10 });
+  const matched = searchResult.items.find((item) => item.id === created?.property.id);
+
+  assert.ok(matched);
+  assert.deepEqual(matched?.images, ["/seed/properties/missing/image_1.jpg"]);
+  assert.equal(getPropertyCoverImage(matched?.images, matched?.media), "/seed/properties/missing/image_1.jpg");
+
+  await updateListingStatus(created!.listing.id, "REJECTED", "u-admin-1", "Fallback test cleanup");
 });
 
 test("saved searches are written to PostgreSQL", async () => {

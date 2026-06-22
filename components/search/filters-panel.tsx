@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useLanguage } from "@/components/layout/language-provider";
 import { AMENITIES, LOCATION_TREE } from "@/lib/constants";
@@ -19,6 +19,8 @@ import {
   translateTransaction
 } from "@/lib/i18n";
 
+const ALL_PROPERTY_TYPES_VALUE = "__ALL_PROPERTY_TYPES__";
+
 function setParam(params: URLSearchParams, key: string, value?: string) {
   if (!value) params.delete(key);
   else params.set(key, value);
@@ -30,7 +32,11 @@ export function FiltersPanel() {
   const current = useSearchParams();
   const { language, t } = useLanguage();
   const [openMobile, setOpenMobile] = useState(false);
-  const params = useMemo(() => new URLSearchParams(current.toString()), [current]);
+  const paramsRef = useRef(new URLSearchParams(current.toString()));
+  const transaction = current.get("transaction") ?? "";
+  const propertyType = current.get("type") ?? "";
+  const [transactionValue, setTransactionValue] = useState(transaction);
+  const [propertyTypeValue, setPropertyTypeValue] = useState(propertyType);
 
   const city = current.get("city") ?? "";
   const area = current.get("area") ?? "";
@@ -38,30 +44,52 @@ export function FiltersPanel() {
   const districtOptions = city && area ? LOCATION_TREE[city]?.[area] ?? [] : [];
   const amenities = (current.get("amenities") ?? "").split(",").filter(Boolean);
 
+  useEffect(() => {
+    paramsRef.current = new URLSearchParams(current.toString());
+  }, [current]);
+
+  useEffect(() => {
+    setTransactionValue(transaction);
+  }, [transaction]);
+
+  useEffect(() => {
+    setPropertyTypeValue(propertyType);
+  }, [propertyType]);
+
   function apply(nextParams: URLSearchParams) {
     nextParams.set("page", "1");
-    router.push(`${pathname}?${nextParams.toString()}`);
+    paramsRef.current = new URLSearchParams(nextParams.toString());
+    const query = nextParams.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+  }
+
+  function updateParams(updater: (nextParams: URLSearchParams) => void) {
+    const next = new URLSearchParams(paramsRef.current.toString());
+    updater(next);
+    apply(next);
   }
 
   const onKeywordChange = useCallback(
     (value: string) => {
-      const next = new URLSearchParams(params);
-      setParam(next, "q", value.trim());
-      apply(next);
+      updateParams((next) => {
+        setParam(next, "q", value.trim());
+      });
     },
-    [params]
+    []
   );
 
   function content() {
     return (
-      <div className="space-y-3">
+      <div key={current.toString()} className="space-y-3">
         <DebouncedInput initialValue={current.get("q") ?? ""} placeholder={t("keyword")} onDebouncedChange={onKeywordChange} />
         <Select
-          defaultValue={current.get("transaction") ?? ""}
+          value={transactionValue}
           onChange={(e) => {
-            const next = new URLSearchParams(params);
-            setParam(next, "transaction", e.target.value);
-            apply(next);
+            const value = e.target.value;
+            setTransactionValue(value);
+            updateParams((next) => {
+              setParam(next, "transaction", value);
+            });
           }}
         >
           <option value="">{t("transaction")}</option>
@@ -70,14 +98,16 @@ export function FiltersPanel() {
           <option value="VACATION">{translateTransaction("VACATION", language)}</option>
         </Select>
         <Select
-          defaultValue={current.get("type") ?? ""}
+          value={propertyTypeValue || ALL_PROPERTY_TYPES_VALUE}
           onChange={(e) => {
-            const next = new URLSearchParams(params);
-            setParam(next, "type", e.target.value);
-            apply(next);
+            const value = e.target.value === ALL_PROPERTY_TYPES_VALUE ? "" : e.target.value;
+            updateParams((next) => {
+              setParam(next, "type", value);
+            });
+            setPropertyTypeValue(value);
           }}
         >
-          <option value="">{t("propertyType")}</option>
+          <option value={ALL_PROPERTY_TYPES_VALUE}>{t("propertyType")}</option>
           {["APARTMENT", "VILLA", "DUPLEX", "PENTHOUSE", "CHALET", "LAND", "COMMERCIAL"].map((propertyType) => (
             <option key={propertyType} value={propertyType}>
               {translatePropertyType(propertyType as PropertyType, language)}
@@ -87,11 +117,11 @@ export function FiltersPanel() {
         <Select
           value={city}
           onChange={(e) => {
-            const next = new URLSearchParams(params);
-            setParam(next, "city", e.target.value);
-            next.delete("area");
-            next.delete("district");
-            apply(next);
+            updateParams((next) => {
+              setParam(next, "city", e.target.value);
+              next.delete("area");
+              next.delete("district");
+            });
           }}
         >
           <option value="">{t("city")}</option>
@@ -104,10 +134,10 @@ export function FiltersPanel() {
         <Select
           value={area}
           onChange={(e) => {
-            const next = new URLSearchParams(params);
-            setParam(next, "area", e.target.value);
-            next.delete("district");
-            apply(next);
+            updateParams((next) => {
+              setParam(next, "area", e.target.value);
+              next.delete("district");
+            });
           }}
         >
           <option value="">{t("area")}</option>
@@ -120,9 +150,9 @@ export function FiltersPanel() {
         <Select
           value={current.get("district") ?? ""}
           onChange={(e) => {
-            const next = new URLSearchParams(params);
-            setParam(next, "district", e.target.value);
-            apply(next);
+            updateParams((next) => {
+              setParam(next, "district", e.target.value);
+            });
           }}
         >
           <option value="">{t("district")}</option>
@@ -139,9 +169,9 @@ export function FiltersPanel() {
             placeholder={t("minPrice")}
             defaultValue={current.get("minPrice") ?? ""}
             onBlur={(e) => {
-              const next = new URLSearchParams(params);
-              setParam(next, "minPrice", e.target.value);
-              apply(next);
+              updateParams((next) => {
+                setParam(next, "minPrice", e.target.value);
+              });
             }}
           />
           <Input
@@ -149,9 +179,9 @@ export function FiltersPanel() {
             placeholder={t("maxPrice")}
             defaultValue={current.get("maxPrice") ?? ""}
             onBlur={(e) => {
-              const next = new URLSearchParams(params);
-              setParam(next, "maxPrice", e.target.value);
-              apply(next);
+              updateParams((next) => {
+                setParam(next, "maxPrice", e.target.value);
+              });
             }}
           />
         </div>
@@ -166,10 +196,10 @@ export function FiltersPanel() {
               key={chip.label}
               className="theme-divider rounded-full border px-2 py-1 text-xs"
               onClick={() => {
-                const next = new URLSearchParams(params);
-                setParam(next, "minPrice", chip.min);
-                setParam(next, "maxPrice", chip.max);
-                apply(next);
+                updateParams((next) => {
+                  setParam(next, "minPrice", chip.min);
+                  setParam(next, "maxPrice", chip.max);
+                });
               }}
             >
               {chip.label}
@@ -182,9 +212,9 @@ export function FiltersPanel() {
             placeholder={t("minArea")}
             defaultValue={current.get("minArea") ?? ""}
             onBlur={(e) => {
-              const next = new URLSearchParams(params);
-              setParam(next, "minArea", e.target.value);
-              apply(next);
+              updateParams((next) => {
+                setParam(next, "minArea", e.target.value);
+              });
             }}
           />
           <Input
@@ -192,9 +222,9 @@ export function FiltersPanel() {
             placeholder={t("maxArea")}
             defaultValue={current.get("maxArea") ?? ""}
             onBlur={(e) => {
-              const next = new URLSearchParams(params);
-              setParam(next, "maxArea", e.target.value);
-              apply(next);
+              updateParams((next) => {
+                setParam(next, "maxArea", e.target.value);
+              });
             }}
           />
         </div>
@@ -204,9 +234,9 @@ export function FiltersPanel() {
             placeholder={t("minBeds")}
             defaultValue={current.get("minBeds") ?? ""}
             onBlur={(e) => {
-              const next = new URLSearchParams(params);
-              setParam(next, "minBeds", e.target.value);
-              apply(next);
+              updateParams((next) => {
+                setParam(next, "minBeds", e.target.value);
+              });
             }}
           />
           <Input
@@ -214,9 +244,9 @@ export function FiltersPanel() {
             placeholder={t("maxBeds")}
             defaultValue={current.get("maxBeds") ?? ""}
             onBlur={(e) => {
-              const next = new URLSearchParams(params);
-              setParam(next, "maxBeds", e.target.value);
-              apply(next);
+              updateParams((next) => {
+                setParam(next, "maxBeds", e.target.value);
+              });
             }}
           />
         </div>
@@ -226,9 +256,9 @@ export function FiltersPanel() {
             placeholder={t("minBaths")}
             defaultValue={current.get("minBaths") ?? ""}
             onBlur={(e) => {
-              const next = new URLSearchParams(params);
-              setParam(next, "minBaths", e.target.value);
-              apply(next);
+              updateParams((next) => {
+                setParam(next, "minBaths", e.target.value);
+              });
             }}
           />
           <Input
@@ -236,9 +266,9 @@ export function FiltersPanel() {
             placeholder={t("maxBaths")}
             defaultValue={current.get("maxBaths") ?? ""}
             onBlur={(e) => {
-              const next = new URLSearchParams(params);
-              setParam(next, "maxBaths", e.target.value);
-              apply(next);
+              updateParams((next) => {
+                setParam(next, "maxBaths", e.target.value);
+              });
             }}
           />
         </div>
@@ -248,9 +278,9 @@ export function FiltersPanel() {
             placeholder={t("referenceLat")}
             defaultValue={current.get("lat") ?? ""}
             onBlur={(e) => {
-              const next = new URLSearchParams(params);
-              setParam(next, "lat", e.target.value);
-              apply(next);
+              updateParams((next) => {
+                setParam(next, "lat", e.target.value);
+              });
             }}
           />
           <Input
@@ -258,9 +288,9 @@ export function FiltersPanel() {
             placeholder={t("referenceLng")}
             defaultValue={current.get("lng") ?? ""}
             onBlur={(e) => {
-              const next = new URLSearchParams(params);
-              setParam(next, "lng", e.target.value);
-              apply(next);
+              updateParams((next) => {
+                setParam(next, "lng", e.target.value);
+              });
             }}
           />
         </div>
@@ -273,14 +303,14 @@ export function FiltersPanel() {
             defaultValue={current.get("distanceKm") ?? "20"}
             className="w-full accent-brand-700"
             onMouseUp={(e) => {
-              const next = new URLSearchParams(params);
-              setParam(next, "distanceKm", (e.target as HTMLInputElement).value);
-              apply(next);
+              updateParams((next) => {
+                setParam(next, "distanceKm", (e.target as HTMLInputElement).value);
+              });
             }}
             onTouchEnd={(e) => {
-              const next = new URLSearchParams(params);
-              setParam(next, "distanceKm", (e.target as HTMLInputElement).value);
-              apply(next);
+              updateParams((next) => {
+                setParam(next, "distanceKm", (e.target as HTMLInputElement).value);
+              });
             }}
           />
           <Input
@@ -288,18 +318,18 @@ export function FiltersPanel() {
             placeholder={t("distanceKm")}
             defaultValue={current.get("distanceKm") ?? ""}
             onBlur={(e) => {
-              const next = new URLSearchParams(params);
-              setParam(next, "distanceKm", e.target.value);
-              apply(next);
+              updateParams((next) => {
+                setParam(next, "distanceKm", e.target.value);
+              });
             }}
           />
         </div>
         <Select
-          defaultValue={current.get("paymentType") ?? ""}
+          value={current.get("paymentType") ?? ""}
           onChange={(e) => {
-            const next = new URLSearchParams(params);
-            setParam(next, "paymentType", e.target.value);
-            apply(next);
+            updateParams((next) => {
+              setParam(next, "paymentType", e.target.value);
+            });
           }}
         >
           <option value="">{t("payment")}</option>
@@ -312,9 +342,9 @@ export function FiltersPanel() {
             placeholder={t("downPaymentMax")}
             defaultValue={current.get("downPaymentMax") ?? ""}
             onBlur={(e) => {
-              const next = new URLSearchParams(params);
-              setParam(next, "downPaymentMax", e.target.value);
-              apply(next);
+              updateParams((next) => {
+                setParam(next, "downPaymentMax", e.target.value);
+              });
             }}
           />
           <Input
@@ -322,9 +352,9 @@ export function FiltersPanel() {
             placeholder={t("yearsMax")}
             defaultValue={current.get("installmentYearsMax") ?? ""}
             onBlur={(e) => {
-              const next = new URLSearchParams(params);
-              setParam(next, "installmentYearsMax", e.target.value);
-              apply(next);
+              updateParams((next) => {
+                setParam(next, "installmentYearsMax", e.target.value);
+              });
             }}
           />
           <Input
@@ -332,18 +362,18 @@ export function FiltersPanel() {
             placeholder={t("monthlyMax")}
             defaultValue={current.get("installmentMonthlyMax") ?? ""}
             onBlur={(e) => {
-              const next = new URLSearchParams(params);
-              setParam(next, "installmentMonthlyMax", e.target.value);
-              apply(next);
+              updateParams((next) => {
+                setParam(next, "installmentMonthlyMax", e.target.value);
+              });
             }}
           />
         </div>
         <Select
-          defaultValue={current.get("furnishing") ?? ""}
+          value={current.get("furnishing") ?? ""}
           onChange={(e) => {
-            const next = new URLSearchParams(params);
-            setParam(next, "furnishing", e.target.value);
-            apply(next);
+            updateParams((next) => {
+              setParam(next, "furnishing", e.target.value);
+            });
           }}
         >
           <option value="">{t("furnishing")}</option>
@@ -352,11 +382,11 @@ export function FiltersPanel() {
           <option value="UNFURNISHED">{translateFurnishing("UNFURNISHED", language)}</option>
         </Select>
         <Select
-          defaultValue={current.get("completionStatus") ?? ""}
+          value={current.get("completionStatus") ?? ""}
           onChange={(e) => {
-            const next = new URLSearchParams(params);
-            setParam(next, "completionStatus", e.target.value);
-            apply(next);
+            updateParams((next) => {
+              setParam(next, "completionStatus", e.target.value);
+            });
           }}
         >
           <option value="">{t("completion")}</option>
@@ -373,11 +403,13 @@ export function FiltersPanel() {
                   type="button"
                   key={a}
                   onClick={() => {
-                    const next = new URLSearchParams(params);
-                    const currentAmenities = (next.get("amenities") ?? "").split(",").filter(Boolean);
-                    const updated = currentAmenities.includes(a) ? currentAmenities.filter((x) => x !== a) : [...currentAmenities, a];
-                    setParam(next, "amenities", updated.join(","));
-                    apply(next);
+                    updateParams((next) => {
+                      const currentAmenities = (next.get("amenities") ?? "").split(",").filter(Boolean);
+                      const updated = currentAmenities.includes(a)
+                        ? currentAmenities.filter((x) => x !== a)
+                        : [...currentAmenities, a];
+                      setParam(next, "amenities", updated.join(","));
+                    });
                   }}
                   className={`rounded-full border px-2 py-1 text-xs ${active ? "border-brand-700 bg-brand-100 text-brand-700" : "theme-divider"}`}
                 >
@@ -390,7 +422,10 @@ export function FiltersPanel() {
         <Button
           variant="outline"
           onClick={() => {
-            router.push(pathname);
+            paramsRef.current = new URLSearchParams();
+            setTransactionValue("");
+            setPropertyTypeValue("");
+            router.replace(pathname, { scroll: false });
             setOpenMobile(false);
           }}
           className="w-full"

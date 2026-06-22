@@ -1,5 +1,6 @@
 "use client";
 
+import { useLanguage } from "@/components/layout/language-provider";
 import { useTheme } from "@/components/layout/theme-provider";
 
 function ThemeGlyph({ dark }: { dark: boolean }) {
@@ -16,9 +17,10 @@ function ThemeGlyph({ dark }: { dark: boolean }) {
 }
 
 export function ThemeToggle({ compact = false }: { compact?: boolean }) {
+  const { t } = useLanguage();
   const { theme, toggleTheme } = useTheme();
   const nextTheme = theme === "dark" ? "light" : "dark";
-  const label = nextTheme === "dark" ? "Switch to dark mode" : "Switch to light mode";
+  const label = nextTheme === "dark" ? t("switchToDarkMode") : t("switchToLightMode");
 
   return (
     <button
@@ -33,7 +35,7 @@ export function ThemeToggle({ compact = false }: { compact?: boolean }) {
       }
     >
       <ThemeGlyph dark={theme === "dark"} />
-      {compact ? null : <span>{theme === "dark" ? "Dark" : "Light"}</span>}
+      {compact ? null : <span>{theme === "dark" ? t("darkMode") : t("lightMode")}</span>}
     </button>
   );
 }

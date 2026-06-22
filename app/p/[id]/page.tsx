@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { headers } from "next/headers";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { FavoriteToggle } from "@/components/property/favorite-toggle";
@@ -10,7 +11,8 @@ import { ContactActions } from "@/components/property/contact-actions";
 import { OSMMapView } from "@/components/maps/osm-map";
 import { GoogleMapsButton } from "@/components/maps/google-maps-button";
 import { getRequestLanguage } from "@/lib/i18n-server";
-import { getPublicPropertyById, getRecommendations } from "@/lib/repository";
+import { getCurrentUserId } from "@/lib/auth";
+import { getPublicPropertyById, getRecommendations, trackPropertyView } from "@/lib/repository";
 import { formatPrice } from "@/lib/utils";
 import {
   getLocalizedPropertyDescription,
@@ -25,7 +27,14 @@ export default async function PropertyDetailsPage({ params }: { params: Promise<
   const language = await getRequestLanguage();
   const property = await getPublicPropertyById(resolved.id);
   if (!property) return notFound();
-  const rec = await getRecommendations("u-buyer-1", property.id);
+  const [userId, headerStore] = await Promise.all([getCurrentUserId(), headers()]);
+  await trackPropertyView({
+    propertyId: property.id,
+    userId,
+    ipAddress: headerStore.get("x-forwarded-for")?.split(",")[0]?.trim() ?? headerStore.get("x-real-ip"),
+    userAgent: headerStore.get("user-agent")
+  });
+  const rec = await getRecommendations(userId ?? undefined, property.id);
   const price = property.transaction === "RENT" ? property.rentPrice : property.price;
   const title = getLocalizedPropertyTitle(property, language);
   const description = getLocalizedPropertyDescription(property, language);

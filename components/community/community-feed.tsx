@@ -10,7 +10,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
-type CommentView = {
+export type CommentView = {
   id: string;
   text: string;
   createdAt: string;
@@ -22,12 +22,13 @@ type CommentView = {
   likedByViewer?: boolean;
 };
 
-type PostView = {
+export type PostView = {
   id: string;
   text: string;
   imageUrl?: string | null;
   createdAt: string;
   updatedAt: string;
+  canDelete: boolean;
   user: { id: string; name: string; avatarUrl?: string | null; isDeveloper: boolean; companyName?: string | null };
   likesCount: number;
   likeCount: number;
@@ -37,7 +38,7 @@ type PostView = {
   comments: CommentView[];
 };
 
-type ListingView = {
+export type ListingView = {
   listingId: string;
   propertyId: string;
   title: string;
@@ -49,31 +50,94 @@ type ListingView = {
   transaction: "BUY" | "RENT" | "VACATION";
   createdAt: string;
   updatedAt: string;
-  seller: { id: string; name: string; avatarUrl?: string | null; isDeveloper: boolean };
+  canDelete: boolean;
+  canMarkSold: boolean;
+  seller: { id: string; name: string; avatarUrl?: string | null; isDeveloper: boolean; companyName?: string | null };
   likesCount: number;
   likedByViewer: boolean;
   commentsCount: number;
   comments: CommentView[];
 };
 
-type Viewer = {
+export type Viewer = {
   id: string;
   role: "BUYER" | "SELLER" | "ADMIN";
   canCreatePost: boolean;
 } | null;
 
-export function CommunityFeed({
-  initialPosts,
-  listings,
-  viewer,
-  focus
-}: {
+type CommunityFeedProps = {
   initialPosts: PostView[];
   listings: ListingView[];
   viewer: Viewer;
   focus?: { kind: "post" | "listing"; id: string; commentId?: string } | null;
-}) {
-  const { direction } = useLanguage();
+  showListings?: boolean;
+  showCreatePost?: boolean;
+  listingSectionTitle?: string;
+  emptyListingsMessage?: string | null;
+  emptyPostsMessage?: string;
+  postsRefreshUrl?: string;
+  showAuthorRole?: boolean;
+};
+
+const MODERATION_TEXT = {
+  en: {
+    delete: "Delete",
+    deleting: "Deleting...",
+    deletePost: "Delete post",
+    deletePostConfirm: "Delete this community post? Its comments and reactions will also be removed.",
+    deleteListingConfirm: "Delete this community property post? This removes the related property from the website.",
+    deleteCommentConfirm: "Delete this comment? Its replies and likes will also be removed.",
+    postDeleted: "Post deleted.",
+    listingDeleted: "Community property post deleted.",
+    commentDeleted: "Comment deleted.",
+    deletePostFailed: "Could not delete community post.",
+    deleteListingFailed: "Could not delete community property post.",
+    deleteCommentFailed: "Could not delete comment.",
+    company: "Company",
+    createdBy: "Created By",
+    role: "Role",
+    seller: "Seller",
+    developer: "Developer"
+  },
+  ar: {
+    delete: "حذف",
+    deleting: "جار الحذف...",
+    deletePost: "حذف المنشور",
+    deletePostConfirm: "هل تريد حذف هذا المنشور؟ سيتم حذف التعليقات والتفاعلات المرتبطة به أيضا.",
+    deleteListingConfirm: "هل تريد حذف منشور هذا العقار؟ سيتم حذف العقار المرتبط به من الموقع.",
+    deleteCommentConfirm: "هل تريد حذف هذا التعليق؟ سيتم حذف الردود والإعجابات المرتبطة به أيضا.",
+    postDeleted: "تم حذف المنشور.",
+    listingDeleted: "تم حذف منشور العقار.",
+    commentDeleted: "تم حذف التعليق.",
+    deletePostFailed: "تعذر حذف منشور المجتمع.",
+    deleteListingFailed: "تعذر حذف منشور العقار.",
+    deleteCommentFailed: "تعذر حذف التعليق.",
+    company: "الشركة",
+    createdBy: "أنشئ بواسطة",
+    role: "الدور",
+    seller: "البائع",
+    developer: "المطور"
+  }
+} as const;
+
+const COMMUNITY_POSTS_CHANGED_EVENT = "ck:community-posts-changed";
+const COMMUNITY_POSTS_CHANNEL = "ck-community-posts";
+
+export function CommunityFeed({
+  initialPosts,
+  listings,
+  viewer,
+  focus,
+  showListings = true,
+  showCreatePost = true,
+  listingSectionTitle = "Latest Approved Listings",
+  emptyListingsMessage,
+  emptyPostsMessage,
+  postsRefreshUrl,
+  showAuthorRole = false
+}: CommunityFeedProps) {
+  const { direction, language, t } = useLanguage();
+  const copy = MODERATION_TEXT[language];
   const threadIndentClass = direction === "rtl" ? "border-r-2 border-slate-200 pr-3" : "border-l-2 border-slate-200 pl-3";
 
   function initials(name: string) {
@@ -100,6 +164,10 @@ export function CommunityFeed({
     );
   }
 
+  function authorRoleLabel(isDeveloper: boolean) {
+    return isDeveloper ? copy.developer : copy.seller;
+  }
+
   const [posts, setPosts] = useState<PostView[]>(initialPosts);
   const [listingItems, setListingItems] = useState<ListingView[]>(listings);
   const [postText, setPostText] = useState("");
@@ -107,6 +175,7 @@ export function CommunityFeed({
   const [postError, setPostError] = useState("");
   const [postLoading, setPostLoading] = useState(false);
   const [postImageLoading, setPostImageLoading] = useState(false);
+  const [deletePostLoadingId, setDeletePostLoadingId] = useState<string | null>(null);
   const [likeLoadingId, setLikeLoadingId] = useState<string | null>(null);
   const [commentLoadingId, setCommentLoadingId] = useState<string | null>(null);
   const [commentByPostId, setCommentByPostId] = useState<Record<string, string>>({});
@@ -116,6 +185,8 @@ export function CommunityFeed({
   const [replyPostCommentLoadingId, setReplyPostCommentLoadingId] = useState<string | null>(null);
   const [expandedPostReplies, setExpandedPostReplies] = useState<Record<string, boolean>>({});
   const [listingLikeLoadingId, setListingLikeLoadingId] = useState<string | null>(null);
+  const [deleteListingLoadingId, setDeleteListingLoadingId] = useState<string | null>(null);
+  const [markSoldListingLoadingId, setMarkSoldListingLoadingId] = useState<string | null>(null);
   const [listingCommentLoadingId, setListingCommentLoadingId] = useState<string | null>(null);
   const [commentByListingId, setCommentByListingId] = useState<Record<string, string>>({});
   const [deleteListingCommentLoadingId, setDeleteListingCommentLoadingId] = useState<string | null>(null);
@@ -128,8 +199,77 @@ export function CommunityFeed({
   const [showLoginRequired, setShowLoginRequired] = useState(false);
   const [likedPostIds, setLikedPostIds] = useState<Record<string, boolean>>({});
   const [likedListingIds, setLikedListingIds] = useState<Record<string, boolean>>({});
+  const [notice, setNotice] = useState<{ id: number; kind: "success" | "error"; message: string } | null>(null);
 
   const COMMENTS_PREVIEW_COUNT = 3;
+  const shouldShowListings = showListings && (!focus || focus.kind !== "post");
+  const shouldShowCreatePost = showCreatePost && viewer?.canCreatePost && !focus;
+  const shouldRenderListings = shouldShowListings && (listingItems.length > 0 || emptyListingsMessage !== null);
+  const hasVisiblePosts = posts.length > 0 || (shouldShowListings && listingItems.length > 0);
+
+  useEffect(() => {
+    setPosts(initialPosts);
+  }, [initialPosts]);
+
+  useEffect(() => {
+    setListingItems(listings);
+  }, [listings]);
+
+  function notifyPostsChanged() {
+    window.dispatchEvent(new Event(COMMUNITY_POSTS_CHANGED_EVENT));
+    if (!("BroadcastChannel" in window)) return;
+
+    const channel = new BroadcastChannel(COMMUNITY_POSTS_CHANNEL);
+    channel.postMessage({ type: COMMUNITY_POSTS_CHANGED_EVENT });
+    channel.close();
+  }
+
+  useEffect(() => {
+    if (!postsRefreshUrl) return;
+
+    let cancelled = false;
+    async function refreshPosts() {
+      try {
+        const res = await fetch(postsRefreshUrl!, { cache: "no-store" });
+        const data = await res.json().catch(() => null);
+        if (!cancelled && res.ok) {
+          if (Array.isArray(data?.posts)) setPosts(data.posts);
+          if (Array.isArray(data?.listings)) setListingItems(data.listings);
+        }
+      } catch {
+        // The feed keeps the current snapshot if a background refresh fails.
+      }
+    }
+
+    void refreshPosts();
+    const intervalId = window.setInterval(() => void refreshPosts(), 2000);
+    const handlePostsChanged = () => void refreshPosts();
+    const handleChannelMessage = (event: MessageEvent) => {
+      if (event.data?.type === COMMUNITY_POSTS_CHANGED_EVENT) void refreshPosts();
+    };
+    const channel = "BroadcastChannel" in window ? new BroadcastChannel(COMMUNITY_POSTS_CHANNEL) : null;
+
+    window.addEventListener("focus", refreshPosts);
+    window.addEventListener(COMMUNITY_POSTS_CHANGED_EVENT, handlePostsChanged);
+    channel?.addEventListener("message", handleChannelMessage);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", refreshPosts);
+      window.removeEventListener(COMMUNITY_POSTS_CHANGED_EVENT, handlePostsChanged);
+      channel?.removeEventListener("message", handleChannelMessage);
+      channel?.close();
+    };
+  }, [postsRefreshUrl]);
+
+  function showNotice(kind: "success" | "error", message: string) {
+    const id = Date.now();
+    setNotice({ id, kind, message });
+    window.setTimeout(() => {
+      setNotice((current) => (current?.id === id ? null : current));
+    }, 3500);
+  }
 
   function buildParentMap(comments: CommentView[]) {
     const map = new Map<string, string>();
@@ -332,6 +472,7 @@ export function CommunityFeed({
         return;
       }
       upsertPost(data.post);
+      notifyPostsChanged();
       setPostText("");
       setPostImagePath("");
     } finally {
@@ -354,6 +495,7 @@ export function CommunityFeed({
       const data = await res.json().catch(() => null);
       if (res.ok && data?.post) {
         upsertPost(data.post);
+        notifyPostsChanged();
         setPersistedPostLike(postId, data.post.reactionByViewer === "LIKE");
       }
     } finally {
@@ -379,6 +521,7 @@ export function CommunityFeed({
       const data = await res.json().catch(() => null);
       if (res.ok && data?.post) {
         upsertPost(data.post);
+        notifyPostsChanged();
         setCommentByPostId((prev) => ({ ...prev, [postId]: "" }));
       }
     } finally {
@@ -404,6 +547,7 @@ export function CommunityFeed({
       const data = await res.json().catch(() => null);
       if (res.ok && data?.post) {
         upsertPost(data.post);
+        notifyPostsChanged();
         setReplyByPostCommentId((prev) => ({ ...prev, [parentCommentId]: "" }));
         setOpenPostReplyForCommentId(null);
       }
@@ -423,6 +567,7 @@ export function CommunityFeed({
       const data = await res.json().catch(() => null);
       if (res.ok && data?.listing) {
         upsertListing(data.listing);
+        notifyPostsChanged();
         setPersistedListingLike(listingId, Boolean(data.listing.likedByViewer));
       }
     } finally {
@@ -448,6 +593,7 @@ export function CommunityFeed({
       const data = await res.json().catch(() => null);
       if (res.ok && data?.listing) {
         upsertListing(data.listing);
+        notifyPostsChanged();
         setCommentByListingId((prev) => ({ ...prev, [listingId]: "" }));
       }
     } finally {
@@ -473,6 +619,7 @@ export function CommunityFeed({
       const data = await res.json().catch(() => null);
       if (res.ok && data?.listing) {
         upsertListing(data.listing);
+        notifyPostsChanged();
         setReplyByListingCommentId((prev) => ({ ...prev, [parentCommentId]: "" }));
         setOpenListingReplyForCommentId(null);
       }
@@ -481,16 +628,95 @@ export function CommunityFeed({
     }
   }
 
+  async function deletePost(postId: string) {
+    if (!viewer) {
+      setShowLoginRequired(true);
+      return;
+    }
+    if (!window.confirm(copy.deletePostConfirm)) return;
+
+    setDeletePostLoadingId(postId);
+    try {
+      const res = await fetch(`/api/community/${postId}`, { method: "DELETE" });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        showNotice("error", String(data?.error ?? copy.deletePostFailed));
+        return;
+      }
+      setPosts((prev) => prev.filter((post) => post.id !== postId));
+      notifyPostsChanged();
+      showNotice("success", copy.postDeleted);
+    } finally {
+      setDeletePostLoadingId(null);
+    }
+  }
+
+  async function deleteListingPost(listingId: string) {
+    if (!viewer) {
+      setShowLoginRequired(true);
+      return;
+    }
+    if (!window.confirm(copy.deleteListingConfirm)) return;
+
+    setDeleteListingLoadingId(listingId);
+    try {
+      const res = await fetch(`/api/community/listings/${listingId}`, { method: "DELETE" });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        showNotice("error", String(data?.error ?? copy.deleteListingFailed));
+        return;
+      }
+      setListingItems((prev) => prev.filter((listing) => listing.listingId !== listingId));
+      notifyPostsChanged();
+      showNotice("success", copy.listingDeleted);
+    } finally {
+      setDeleteListingLoadingId(null);
+    }
+  }
+
+  async function markListingSold(listingId: string) {
+    if (!viewer) {
+      setShowLoginRequired(true);
+      return;
+    }
+    if (!window.confirm(t("soldListingConfirm"))) return;
+
+    setMarkSoldListingLoadingId(listingId);
+    try {
+      const res = await fetch(`/api/seller/listings/${listingId}/sold`, { method: "POST" });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        showNotice("error", String(data?.error ?? t("failedToMarkSold")));
+        return;
+      }
+      setListingItems((prev) => prev.filter((listing) => listing.listingId !== listingId));
+      notifyPostsChanged();
+      showNotice("success", t("propertyMarkedSold"));
+    } finally {
+      setMarkSoldListingLoadingId(null);
+    }
+  }
+
   async function deletePostComment(postId: string, commentId: string) {
     if (!viewer) {
       setShowLoginRequired(true);
       return;
     }
+    if (!window.confirm(copy.deleteCommentConfirm)) return;
+
     setDeletePostCommentLoadingId(commentId);
     try {
       const res = await fetch(`/api/community/${postId}/comment/${commentId}`, { method: "DELETE" });
       const data = await res.json().catch(() => null);
-      if (res.ok && data?.post) upsertPost(data.post);
+      if (!res.ok) {
+        showNotice("error", String(data?.error ?? copy.deleteCommentFailed));
+        return;
+      }
+      if (data?.post) {
+        upsertPost(data.post);
+        notifyPostsChanged();
+        showNotice("success", copy.commentDeleted);
+      }
     } finally {
       setDeletePostCommentLoadingId(null);
     }
@@ -501,11 +727,21 @@ export function CommunityFeed({
       setShowLoginRequired(true);
       return;
     }
+    if (!window.confirm(copy.deleteCommentConfirm)) return;
+
     setDeleteListingCommentLoadingId(commentId);
     try {
       const res = await fetch(`/api/community/listings/${listingId}/comment/${commentId}`, { method: "DELETE" });
       const data = await res.json().catch(() => null);
-      if (res.ok && data?.listing) upsertListing(data.listing);
+      if (!res.ok) {
+        showNotice("error", String(data?.error ?? copy.deleteCommentFailed));
+        return;
+      }
+      if (data?.listing) {
+        upsertListing(data.listing);
+        notifyPostsChanged();
+        showNotice("success", copy.commentDeleted);
+      }
     } finally {
       setDeleteListingCommentLoadingId(null);
     }
@@ -520,7 +756,10 @@ export function CommunityFeed({
     try {
       const res = await fetch(`/api/community/${postId}/comment/${commentId}/like`, { method: "POST" });
       const data = await res.json().catch(() => null);
-      if (res.ok && data?.post) upsertPost(data.post);
+      if (res.ok && data?.post) {
+        upsertPost(data.post);
+        notifyPostsChanged();
+      }
     } finally {
       setDeletePostCommentLoadingId(null);
     }
@@ -535,7 +774,10 @@ export function CommunityFeed({
     try {
       const res = await fetch(`/api/community/listings/${listingId}/comment/${commentId}/like`, { method: "POST" });
       const data = await res.json().catch(() => null);
-      if (res.ok && data?.listing) upsertListing(data.listing);
+      if (res.ok && data?.listing) {
+        upsertListing(data.listing);
+        notifyPostsChanged();
+      }
     } finally {
       setDeleteListingCommentLoadingId(null);
     }
@@ -585,7 +827,7 @@ export function CommunityFeed({
                 disabled={deletePostCommentLoadingId === comment.id}
                 className="text-xs font-semibold text-red-600 hover:underline disabled:opacity-60"
               >
-                Delete
+                {copy.delete}
               </button>
             ) : null}
           </div>
@@ -678,7 +920,7 @@ export function CommunityFeed({
                 disabled={deleteListingCommentLoadingId === comment.id}
                 className="text-xs font-semibold text-red-600 hover:underline disabled:opacity-60"
               >
-                Delete
+                {copy.delete}
               </button>
             ) : null}
           </div>
@@ -730,22 +972,75 @@ export function CommunityFeed({
   return (
     <>
       <div className="mx-auto max-w-3xl space-y-4">
-        {!focus || focus.kind !== "post" ? (
+        {notice ? (
+          <div
+            role="status"
+            dir={direction}
+            className={`rounded-lg border px-3 py-2 text-sm font-semibold ${
+              notice.kind === "success"
+                ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                : "border-red-200 bg-red-50 text-red-700"
+            }`}
+          >
+            {notice.message}
+          </div>
+        ) : null}
+
+        {shouldRenderListings ? (
           <Card className="space-y-3">
-            <h2 className="text-lg font-semibold">Latest Approved Listings</h2>
+            <h2 className="text-lg font-semibold">{listingSectionTitle}</h2>
             {listingItems.length === 0 ? (
-              <p className="text-sm text-slate-600">No approved listings yet.</p>
+              <p className="text-sm text-slate-600">{emptyListingsMessage ?? "No approved listings yet."}</p>
             ) : (
               <div className="space-y-3">
                 {listingItems.map((listing) => (
                   <div key={listing.listingId} id={`community-listing-${listing.listingId}`} className="overflow-hidden rounded-xl border border-slate-200">
                   <div className="p-3">
-                    <div className="flex items-center gap-2">
-                      <Avatar user={listing.seller} size={28} />
-                      <p className="text-sm font-semibold text-slate-900">
-                        {listing.seller.name}{" "}
-                        {listing.seller.isDeveloper ? <span className="text-xs font-normal text-slate-500">(Developer)</span> : null}
-                      </p>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex min-w-0 items-start gap-2">
+                        <Avatar user={listing.seller} size={28} />
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-slate-900">
+                            {showAuthorRole ? `${copy.createdBy}: ${listing.seller.name}` : listing.seller.name}{" "}
+                            {!showAuthorRole && listing.seller.isDeveloper ? <span className="text-xs font-normal text-slate-500">(Developer)</span> : null}
+                          </p>
+                          {showAuthorRole ? (
+                            <p className="truncate text-xs font-medium text-slate-600">
+                              {copy.role}: {authorRoleLabel(listing.seller.isDeveloper)}
+                            </p>
+                          ) : null}
+                          {listing.seller.companyName ? (
+                            <p className="truncate text-xs font-medium text-slate-600">
+                              {copy.company}: {listing.seller.companyName}
+                            </p>
+                          ) : null}
+                        </div>
+                      </div>
+                      {listing.canMarkSold || listing.canDelete ? (
+                        <div className="flex shrink-0 items-center gap-2">
+                          {listing.canMarkSold ? (
+                            <button
+                              type="button"
+                              onClick={() => markListingSold(listing.listingId)}
+                              disabled={markSoldListingLoadingId === listing.listingId || deleteListingLoadingId === listing.listingId}
+                              className="rounded-lg border border-emerald-200 px-2.5 py-1 text-xs font-semibold text-emerald-600 hover:bg-emerald-50 disabled:opacity-60"
+                            >
+                              {markSoldListingLoadingId === listing.listingId ? t("markingSold") : t("soldListing")}
+                            </button>
+                          ) : null}
+                          {listing.canDelete ? (
+                            <button
+                              type="button"
+                              onClick={() => deleteListingPost(listing.listingId)}
+                              disabled={deleteListingLoadingId === listing.listingId || markSoldListingLoadingId === listing.listingId}
+                              className="rounded-lg border border-red-200 px-2.5 py-1 text-xs font-semibold text-red-600 hover:bg-red-50 disabled:opacity-60"
+                              aria-label={copy.deletePost}
+                            >
+                              {deleteListingLoadingId === listing.listingId ? copy.deleting : copy.delete}
+                            </button>
+                          ) : null}
+                        </div>
+                      ) : null}
                     </div>
                     <p className="text-sm font-semibold text-slate-900">{listing.title}</p>
                     <p className="mt-1 text-xs text-slate-500">
@@ -839,7 +1134,7 @@ export function CommunityFeed({
         </Card>
         ) : null}
 
-        {viewer?.canCreatePost && !focus ? (
+        {shouldShowCreatePost ? (
           <Card className="space-y-3">
             <h2 className="text-lg font-semibold">Create Post</h2>
             <Textarea
@@ -868,7 +1163,13 @@ export function CommunityFeed({
           </Card>
         ) : null}
 
-        {posts.length === 0 ? null : (
+        {!hasVisiblePosts ? (
+          emptyPostsMessage ? (
+            <Card className="border-slate-200 bg-white text-slate-900">
+              <p className="text-sm text-slate-600">{emptyPostsMessage}</p>
+            </Card>
+          ) : null
+        ) : (
           posts.map((post) => (
             <Card key={post.id} id={`community-post-${post.id}`} className="overflow-hidden border-slate-200 bg-white p-0 text-slate-900">
               <div className="p-4 pb-3">
@@ -877,20 +1178,41 @@ export function CommunityFeed({
                     <Avatar user={post.user} size={40} />
                     <div className="min-w-0">
                       <p className="truncate text-base font-semibold text-slate-900">
-                        {post.user.name}
-                        <span className={`${direction === "rtl" ? "mr-1" : "ml-1"} text-brand-700`}> - Follow</span>
+                        {showAuthorRole ? `${copy.createdBy}: ${post.user.name}` : post.user.name}
+                        {!showAuthorRole ? <span className={`${direction === "rtl" ? "mr-1" : "ml-1"} text-brand-700`}> - Follow</span> : null}
                       </p>
-                      {post.user.companyName ? <p className="truncate text-xs text-slate-600">{post.user.companyName}</p> : null}
+                      {showAuthorRole ? (
+                        <p className="truncate text-xs font-medium text-slate-600">
+                          {copy.role}: {authorRoleLabel(post.user.isDeveloper)}
+                        </p>
+                      ) : null}
+                      {post.user.companyName ? (
+                        <p className="truncate text-xs font-medium text-slate-600">
+                          {copy.company}: {post.user.companyName}
+                        </p>
+                      ) : null}
                       <p className="text-xs text-slate-500">{new Date(post.createdAt).toLocaleString()}</p>
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    className="rounded-full px-2 py-1 text-slate-500 hover:bg-slate-100 hover:text-slate-700"
-                    aria-label="Post actions"
-                  >
-                    ...
-                  </button>
+                  {post.canDelete ? (
+                    <button
+                      type="button"
+                      onClick={() => deletePost(post.id)}
+                      disabled={deletePostLoadingId === post.id}
+                      className="shrink-0 rounded-lg border border-red-200 px-2.5 py-1 text-xs font-semibold text-red-600 hover:bg-red-50 disabled:opacity-60"
+                      aria-label={copy.deletePost}
+                    >
+                      {deletePostLoadingId === post.id ? copy.deleting : copy.delete}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="rounded-full px-2 py-1 text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+                      aria-label="Post actions"
+                    >
+                      ...
+                    </button>
+                  )}
                 </div>
               </div>
 

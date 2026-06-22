@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUserId } from "@/lib/auth";
-import { createCommunityPost, getUserById, listCommunityPosts } from "@/lib/repository";
+import { createCommunityPost, getUserById, listCommunityListings, listCommunityPosts } from "@/lib/repository";
 
 export async function GET() {
   const userId = await getCurrentUserId();
   const viewer = await getUserById(userId);
-  const posts = await listCommunityPosts(userId);
+  const [posts, listings] = await Promise.all([listCommunityPosts(userId), listCommunityListings(userId)]);
   return NextResponse.json({
     ok: true,
     posts,
+    listings,
     canCreatePost: viewer?.role === "SELLER"
   });
 }

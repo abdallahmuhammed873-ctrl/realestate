@@ -11,11 +11,14 @@ import { getPropertyCoverImage } from "@/lib/property-images";
 
 function ListingStatusBadge({
   status,
+  soldAt,
   language
 }: {
   status: "DRAFT" | "PENDING" | "APPROVED" | "REJECTED";
+  soldAt?: string | null;
   language: "en" | "ar";
 }) {
+  if (soldAt) return <span className="rounded-full bg-emerald-200 px-2 py-1 text-xs font-semibold text-emerald-900">{t(language, "soldListing")}</span>;
   if (status === "APPROVED") return <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700">{t(language, "approvedStatus")}</span>;
   if (status === "REJECTED") return <span className="rounded-full bg-red-100 px-2 py-1 text-xs font-semibold text-red-700">{t(language, "rejectedStatus")}</span>;
   if (status === "PENDING") return <span className="rounded-full bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-700">{t(language, "pendingReview")}</span>;
@@ -62,7 +65,7 @@ export default async function SellerDashboardPage() {
               return (
                 <li key={listing.id} className="rounded-xl border p-3">
                   <p className="text-sm font-semibold">Listing {listing.id}</p>
-                  <ListingStatusBadge status={listing.status} language={language} />
+                  <ListingStatusBadge status={listing.status} soldAt={listing.soldAt} language={language} />
                   <p className="mt-1 text-xs text-slate-600">
                     {t(language, "createdByLabel", { name: seller?.name ?? t(language, "seller") })} {seller?.companyOwnerId ? t(language, "companyUserSuffix") : ""}
                   </p>
@@ -80,7 +83,7 @@ export default async function SellerDashboardPage() {
                   </div>
                   <div className="space-y-2">
                     <div className="flex flex-wrap items-center gap-2">
-                      <ListingStatusBadge status={listing.status} language={language} />
+                      <ListingStatusBadge status={listing.status} soldAt={listing.soldAt} language={language} />
                       <span className="rounded-full bg-brand-100 px-2 py-1 text-xs font-semibold text-brand-700">{translateTransaction(property.transaction, language)}</span>
                       <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700">{translatePaymentType(property.paymentType, language)}</span>
                     </div>
@@ -101,7 +104,7 @@ export default async function SellerDashboardPage() {
                     <p className="text-xs text-slate-600">
                       {t(language, "createdByLabel", { name: seller?.name ?? t(language, "seller") })} {seller?.companyOwnerId ? t(language, "companyUserSuffix") : ""}
                     </p>
-                    <ListingActions listingId={listing.id} />
+                    <ListingActions listingId={listing.id} soldAt={listing.soldAt} />
                   </div>
                 </div>
               </li>

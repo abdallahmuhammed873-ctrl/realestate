@@ -3,8 +3,11 @@ import {
   CommunityPostView,
   getCommunityListingView,
   getCommunityPostView,
+  getSellerCommunityPostScopeIds,
   listCommunityListingViews,
+  listCommunityListingViewsBySellerIds,
   listCommunityPostViews,
+  listCommunityPostViewsByAuthorIds,
   mapCommunityListingCommentLike,
   mapCommunityPost,
   mapUser,
@@ -23,6 +26,24 @@ async function canInteract(userId: string) {
 
 export async function listCommunityPosts(viewerId?: string | null) {
   return listCommunityPostViews(viewerId);
+}
+
+export async function listSellerCommunityPosts(authorId: string, viewerId?: string | null) {
+  return listCommunityPostViewsByAuthorIds([authorId], viewerId);
+}
+
+export async function listSellerCommunityListings(authorId: string, viewerId?: string | null) {
+  return listCommunityListingViewsBySellerIds([authorId], viewerId);
+}
+
+export async function listSellerCompanyCommunityPosts(authorId: string, viewerId?: string | null) {
+  const authorIds = await getSellerCommunityPostScopeIds(authorId);
+  return listCommunityPostViewsByAuthorIds(authorIds, viewerId);
+}
+
+export async function listSellerCompanyCommunityListings(authorId: string, viewerId?: string | null) {
+  const authorIds = await getSellerCommunityPostScopeIds(authorId);
+  return listCommunityListingViewsBySellerIds(authorIds, viewerId);
 }
 
 export async function listCommunityListings(viewerId?: string | null) {
@@ -212,7 +233,7 @@ export async function toggleCommunityListingLike(listingId: string, userId: stri
   const user = await canInteract(userId);
   if (!user) return { ok: false as const, error: "Login required." };
   const listing = await prisma.listing.findFirst({
-    where: { id: listingId, status: "APPROVED" }
+    where: { id: listingId, status: "APPROVED", soldAt: null }
   });
   if (!listing) return { ok: false as const, error: "Listing not found." };
 
@@ -245,7 +266,7 @@ export async function addCommunityListingComment(
   const user = await canInteract(userId);
   if (!user) return { ok: false as const, error: "Login required." };
   const listing = await prisma.listing.findFirst({
-    where: { id: listingId, status: "APPROVED" }
+    where: { id: listingId, status: "APPROVED", soldAt: null }
   });
   if (!listing) return { ok: false as const, error: "Listing not found." };
 
@@ -276,6 +297,11 @@ export async function addCommunityListingComment(
 export async function deleteCommunityListingComment(listingId: string, commentId: string, userId: string) {
   const user = await canInteract(userId);
   if (!user) return { ok: false as const, error: "Login required." };
+  const listing = await prisma.listing.findFirst({
+    where: { id: listingId, status: "APPROVED", soldAt: null },
+    select: { id: true }
+  });
+  if (!listing) return { ok: false as const, error: "Listing not found." };
   const comment = await prisma.communityListingComment.findFirst({
     where: { id: commentId, listingId }
   });
@@ -311,6 +337,11 @@ export async function deleteCommunityListingComment(listingId: string, commentId
 export async function toggleCommunityListingCommentLike(listingId: string, commentId: string, userId: string) {
   const user = await canInteract(userId);
   if (!user) return { ok: false as const, error: "Login required." };
+  const listing = await prisma.listing.findFirst({
+    where: { id: listingId, status: "APPROVED", soldAt: null },
+    select: { id: true }
+  });
+  if (!listing) return { ok: false as const, error: "Listing not found." };
   const comment = await prisma.communityListingComment.findFirst({
     where: { id: commentId, listingId }
   });

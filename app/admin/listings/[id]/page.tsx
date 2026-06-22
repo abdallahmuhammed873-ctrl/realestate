@@ -13,7 +13,7 @@ export default async function AdminListingReviewPage({ params }: { params: Promi
   const resolved = await params;
   const language = await getRequestLanguage();
   const user = await requireRole(["ADMIN"]);
-  if (!user) redirect("/admin/login");
+  if (!user) redirect("/auth");
 
   const data = await getListingWithProperty(resolved.id);
   if (!data || !data.property) return notFound();

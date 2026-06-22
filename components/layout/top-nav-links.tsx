@@ -27,6 +27,9 @@ export function TopNavLinks({ user }: { user: TopNavUser | null }) {
       <Link href="/search" className="hover:text-[var(--ink)]">
         {t("search")}
       </Link>
+      <Link href="/price-estimator" className="hover:text-[var(--ink)]">
+        {t("aiPrice")}
+      </Link>
       <NotificationBell />
       <AppointmentsLink />
       <Link href="/favorites" className="hover:text-[var(--ink)]">
@@ -44,7 +47,7 @@ export function TopNavLinks({ user }: { user: TopNavUser | null }) {
         </Link>
       ) : null}
       {user?.role === "ADMIN" ? (
-        <Link href="/admin" className="hover:text-[var(--ink)]">
+        <Link href="/admin/analytics" className="hover:text-[var(--ink)]">
           {t("admin")}
         </Link>
       ) : null}
@@ -53,7 +56,7 @@ export function TopNavLinks({ user }: { user: TopNavUser | null }) {
       {user ? (
         <>
           <ProfileMenu user={user} />
-          <LogoutButton redirectTo={user.role === "ADMIN" ? "/admin/login" : "/auth"} />
+          <LogoutButton redirectTo="/auth" />
         </>
       ) : (
         <Link href="/auth" className="rounded-xl border theme-divider bg-[var(--surface)] px-3 py-1.5 text-[var(--ink)] hover:bg-[var(--surface-soft)]">

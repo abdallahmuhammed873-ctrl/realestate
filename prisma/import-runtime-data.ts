@@ -9,7 +9,16 @@ function parseQueryJson(input: string) {
   }
 }
 
+function assertRuntimeDataResetAllowed() {
+  if (process.env.ALLOW_RUNTIME_DATA_RESET === "1") return;
+
+  throw new Error(
+    "Refusing to overwrite the current database from .demo-db.json without ALLOW_RUNTIME_DATA_RESET=1."
+  );
+}
+
 export async function importRuntimeData(prisma: PrismaClient) {
+  assertRuntimeDataResetAllowed();
   const data = loadRuntimeData();
 
   await prisma.communityListingCommentLike.deleteMany();

@@ -1,3 +1,4 @@
+import { getPropertyImageSources } from "./property-images.ts";
 import type { Appointment, Property, PropertyMedia, PublicPropertyCard, User } from "./types.ts";
 
 type NotificationItem = {
@@ -68,6 +69,7 @@ export function toMobileProperty(property: Property, context: MobileMediaContext
   const media = property.media ?? [];
   const hasPanorama360 = media.some((item) => item.kind === "PANORAMA_360");
   const hasSpin360 = media.some((item) => item.kind === "SPIN_360_FRAME");
+  const imageSources = getPropertyImageSources(property.images, property.media);
 
   return {
     id: property.id,
@@ -105,7 +107,7 @@ export function toMobileProperty(property: Property, context: MobileMediaContext
     paymentType: property.paymentType,
     completionStatus: property.completionStatus,
     amenities: property.amenities,
-    imageUrls: property.images.map((image) => normalizePathToAbsoluteUrl(image, context.origin)),
+    imageUrls: imageSources.map((image) => normalizePathToAbsoluteUrl(image, context.origin)),
     media: media.map((mediaItem) => toMobilePropertyMedia(mediaItem, context)),
     has360View: hasPanorama360 || hasSpin360,
     hasPanorama360,

@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
   if (!ok) return NextResponse.json({ error: "Invalid or expired reset session." }, { status: 400 });
 
   const user = await findUserByEmail(email);
-  const redirectTo = user?.role === "ADMIN" ? "/admin" : user?.role === "SELLER" ? "/seller/dashboard" : "/profile";
+  const redirectTo = user?.role === "ADMIN" ? "/admin/analytics" : user?.role === "SELLER" ? "/seller/dashboard" : "/profile";
   const res = NextResponse.json({ ok: true, message: "Password updated successfully.", redirectTo });
   if (user) {
     return setAuthSessionCookie(res, user.id);

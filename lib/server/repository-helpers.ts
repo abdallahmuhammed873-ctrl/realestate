@@ -124,6 +124,13 @@ type NotificationItem = {
   href?: string;
 };
 
+type CommunityViewerPermissions = {
+  id: string;
+  isAdmin: boolean;
+  isSeller: boolean;
+  canModerateCompanyId: string | null;
+};
+
 type CommunityCommentView = {
   id: string;
   text: string;
@@ -142,6 +149,7 @@ export type CommunityPostView = {
   imageUrl?: string | null;
   createdAt: string;
   updatedAt: string;
+  canDelete: boolean;
   user: { id: string; name: string; avatarUrl?: string | null; isDeveloper: boolean; companyName?: string | null };
   likesCount: number;
   likeCount: number;
@@ -163,7 +171,9 @@ export type CommunityListingView = {
   transaction: Property["transaction"];
   createdAt: string;
   updatedAt: string;
-  seller: { id: string; name: string; avatarUrl?: string | null; isDeveloper: boolean };
+  canDelete: boolean;
+  canMarkSold: boolean;
+  seller: { id: string; name: string; avatarUrl?: string | null; isDeveloper: boolean; companyName?: string | null };
   likesCount: number;
   likedByViewer: boolean;
   commentsCount: number;
@@ -174,6 +184,24 @@ const globalStore = globalThis as unknown as {
   notificationSeenByUser?: Record<string, string[]>;
   compareByUser?: Record<string, string[]>;
 };
+
+function cleanAssetPath(value: string | null | undefined) {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : null;
+}
+
+function isExternalAssetPath(assetPath: string) {
+  return /^(https?:|data:|blob:)/i.test(assetPath) || assetPath.startsWith("//");
+}
+
+function normalizePropertyAssetPath(assetPath: string | null | undefined) {
+  const cleaned = cleanAssetPath(assetPath);
+  if (!cleaned) return null;
+  if (isExternalAssetPath(cleaned)) return cleaned;
+
+  const normalized = cleaned.replace(/\\/g, "/").replace(/^\/+/, "");
+  return `/${normalized}`;
+}
 
 function ensureMemoryStore() {
   if (!globalStore.notificationSeenByUser) globalStore.notificationSeenByUser = {};
@@ -231,17 +259,23 @@ export function mapListing(listing: PrismaListing | null): Listing | null {
     adminNotes: listing.adminNotes ?? null,
     reviewedBy: listing.reviewedBy ?? null,
     reviewedAt: toIso(listing.reviewedAt),
+    soldAt: toIso(listing.soldAt),
+    soldById: listing.soldById ?? null,
+    soldSnapshot: listing.soldSnapshot ?? null,
     createdAt: listing.createdAt.toISOString(),
     updatedAt: listing.updatedAt.toISOString()
   };
 }
 
 export function mapPropertyMedia(media: PrismaPropertyMedia): PropertyMedia {
+  const normalizedPath = normalizePropertyAssetPath(media.path);
+  const path = normalizedPath ?? media.path;
+
   return {
     id: media.id,
     propertyId: media.propertyId,
     kind: media.kind,
-    path: media.path,
+    path,
     label: media.label ?? null,
     altText: media.altText ?? null,
     sortOrder: media.sortOrder,
@@ -258,13 +292,18 @@ export function mapProperty(
     | null
 ): Property | null {
   if (!property) return null;
-  const mediaImages =
+  const mappedMedia =
     "media" in property && Array.isArray(property.media)
       ? property.media
-          .filter((item) => item.kind === "IMAGE")
+          .slice()
           .sort((a, b) => a.sortOrder - b.sortOrder)
-          .map((item) => item.path)
-      : [];
+          .map(mapPropertyMedia)
+      : undefined;
+  const mediaImages = (mappedMedia ?? []).filter((item) => item.kind === "IMAGE").map((item) => item.path);
+  const directImages = (property.images ?? [])
+    .map((image) => normalizePropertyAssetPath(image))
+    .filter((image): image is string => Boolean(image));
+
   return {
     id: property.id,
     listingId: property.listingId,
@@ -301,8 +340,8 @@ export function mapProperty(
     paymentType: property.paymentType,
     completionStatus: property.completionStatus,
     amenities: property.amenities,
-    images: mediaImages.length > 0 ? mediaImages : property.images,
-    media: "media" in property && Array.isArray(property.media) ? property.media.map(mapPropertyMedia) : undefined,
+    images: mediaImages.length > 0 ? mediaImages : directImages,
+    media: mappedMedia,
     installmentDownPayment: property.installmentDownPayment ?? null,
     installmentYears: property.installmentYears ?? null,
     installmentMonthly: property.installmentMonthly ?? null,
@@ -484,6 +523,28 @@ export async function getSellerDashboardScopeIds(sellerId: string) {
   return members.length > 0 ? [sellerId, ...members.map((member) => member.id)] : [sellerId];
 }
 
+export async function getSellerCommunityPostScopeIds(sellerId: string) {
+  const seller = await prisma.user.findUnique({
+    where: { id: sellerId },
+    select: { id: true, role: true, isCompanyAccount: true, companyOwnerId: true }
+  });
+
+  if (!seller || seller.role !== "SELLER") return [];
+
+  const companyOwnerId = seller.companyOwnerId ?? (seller.isCompanyAccount ? seller.id : null);
+  if (!companyOwnerId) return [seller.id];
+
+  const members = await prisma.user.findMany({
+    where: {
+      role: "SELLER",
+      companyOwnerId
+    },
+    select: { id: true }
+  });
+
+  return uniqueStringArray([companyOwnerId, seller.id, ...members.map((member) => member.id)]);
+}
+
 export async function canSellerAccessListing(viewerSellerId: string, listingOwnerSellerId: string) {
   if (viewerSellerId === listingOwnerSellerId) return true;
   const owner = await prisma.user.findUnique({
@@ -495,6 +556,15 @@ export async function canSellerAccessListing(viewerSellerId: string, listingOwne
 
 function currentPrice(item: PublicPropertyCard) {
   return item.transaction === "RENT" ? item.rentPrice ?? 0 : item.price ?? 0;
+}
+
+function stableShuffleRank(value: string) {
+  let hash = 2166136261;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
 }
 
 function compareById(a: PublicPropertyCard, b: PublicPropertyCard) {
@@ -572,7 +642,7 @@ export async function searchPropertyCards(filters: SearchFilters) {
   const sort = filters.sort ?? "FEATURED";
   items.sort((a, b) => {
     if (sort === "FEATURED") {
-      return Number(b.goodDeal) - Number(a.goodDeal) || currentPrice(a) - currentPrice(b) || compareById(a, b);
+      return stableShuffleRank(a.id) - stableShuffleRank(b.id) || compareById(a, b);
     }
     if (sort === "NEWEST") return Date.parse(b.createdAt) - Date.parse(a.createdAt) || compareById(a, b);
     if (sort === "PRICE_ASC") return currentPrice(a) - currentPrice(b) || compareById(a, b);
@@ -622,7 +692,41 @@ export function newId() {
   return randomUUID();
 }
 
+async function getCommunityViewerPermissions(viewerId?: string | null): Promise<CommunityViewerPermissions | null> {
+  if (!viewerId) return null;
+  const viewer = await prisma.user.findUnique({
+    where: { id: viewerId },
+    select: { id: true, role: true, isCompanyAccount: true }
+  });
+  if (!viewer) return null;
+
+  return {
+    id: viewer.id,
+    isAdmin: viewer.role === "ADMIN",
+    isSeller: viewer.role === "SELLER",
+    canModerateCompanyId: viewer.role === "SELLER" && viewer.isCompanyAccount ? viewer.id : null
+  };
+}
+
+function canViewerDeleteCommunityContent(
+  author: Pick<PrismaUser, "id" | "companyOwnerId">,
+  viewer: CommunityViewerPermissions | null
+) {
+  if (!viewer) return false;
+  if (viewer.isAdmin) return true;
+  return Boolean(author.id === viewer.id || (viewer.canModerateCompanyId && author.companyOwnerId === viewer.canModerateCompanyId));
+}
+
+function canViewerMarkCommunityListingSold(
+  seller: Pick<PrismaUser, "id" | "companyOwnerId">,
+  viewer: CommunityViewerPermissions | null
+) {
+  if (!viewer?.isSeller) return false;
+  return Boolean(seller.id === viewer.id || (viewer.canModerateCompanyId && seller.companyOwnerId === viewer.canModerateCompanyId));
+}
+
 export async function getCommunityPostView(postId: string, viewerId?: string | null) {
+  const viewer = await getCommunityViewerPermissions(viewerId);
   const post = await prisma.communityPost.findUnique({
     where: { id: postId },
     include: {
@@ -641,10 +745,11 @@ export async function getCommunityPostView(postId: string, viewerId?: string | n
       commentLikes: true
     }
   });
-  return post ? mapCommunityPostView(post, viewerId) : null;
+  return post ? mapCommunityPostView(post, viewerId, viewer) : null;
 }
 
 export async function getCommunityListingView(listingId: string, viewerId?: string | null) {
+  const viewer = await getCommunityViewerPermissions(viewerId);
   const listing = await prisma.listing.findUnique({
     where: { id: listingId },
     include: {
@@ -668,10 +773,11 @@ export async function getCommunityListingView(listingId: string, viewerId?: stri
       communityCommentLikes: true
     }
   });
-  return listing ? mapCommunityListingView(listing, viewerId) : null;
+  return listing ? mapCommunityListingView(listing, viewerId, viewer) : null;
 }
 
 export async function listCommunityPostViews(viewerId?: string | null) {
+  const viewer = await getCommunityViewerPermissions(viewerId);
   const posts = await prisma.communityPost.findMany({
     orderBy: { createdAt: "desc" },
     include: {
@@ -690,12 +796,42 @@ export async function listCommunityPostViews(viewerId?: string | null) {
       commentLikes: true
     }
   });
-  return posts.map((post) => mapCommunityPostView(post, viewerId));
+  return posts.map((post) => mapCommunityPostView(post, viewerId, viewer));
+}
+
+export async function listCommunityPostViewsByAuthorIds(authorIds: string[], viewerId?: string | null) {
+  const uniqueAuthorIds = Array.from(new Set(authorIds.filter(Boolean)));
+  if (uniqueAuthorIds.length === 0) return [];
+
+  const viewer = await getCommunityViewerPermissions(viewerId);
+  const posts = await prisma.communityPost.findMany({
+    where: {
+      userId: { in: uniqueAuthorIds }
+    },
+    orderBy: { createdAt: "desc" },
+    include: {
+      user: {
+        include: {
+          companyOwner: true
+        }
+      },
+      likes: true,
+      comments: {
+        orderBy: { createdAt: "asc" },
+        include: {
+          user: true
+        }
+      },
+      commentLikes: true
+    }
+  });
+  return posts.map((post) => mapCommunityPostView(post, viewerId, viewer));
 }
 
 export async function listCommunityListingViews(viewerId?: string | null) {
+  const viewer = await getCommunityViewerPermissions(viewerId);
   const listings = await prisma.listing.findMany({
-    where: { status: "APPROVED" },
+    where: { status: "APPROVED", soldAt: null },
     orderBy: { updatedAt: "desc" },
     include: {
       user: {
@@ -720,7 +856,45 @@ export async function listCommunityListingViews(viewerId?: string | null) {
   });
   return listings
     .filter((listing) => Boolean(listing.property))
-    .map((listing) => mapCommunityListingView(listing, viewerId));
+    .map((listing) => mapCommunityListingView(listing, viewerId, viewer));
+}
+
+export async function listCommunityListingViewsBySellerIds(sellerIds: string[], viewerId?: string | null) {
+  const uniqueSellerIds = Array.from(new Set(sellerIds.filter(Boolean)));
+  if (uniqueSellerIds.length === 0) return [];
+
+  const viewer = await getCommunityViewerPermissions(viewerId);
+  const listings = await prisma.listing.findMany({
+    where: {
+      userId: { in: uniqueSellerIds },
+      status: "APPROVED",
+      soldAt: null
+    },
+    orderBy: { updatedAt: "desc" },
+    include: {
+      user: {
+        include: {
+          companyOwner: true
+        }
+      },
+      property: {
+        include: {
+          media: { orderBy: { sortOrder: "asc" } }
+        }
+      },
+      communityLikes: true,
+      communityComments: {
+        orderBy: { createdAt: "asc" },
+        include: {
+          user: true
+        }
+      },
+      communityCommentLikes: true
+    }
+  });
+  return listings
+    .filter((listing) => Boolean(listing.property))
+    .map((listing) => mapCommunityListingView(listing, viewerId, viewer));
 }
 
 function buildCommentViews<
@@ -779,9 +953,10 @@ function buildCommentViews<
   return topLevel;
 }
 
-function mapCommunityPostView(post: CommunityPostWithRelations, viewerId?: string | null): CommunityPostView {
+function mapCommunityPostView(post: CommunityPostWithRelations, viewerId?: string | null, viewer: CommunityViewerPermissions | null = null): CommunityPostView {
   const author = post.user;
-  const viewerIsAdmin = Boolean(viewerId) && false;
+  const companyName = author.isCompanyAccount ? author.name : author.companyOwner?.name ?? null;
+  const viewerIsAdmin = Boolean(viewer?.isAdmin);
   const likeCount = post.likes.filter((like) => like.reaction === "LIKE").length;
   const loveCount = post.likes.filter((like) => like.reaction === "LOVE").length;
   const viewerReaction = viewerId ? post.likes.find((like) => like.userId === viewerId)?.reaction ?? null : null;
@@ -792,12 +967,13 @@ function mapCommunityPostView(post: CommunityPostWithRelations, viewerId?: strin
     imageUrl: post.imagePath ?? null,
     createdAt: post.createdAt.toISOString(),
     updatedAt: post.updatedAt.toISOString(),
+    canDelete: canViewerDeleteCommunityContent(author, viewer),
     user: {
       id: author.id,
       name: author.name,
       avatarUrl: author.avatarPath ?? null,
       isDeveloper: author.isCompanyAccount,
-      companyName: author.companyOwner?.name ?? null
+      companyName
     },
     likesCount: post.likes.length,
     likeCount,
@@ -808,11 +984,12 @@ function mapCommunityPostView(post: CommunityPostWithRelations, viewerId?: strin
   };
 }
 
-function mapCommunityListingView(listing: CommunityListingWithRelations, viewerId?: string | null): CommunityListingView {
+function mapCommunityListingView(listing: CommunityListingWithRelations, viewerId?: string | null, viewer: CommunityViewerPermissions | null = null): CommunityListingView {
   const property = listing.property!;
   const mappedProperty = mapProperty(property)!;
   const seller = listing.user;
-  const viewerIsAdmin = false;
+  const companyName = seller.isCompanyAccount ? seller.name : seller.companyOwner?.name ?? null;
+  const viewerIsAdmin = Boolean(viewer?.isAdmin);
 
   return {
     listingId: listing.id,
@@ -826,11 +1003,14 @@ function mapCommunityListingView(listing: CommunityListingWithRelations, viewerI
     transaction: property.transaction,
     createdAt: listing.createdAt.toISOString(),
     updatedAt: listing.updatedAt.toISOString(),
+    canDelete: canViewerDeleteCommunityContent(seller, viewer),
+    canMarkSold: canViewerMarkCommunityListingSold(seller, viewer),
     seller: {
       id: seller.id,
       name: seller.name,
       avatarUrl: seller.avatarPath ?? null,
-      isDeveloper: seller.isCompanyAccount
+      isDeveloper: seller.isCompanyAccount,
+      companyName
     },
     likesCount: listing.communityLikes.length,
     likedByViewer: viewerId ? listing.communityLikes.some((like) => like.userId === viewerId) : false,
@@ -1195,7 +1375,7 @@ export async function listNotificationsInternal(userId: string): Promise<Notific
           id: `n-admin-ap-${appointment.id}-${appointment.updatedAt.toISOString()}`,
           text: `New viewing request from ${buyer?.name ?? "Buyer"} for ${property?.title ?? appointment.propertyId}.`,
           createdAt: appointment.updatedAt.toISOString(),
-          href: `/admin?appointment=${encodeURIComponent(appointment.id)}`
+          href: `/admin/analytics?appointment=${encodeURIComponent(appointment.id)}`
         };
       });
 

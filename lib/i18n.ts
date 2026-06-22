@@ -22,6 +22,8 @@ const navigation = {
   favorites: { en: "Favorites", ar: "المفضلة" },
   compare: { en: "Compare", ar: "مقارنة" },
   community: { en: "Community", ar: "المجتمع" },
+  aiPrice: { en: "AI Price", ar: "السعر الذكي" },
+  analytics: { en: "Analytics", ar: "التحليلات" },
   seller: { en: "Seller", ar: "البائع" },
   admin: { en: "Admin", ar: "الإدارة" },
   buyer: { en: "Buyer", ar: "المشتري" },
@@ -33,7 +35,11 @@ const navigation = {
   notify: { en: "Alerts", ar: "التنبيهات" },
   switchToArabic: { en: "AR", ar: "العربية" },
   switchToEnglish: { en: "EN", ar: "English" },
-  languageToggleLabel: { en: "Switch language", ar: "تبديل اللغة" }
+  languageToggleLabel: { en: "Switch language", ar: "تبديل اللغة" },
+  switchToDarkMode: { en: "Switch to dark mode", ar: "التبديل إلى الوضع الداكن" },
+  switchToLightMode: { en: "Switch to light mode", ar: "التبديل إلى الوضع الفاتح" },
+  darkMode: { en: "Dark", ar: "داكن" },
+  lightMode: { en: "Light", ar: "فاتح" }
 } satisfies TranslationSection;
 
 const profile = {
@@ -57,7 +63,12 @@ const profile = {
   saving: { en: "Saving...", ar: "جارٍ الحفظ..." },
   uploading: { en: "Uploading...", ar: "جارٍ الرفع..." },
   profileImageAlt: { en: "{name} profile", ar: "الملف الشخصي لـ {name}" },
-  yourPropertyPosts: { en: "Your Property Posts", ar: "إعلاناتك العقارية" },
+  myPosts: { en: "My Posts", ar: "\u0645\u0646\u0634\u0648\u0631\u0627\u062a\u064a" },
+  companyPosts: { en: "Company Posts", ar: "\u0645\u0646\u0634\u0648\u0631\u0627\u062a \u0627\u0644\u0634\u0631\u0643\u0629" },
+  backToProfile: { en: "Back to Profile", ar: "\u0627\u0644\u0639\u0648\u062f\u0629 \u0625\u0644\u0649 \u0627\u0644\u0645\u0644\u0641 \u0627\u0644\u0634\u062e\u0635\u064a" },
+  propertyPosts: { en: "Property Posts", ar: "\u0645\u0646\u0634\u0648\u0631\u0627\u062a \u0627\u0644\u0639\u0642\u0627\u0631\u0627\u062a" },
+  noCommunityPostsYet: { en: "No community posts yet.", ar: "\u0644\u0627 \u062a\u0648\u062c\u062f \u0645\u0646\u0634\u0648\u0631\u0627\u062a \u0645\u062c\u062a\u0645\u0639 \u0628\u0639\u062f." },
+  noCompanyPostsYet: { en: "No company posts yet.", ar: "\u0644\u0627 \u062a\u0648\u062c\u062f \u0645\u0646\u0634\u0648\u0631\u0627\u062a \u0644\u0644\u0634\u0631\u0643\u0629 \u0628\u0639\u062f." },
   newListing: { en: "New Listing", ar: "إعلان جديد" },
   noListingsYet: { en: "No listings yet.", ar: "لا توجد إعلانات بعد." },
   updatedAtLabel: { en: "Updated: {value}", ar: "آخر تحديث: {value}" },
@@ -76,6 +87,17 @@ const profile = {
   showProfile: { en: "Show Profile", ar: "عرض الملف الشخصي" },
   noPhoneAdded: { en: "No phone added", ar: "لم يتم إضافة رقم هاتف" },
   developer: { en: "Developer", ar: "المطور" }
+} satisfies TranslationSection;
+
+const soldActions = {
+  soldListing: { en: "Sold", ar: "\u0645\u0628\u0627\u0639" },
+  markingSold: { en: "Marking sold...", ar: "\u062c\u0627\u0631\u064d \u062a\u0639\u0644\u064a\u0645\u0647 \u0643\u0645\u0628\u0627\u0639..." },
+  soldListingConfirm: {
+    en: "Are you sure you want to mark this property as sold?",
+    ar: "\u0647\u0644 \u0623\u0646\u062a \u0645\u062a\u0623\u0643\u062f \u0623\u0646\u0643 \u062a\u0631\u064a\u062f \u062a\u0639\u0644\u064a\u0645 \u0647\u0630\u0627 \u0627\u0644\u0639\u0642\u0627\u0631 \u0643\u0645\u0628\u0627\u0639\u061f"
+  },
+  failedToMarkSold: { en: "Failed to mark property as sold.", ar: "\u062a\u0639\u0630\u0631 \u062a\u0639\u0644\u064a\u0645 \u0627\u0644\u0639\u0642\u0627\u0631 \u0643\u0645\u0628\u0627\u0639." },
+  propertyMarkedSold: { en: "Property marked as sold.", ar: "\u062a\u0645 \u062a\u0639\u0644\u064a\u0645 \u0627\u0644\u0639\u0642\u0627\u0631 \u0643\u0645\u0628\u0627\u0639." }
 } satisfies TranslationSection;
 
 const chatbot = {
@@ -536,6 +558,311 @@ const admin = {
   adminAccessRequired: { en: "Admin access required.", ar: "مطلوب حساب إدارة." }
 } satisfies TranslationSection;
 
+const aiPrice = {
+  priceEstimatorEyebrow: { en: "AI Price Estimator", ar: "مقدر السعر بالذكاء الاصطناعي" },
+  priceEstimatorTitle: { en: "Estimate a fair property price", ar: "قدّر السعر العادل للعقار" },
+  priceEstimatorDescription: {
+    en: "Compare your property details against approved marketplace data to estimate price, expected range, and confidence.",
+    ar: "قارن تفاصيل عقارك ببيانات السوق المعتمدة لتقدير السعر والنطاق المتوقع ودرجة الثقة."
+  },
+  areaSqm: { en: "Area in square meters", ar: "المساحة بالمتر المربع" },
+  bedrooms: { en: "Bedrooms", ar: "غرف النوم" },
+  bathrooms: { en: "Bathrooms", ar: "الحمامات" },
+  furnishingStatus: { en: "Furnishing status", ar: "حالة الفرش" },
+  completionStatusLabel: { en: "Finishing / completion status", ar: "حالة التشطيب / التسليم" },
+  paymentTypeLabel: { en: "Payment type", ar: "نوع الدفع" },
+  notSpecified: { en: "Not specified", ar: "غير محدد" },
+  anyType: { en: "Any type", ar: "أي نوع" },
+  anyPayment: { en: "Any payment", ar: "أي طريقة دفع" },
+  estimatePrice: { en: "Estimate Price", ar: "تقدير السعر" },
+  estimating: { en: "Estimating...", ar: "جارٍ التقدير..." },
+  basedOnSimilarProperties: { en: "Based on similar properties", ar: "بناءً على عقارات مشابهة" },
+  basedOnCityAverage: { en: "Based on city and type averages", ar: "بناءً على متوسط المدينة والنوع" },
+  basedOnAiGuidance: { en: "Based on AI market guidance", ar: "بناءً على إرشاد السوق بالذكاء الاصطناعي" },
+  estimatedPrice: { en: "Estimated Price", ar: "السعر المتوقع" },
+  expectedRange: { en: "Expected Range", ar: "النطاق المتوقع" },
+  confidenceScore: { en: "Confidence Score", ar: "درجة الثقة" },
+  priceEstimatorEmptyHint: {
+    en: "Enter property details to calculate a fair price from approved listings, with AI guidance when the database has no close match.",
+    ar: "أدخل تفاصيل العقار لحساب سعر عادل من الإعلانات المعتمدة، مع إرشاد بالذكاء الاصطناعي إذا لم توجد مطابقة قريبة في قاعدة البيانات."
+  },
+  recentEstimates: { en: "Recent Estimates", ar: "آخر التقديرات" },
+  confidenceValue: { en: "Confidence {value}", ar: "الثقة {value}" },
+  recentEstimateSummary: { en: "{type} in {location}, {areaSqm} sqm", ar: "{type} في {location}، {areaSqm} متر مربع" },
+  investmentPlannerEyebrow: { en: "AI Investment Planner", ar: "مخطط الاستثمار بالذكاء الاصطناعي" },
+  investmentPlannerTitle: { en: "Plan what you can buy from your salary", ar: "خطط لما يمكنك شراؤه من راتبك" },
+  investmentPlannerDescription: {
+    en: "Add your salary and desired features. Gemini will create plans when configured, and the system will still use matching database properties when available.",
+    ar: "أضف راتبك والمواصفات المطلوبة. سيُنشئ Gemini خططًا عند تفعيله، وسيظل النظام يستخدم العقارات المطابقة من قاعدة البيانات عند توفرها."
+  },
+  monthlySalary: { en: "Monthly salary", ar: "الراتب الشهري" },
+  monthlyExpenses: { en: "Monthly expenses", ar: "المصاريف الشهرية" },
+  currentSavings: { en: "Current savings", ar: "المدخرات الحالية" },
+  areaOrDistrict: { en: "Area or district", ar: "المنطقة أو الحي" },
+  preferredPayment: { en: "Preferred payment", ar: "طريقة الدفع المفضلة" },
+  riskLevel: { en: "Risk level", ar: "مستوى المخاطرة" },
+  lowRisk: { en: "Low risk", ar: "مخاطرة منخفضة" },
+  mediumRisk: { en: "Medium risk", ar: "مخاطرة متوسطة" },
+  highRisk: { en: "High risk", ar: "مخاطرة عالية" },
+  desiredFeatures: { en: "Features you want", ar: "المواصفات المطلوبة" },
+  createInvestmentPlan: { en: "Create Investment Plan", ar: "إنشاء خطة استثمار" },
+  creatingPlan: { en: "Creating plan...", ar: "جارٍ إنشاء الخطة..." },
+  yourBuyingPlan: { en: "Your Buying Plan", ar: "خطة الشراء الخاصة بك" },
+  geminiAiPlan: { en: "Gemini AI plan", ar: "خطة Gemini بالذكاء الاصطناعي" },
+  localFallbackPlan: { en: "Local fallback plan", ar: "خطة محلية بديلة" },
+  affordability: { en: "Affordability", ar: "القدرة الشرائية" },
+  affordabilityLow: { en: "LOW", ar: "منخفضة" },
+  affordabilityMedium: { en: "MEDIUM", ar: "متوسطة" },
+  affordabilityHigh: { en: "HIGH", ar: "مرتفعة" },
+  monthlyBudget: { en: "Monthly Budget", ar: "الميزانية الشهرية" },
+  affordablePrice: { en: "Affordable Price", ar: "السعر المناسب" },
+  planYearsLabel: { en: "{title} - about {years} years", ar: "{title} - حوالي {years} سنة" },
+  planPaymentLine: {
+    en: "Save {monthlySaving} monthly, target down payment {downPaymentTarget}, expected installment {installment}.",
+    ar: "ادخر {monthlySaving} شهريًا، والدفعة المقدمة المستهدفة {downPaymentTarget}، والقسط المتوقع {installment}."
+  },
+  recommendations: { en: "Recommendations", ar: "التوصيات" },
+  suitableDatabaseMatches: { en: "Suitable Database Matches", ar: "مطابقات مناسبة من قاعدة البيانات" },
+  matchedPropertyLine: {
+    en: "{price} | {city}, {area} | {bedrooms} beds | {areaSqm} sqm",
+    ar: "{price} | {city}، {area} | {bedrooms} غرف | {areaSqm} متر مربع"
+  },
+  priceEstimatorGenericError: { en: "Could not calculate an estimate right now.", ar: "تعذر حساب التقدير الآن." },
+  plannerGenericError: { en: "Could not create an investment plan right now.", ar: "تعذر إنشاء خطة الاستثمار الآن." },
+  priceEstimatorValidationRequired: {
+    en: "Please enter property type, city, and a valid area in square meters.",
+    ar: "يرجى إدخال نوع العقار والمدينة ومساحة صحيحة بالمتر المربع."
+  },
+  investmentPlannerSalaryValidation: { en: "Please enter a valid monthly salary.", ar: "يرجى إدخال راتب شهري صحيح." },
+  placeholderNewCairo: { en: "New Cairo", ar: "القاهرة الجديدة" },
+  placeholderFifthSettlement: { en: "Fifth Settlement", ar: "التجمع الخامس" },
+  placeholderNorthInvestors: { en: "North Investors", ar: "المستثمرين الشمالية" },
+  placeholderAreaSqm: { en: "150", ar: "150" },
+  placeholderBedrooms: { en: "3", ar: "3" },
+  placeholderBathrooms: { en: "2", ar: "2" },
+  placeholderSalary: { en: "30000", ar: "30000" },
+  placeholderExpenses: { en: "12000", ar: "12000" },
+  placeholderSavings: { en: "250000", ar: "250000" },
+  placeholderNotes: {
+    en: "Near university, good resale, ready to move, balcony...",
+    ar: "قريب من الجامعة، إعادة بيع جيدة، جاهز للسكن، بلكونة..."
+  },
+  priceEstimateExplanationSimilar: {
+    en: "Based on {count} similar approved properties in {location}. The estimate adjusts for size, rooms, furnishing, completion status, and payment type when provided.",
+    ar: "بناءً على {count} عقارات معتمدة مشابهة في {location}. يراعي التقدير المساحة والغرف والفرش وحالة التسليم ونوع الدفع عند توفرها."
+  },
+  priceEstimateExplanationCityAverage: {
+    en: "Based on {count} approved {propertyType} properties in {city}. The estimate adjusts for size, rooms, furnishing, completion status, and payment type when provided.",
+    ar: "بناءً على {count} عقارات معتمدة من نوع {propertyType} في {city}. يراعي التقدير المساحة والغرف والفرش وحالة التسليم ونوع الدفع عند توفرها."
+  },
+  priceEstimateAiGuidanceExplanation: {
+    en: "No enough matching approved database properties were found, so this is general AI market guidance. Treat it as a planning range, not a verified valuation.",
+    ar: "لم يتم العثور على عقارات معتمدة كافية ومطابقة في قاعدة البيانات، لذلك فهذا إرشاد عام للسوق بالذكاء الاصطناعي. اعتبره نطاقًا للتخطيط وليس تقييمًا موثقًا."
+  },
+  plannerConservativePlan: { en: "Conservative plan", ar: "خطة محافظة" },
+  plannerBalancedPlan: { en: "Balanced plan", ar: "خطة متوازنة" },
+  plannerFastPlan: { en: "Fast plan", ar: "خطة سريعة" },
+  plannerConservativeRecommendation: {
+    en: "Build a stronger down payment first, then choose a unit with lower monthly installments.",
+    ar: "كوّن دفعة مقدمة أقوى أولًا، ثم اختر وحدة بأقساط شهرية أقل."
+  },
+  plannerBalancedRecommendation: {
+    en: "Best fit if you can keep expenses stable and avoid taking on extra debt.",
+    ar: "أنسب خيار إذا استطعت تثبيت مصاريفك وتجنب ديون إضافية."
+  },
+  plannerFastRecommendation: {
+    en: "Only use this if your income is stable and you have emergency savings.",
+    ar: "استخدم هذه الخطة فقط إذا كان دخلك مستقرًا ولديك مدخرات للطوارئ."
+  },
+  plannerHighRecommendation: {
+    en: "Your income looks strong for this target, so compare locations and resale value instead of only chasing the cheapest price.",
+    ar: "دخلك يبدو مناسبًا لهذا الهدف، لذلك قارن بين المواقع وقيمة إعادة البيع بدلًا من البحث عن الأرخص فقط."
+  },
+  plannerMediumRecommendation: {
+    en: "Your target looks possible, but the payment plan matters. Prefer longer installments or a slightly smaller unit.",
+    ar: "هدفك يبدو ممكنًا، لكن خطة الدفع مهمة. فضّل أقساطًا أطول أو وحدة أصغر قليلًا."
+  },
+  plannerLowRecommendation: {
+    en: "The target is currently high compared with your salary. Increase savings, reduce the target price, or choose an earlier-stage/off-plan unit.",
+    ar: "الهدف مرتفع حاليًا مقارنة براتبك. زد المدخرات أو اخفض السعر المستهدف أو اختر وحدة تحت الإنشاء."
+  },
+  plannerPaymentRule: {
+    en: "Keep total property payments below about 30-35% of monthly salary for safer cash flow.",
+    ar: "حافظ على إجمالي مدفوعات العقار دون 30-35% تقريبًا من الراتب الشهري لتدفق نقدي أكثر أمانًا."
+  },
+  plannerMatchedRecommendation: {
+    en: "The database found properties close to your request, so start by comparing their payment plans and locations.",
+    ar: "وجدت قاعدة البيانات عقارات قريبة من طلبك، فابدأ بمقارنة خطط الدفع والمواقع."
+  },
+  plannerNoMatchRecommendation: {
+    en: "No close database match was found, so treat this as a planning guide and search broader areas or property types.",
+    ar: "لم يتم العثور على مطابقة قريبة في قاعدة البيانات، لذلك اعتبرها إرشادات تخطيط وابحث في مناطق أو أنواع عقارات أوسع."
+  },
+  plannerHighSummary: {
+    en: "You appear financially ready for similar properties, assuming stable income and reasonable expenses.",
+    ar: "تبدو جاهزًا ماليًا لعقارات مشابهة، بافتراض ثبات الدخل ومعقولية المصاريف."
+  },
+  plannerMediumSummary: {
+    en: "You may be able to buy, but should use a careful installment/down-payment plan.",
+    ar: "قد تتمكن من الشراء، لكنك تحتاج إلى خطة دقيقة للأقساط والدفعة المقدمة."
+  },
+  plannerLowSummary: {
+    en: "Buying this target soon may be difficult without more savings or a lower-priced option.",
+    ar: "شراء هذا الهدف قريبًا قد يكون صعبًا دون مدخرات أكبر أو خيار بسعر أقل."
+  },
+  plannerMatchReason: {
+    en: "Closest database match based on your preferred type, location, rooms, and payment type.",
+    ar: "أقرب مطابقة في قاعدة البيانات حسب النوع والموقع والغرف وطريقة الدفع المفضلة."
+  }
+} satisfies TranslationSection;
+
+const analyticsDashboard = {
+  analyticsDashboardEyebrow: { en: "Admin Analytics Dashboard", ar: "لوحة تحليلات الإدارة" },
+  analyticsDashboardTitle: { en: "System performance and activity", ar: "أداء النظام والنشاط" },
+  backToAdmin: { en: "Back to Admin", ar: "العودة إلى الإدارة" },
+  cityFilter: { en: "City filter", ar: "فلتر المدينة" },
+  listingStatus: { en: "Listing status", ar: "حالة الإعلان" },
+  allStatuses: { en: "All statuses", ar: "كل الحالات" },
+  apply: { en: "Apply", ar: "تطبيق" },
+  totalUsers: { en: "Total users", ar: "إجمالي المستخدمين" },
+  totalBuyers: { en: "Total buyers", ar: "إجمالي المشترين" },
+  totalSellers: { en: "Total sellers", ar: "إجمالي البائعين" },
+  totalProperties: { en: "Total properties", ar: "إجمالي العقارات" },
+  totalListings: { en: "Total listings", ar: "إجمالي الإعلانات" },
+  pendingListingsMetric: { en: "Pending listings", ar: "إعلانات قيد المراجعة" },
+  approvedListingsMetric: { en: "Approved listings", ar: "إعلانات معتمدة" },
+  rejectedListingsMetric: { en: "Rejected listings", ar: "إعلانات مرفوضة" },
+  totalAppointments: { en: "Total appointments", ar: "إجمالي المواعيد" },
+  totalFavorites: { en: "Total favorites", ar: "إجمالي المفضلة" },
+  totalPriceEstimates: { en: "Total price estimates", ar: "إجمالي تقديرات الأسعار" },
+  appointmentsByStatus: { en: "Appointments by status", ar: "المواعيد حسب الحالة" },
+  listingsByStatus: { en: "Listings by status", ar: "الإعلانات حسب الحالة" },
+  propertiesByCity: { en: "Properties by city", ar: "العقارات حسب المدينة" },
+  mostViewedProperties: { en: "Most viewed properties", ar: "العقارات الأكثر مشاهدة" },
+  mostFavoritedProperties: { en: "Most favorited properties", ar: "العقارات الأكثر إضافة للمفضلة" },
+  newestUsers: { en: "Newest users", ar: "أحدث المستخدمين" },
+  newestProperties: { en: "Newest properties", ar: "أحدث العقارات" },
+  propertyColumn: { en: "Property", ar: "العقار" },
+  locationColumn: { en: "Location", ar: "الموقع" },
+  viewsColumn: { en: "Views", ar: "المشاهدات" },
+  priceColumn: { en: "Price", ar: "السعر" },
+  favoritesColumn: { en: "Favorites", ar: "المفضلة" },
+  nameColumn: { en: "Name", ar: "الاسم" },
+  roleColumn: { en: "Role", ar: "الدور" },
+  joinedColumn: { en: "Joined", ar: "تاريخ الانضمام" },
+  statusColumn: { en: "Status", ar: "الحالة" },
+  createdColumn: { en: "Created", ar: "تاريخ الإنشاء" },
+  noDataAvailable: { en: "No data available.", ar: "لا توجد بيانات متاحة." },
+  statusDraft: { en: "DRAFT", ar: "مسودة" },
+  statusPending: { en: "PENDING", ar: "قيد المراجعة" },
+  statusApproved: { en: "APPROVED", ar: "معتمد" },
+  statusRejected: { en: "REJECTED", ar: "مرفوض" },
+  statusConfirmed: { en: "CONFIRMED", ar: "مؤكد" },
+  statusCancelled: { en: "CANCELLED", ar: "ملغي" },
+  statusRescheduled: { en: "RESCHEDULED", ar: "تمت إعادة الجدولة" },
+  advancedFilters: { en: "Advanced slicers", ar: "فلاتر متقدمة" },
+  dateRange: { en: "Date range", ar: "نطاق التاريخ" },
+  startDate: { en: "Start date", ar: "تاريخ البدء" },
+  endDate: { en: "End date", ar: "تاريخ الانتهاء" },
+  governorateFilter: { en: "Governorate", ar: "المحافظة" },
+  propertyTypeFilter: { en: "Property type", ar: "نوع العقار" },
+  transactionTypeFilter: { en: "Transaction type", ar: "نوع المعاملة" },
+  sellerFilter: { en: "Seller", ar: "البائع" },
+  developerFilter: { en: "Developer", ar: "المطور" },
+  buyerFilter: { en: "Buyer", ar: "المشتري" },
+  userTypeFilter: { en: "User type", ar: "نوع المستخدم" },
+  priceRange: { en: "Property price range", ar: "نطاق سعر العقار" },
+  aiPriceRange: { en: "AI price range", ar: "نطاق السعر الذكي" },
+  minPrice: { en: "Min price", ar: "أقل سعر" },
+  maxPrice: { en: "Max price", ar: "أعلى سعر" },
+  minAiPrice: { en: "Min AI price", ar: "أقل سعر ذكي" },
+  maxAiPrice: { en: "Max AI price", ar: "أعلى سعر ذكي" },
+  clearAllFilters: { en: "Clear all filters", ar: "مسح كل الفلاتر" },
+  activeFilters: { en: "Active filters", ar: "الفلاتر النشطة" },
+  noActiveFilters: { en: "No active filters", ar: "لا توجد فلاتر نشطة" },
+  refreshDashboard: { en: "Refresh dashboard", ar: "تحديث اللوحة" },
+  refreshing: { en: "Refreshing...", ar: "جارٍ التحديث..." },
+  lastUpdated: { en: "Last updated", ar: "آخر تحديث" },
+  propertyAnalytics: { en: "Property analytics", ar: "تحليلات العقارات" },
+  userAnalytics: { en: "User analytics", ar: "تحليلات المستخدمين" },
+  activityAnalytics: { en: "Activity analytics", ar: "تحليلات النشاط" },
+  aiPriceAnalytics: { en: "AI Price analytics", ar: "تحليلات السعر الذكي" },
+  searchAnalytics: { en: "Search analytics", ar: "تحليلات البحث" },
+  performanceAnalytics: { en: "Performance analytics", ar: "تحليلات الأداء" },
+  propertiesByGovernorate: { en: "Properties by governorate", ar: "العقارات حسب المحافظة" },
+  propertiesByType: { en: "Properties by type", ar: "العقارات حسب النوع" },
+  propertiesByTransaction: { en: "Properties by transaction", ar: "العقارات حسب المعاملة" },
+  topCitiesByListings: { en: "Top cities by listings", ar: "أكثر المدن حسب الإعلانات" },
+  topPropertyTypes: { en: "Top property types", ar: "أكثر أنواع العقارات" },
+  averagePriceByCity: { en: "Average property price by city", ar: "متوسط سعر العقار حسب المدينة" },
+  averagePriceByPropertyType: { en: "Average property price by type", ar: "متوسط سعر العقار حسب النوع" },
+  totalDevelopers: { en: "Total developers", ar: "إجمالي المطورين" },
+  activeUsersMetric: { en: "Active users", ar: "مستخدمون نشطون" },
+  inactiveUsersMetric: { en: "Inactive users", ar: "مستخدمون غير نشطين" },
+  totalSearches: { en: "Total searches", ar: "إجمالي عمليات البحث" },
+  averagePropertyPrice: { en: "Average property price", ar: "متوسط سعر العقار" },
+  averageAiPredictedPrice: { en: "Average AI predicted price", ar: "متوسط السعر المتوقع ذكياً" },
+  newUsersPerMonth: { en: "New users per month", ar: "مستخدمون جدد شهرياً" },
+  userGrowthTrend: { en: "User growth trend", ar: "اتجاه نمو المستخدمين" },
+  userRoleMix: { en: "User role mix", ar: "توزيع أدوار المستخدمين" },
+  userRegistrationSources: { en: "User registration sources", ar: "مصادر تسجيل المستخدمين" },
+  activeVsInactiveUsers: { en: "Active vs inactive users", ar: "المستخدمون النشطون مقابل غير النشطين" },
+  listingsCreatedPerMonth: { en: "Listings created per month", ar: "الإعلانات المنشأة شهرياً" },
+  listingStatusPerMonth: { en: "Listing statuses per month", ar: "حالات الإعلانات شهرياً" },
+  dailyActivityTrend: { en: "Daily activity trend", ar: "اتجاه النشاط اليومي" },
+  weeklyActivityTrend: { en: "Weekly activity trend", ar: "اتجاه النشاط الأسبوعي" },
+  monthlyActivityTrend: { en: "Monthly activity trend", ar: "اتجاه النشاط الشهري" },
+  aiPredictionsPerDay: { en: "AI price predictions per day", ar: "توقعات السعر الذكي يومياً" },
+  aiPredictionsPerMonth: { en: "AI price predictions per month", ar: "توقعات السعر الذكي شهرياً" },
+  averagePredictedPriceByCity: { en: "Average predicted price by city", ar: "متوسط السعر المتوقع حسب المدينة" },
+  averagePredictedPriceByPropertyType: { en: "Average predicted price by type", ar: "متوسط السعر المتوقع حسب النوع" },
+  highestPredictedPriceAreas: { en: "Highest predicted price areas", ar: "أعلى المناطق في السعر المتوقع" },
+  aiUsageTrend: { en: "AI usage trend", ar: "اتجاه استخدام الذكاء الاصطناعي" },
+  mostSearchedCities: { en: "Most searched cities", ar: "أكثر المدن بحثاً" },
+  mostSearchedPropertyTypes: { en: "Most searched property types", ar: "أكثر أنواع العقارات بحثاً" },
+  searchActivityTrend: { en: "Search activity trend", ar: "اتجاه نشاط البحث" },
+  searchRequestsPerDay: { en: "Search requests per day", ar: "طلبات البحث يومياً" },
+  totalPropertiesGrowth: { en: "Total properties growth", ar: "نمو إجمالي العقارات" },
+  totalUsersGrowth: { en: "Total users growth", ar: "نمو إجمالي المستخدمين" },
+  approvalRate: { en: "Approval rate", ar: "معدل القبول" },
+  rejectionRate: { en: "Rejection rate", ar: "معدل الرفض" },
+  listingConversionFunnel: { en: "Listing conversion funnel", ar: "قمع تحويل الإعلانات" },
+  systemActivityOverview: { en: "System activity overview", ar: "ملخص نشاط النظام" },
+  priceAreaScatter: { en: "Price vs area scatter", ar: "تشتت السعر مقابل المساحة" },
+  activityHeatmap: { en: "Activity heatmap", ar: "خريطة حرارية للنشاط" },
+  directOrUnknown: { en: "Direct / unknown", ar: "مباشر / غير معروف" },
+  activeLabel: { en: "Active", ar: "نشط" },
+  inactiveLabel: { en: "Inactive", ar: "غير نشط" },
+  listingsCreated: { en: "Listings created", ar: "إعلانات منشأة" },
+  valueColumn: { en: "Value", ar: "القيمة" },
+  countColumn: { en: "Count", ar: "العدد" },
+  propertyViewEvent: { en: "Property views", ar: "مشاهدات العقارات" },
+  propertyFavoriteEvent: { en: "Property favorites", ar: "إضافات للمفضلة" },
+  propertyCompareEvent: { en: "Property compares", ar: "مقارنات العقارات" },
+  appointmentRequestEvent: { en: "Appointment requests", ar: "طلبات المواعيد" },
+  searchEvent: { en: "Searches", ar: "عمليات البحث" },
+  priceEstimateEvent: { en: "AI price estimates", ar: "تقديرات السعر الذكي" }
+} satisfies TranslationSection;
+
+const soldAnalytics = {
+  soldPropertyAnalytics: { en: "Sold property analytics", ar: "تحليلات العقارات المباعة" },
+  totalSoldProperties: { en: "Total sold properties", ar: "إجمالي العقارات المباعة" },
+  averageDaysUntilSale: { en: "Average days until sale", ar: "متوسط الأيام حتى البيع" },
+  totalSoldRevenueValue: { en: "Total sold value", ar: "إجمالي قيمة المبيعات" },
+  soldPropertiesByCity: { en: "Sold properties by city", ar: "العقارات المباعة حسب المدينة" },
+  soldPropertiesByGovernorate: { en: "Sold properties by governorate", ar: "العقارات المباعة حسب المحافظة" },
+  soldPropertiesByType: { en: "Sold properties by type", ar: "العقارات المباعة حسب النوع" },
+  soldPropertiesByDeveloper: { en: "Sold properties by developer", ar: "العقارات المباعة حسب المطور" },
+  soldPropertiesBySeller: { en: "Sold properties by seller", ar: "العقارات المباعة حسب البائع" },
+  soldPropertiesPerMonth: { en: "Sold properties per month", ar: "العقارات المباعة شهريا" },
+  soldPropertiesPerYear: { en: "Sold properties per year", ar: "العقارات المباعة سنويا" },
+  fastestSellingPropertyTypes: { en: "Fastest selling property types", ar: "أسرع أنواع العقارات بيعا" },
+  highestSellingCities: { en: "Highest selling cities", ar: "أعلى المدن مبيعا" },
+  soldValueByMonth: { en: "Sold value by month", ar: "قيمة المبيعات حسب الشهر" },
+  propertySoldEvent: { en: "Properties sold", ar: "عقارات مباعة" },
+  daysUnit: { en: "days", ar: "أيام" }
+} satisfies TranslationSection;
+
 const auth = {
   loginRegister: { en: "Login / Register", ar: "تسجيل الدخول / إنشاء حساب" },
   loginOrResetHint: {
@@ -592,6 +919,7 @@ const auth = {
 export const dictionaries = {
   navigation,
   profile,
+  soldActions,
   chatbot,
   home,
   search,
@@ -599,6 +927,9 @@ export const dictionaries = {
   seller,
   footer,
   admin,
+  aiPrice,
+  analyticsDashboard,
+  soldAnalytics,
   auth
 } as const;
 
@@ -678,8 +1009,20 @@ const locationLabels: Record<string, TranslationEntry> = {
   Heliopolis: { en: "Heliopolis", ar: "مصر الجديدة" },
   Maadi: { en: "Maadi", ar: "المعادي" },
   "6th of October": { en: "6th of October", ar: "6 أكتوبر" },
+  Alexandria: { en: "Alexandria", ar: "الإسكندرية" },
+  "North Coast": { en: "North Coast", ar: "الساحل الشمالي" },
+  "Ain Sokhna": { en: "Ain Sokhna", ar: "العين السخنة" },
+  Hurghada: { en: "Hurghada", ar: "الغردقة" },
+  "Sharm El-Sheikh": { en: "Sharm El-Sheikh", ar: "شرم الشيخ" },
+  "Sheikh Zayed": { en: "Sheikh Zayed", ar: "الشيخ زايد" },
   SheikhZayed: { en: "Sheikh Zayed", ar: "الشيخ زايد" },
   "Fifth Settlement": { en: "Fifth Settlement", ar: "التجمع الخامس" },
+  "South Investors": { en: "South Investors", ar: "المستثمرين الجنوبية" },
+  "North Investors": { en: "North Investors", ar: "المستثمرين الشمالية" },
+  Mokattam: { en: "Mokattam", ar: "المقطم" },
+  "Al Khamayel": { en: "Al Khamayel", ar: "الخمايل" },
+  "Al Ahyaa": { en: "Al Ahyaa", ar: "الأحياء" },
+  "Nabq Bay": { en: "Nabq Bay", ar: "خليج نبق" },
   "North 90 Street": { en: "North 90 Street", ar: "شارع التسعين الشمالي" },
   "South Academy": { en: "South Academy", ar: "جنوب الأكاديمية" },
   Korba: { en: "Korba", ar: "الكوربة" },

@@ -69,7 +69,7 @@ export function LoginRequiredModal({ open, onClose }: { open: boolean; onClose: 
             Sign Up
           </Link>
           <Link
-            href="/auth"
+            href="/auth/forgot-password"
             onClick={onClose}
             className="link-accent block w-full text-center text-sm font-semibold hover:underline"
           >

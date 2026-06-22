@@ -43,7 +43,7 @@ export default function AuthPage() {
       const data = await res.json().catch(() => null);
       const userRole = String(data?.user?.role ?? "");
       if (userRole === "ADMIN") {
-        router.push("/admin");
+        router.push("/admin/analytics");
       } else if (userRole === "SELLER") {
         router.push("/seller/dashboard");
       } else {
@@ -126,7 +126,6 @@ export default function AuthPage() {
           </Link>
           {loginError ? <p className="text-xs text-red-600">{loginError}</p> : null}
         </form>
-        <p className="mt-3 text-xs text-slate-500">{t("demoCredentialsHint")}</p>
       </div>
 
       {showSignUp ? (

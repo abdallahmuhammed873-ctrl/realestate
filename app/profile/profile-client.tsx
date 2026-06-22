@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, type ChangeEvent, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { CommunityFeed, type ListingView, type PostView } from "@/components/community/community-feed";
 import { deleteUploadedPath, uploadFiles } from "@/lib/client/uploads";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,21 +18,19 @@ type ProfileUser = {
   avatarUrl?: string | null;
   role: "BUYER" | "SELLER" | "ADMIN";
   isCompanyAccount?: boolean;
+  companyOwnerId?: string;
   companyName?: string;
 };
 
-type SellerListingItem = {
-  listingId: string;
-  status: "DRAFT" | "PENDING" | "APPROVED" | "REJECTED";
-  title: string;
-  description: string;
-  imageUrl: string;
-  updatedAt: string;
-  createdByName: string;
-  isCompanyUser: boolean;
-};
-
-export function ProfileClient({ user, sellerListings }: { user: ProfileUser; sellerListings?: SellerListingItem[] }) {
+export function ProfileClient({
+  user,
+  communityPosts,
+  communityListings
+}: {
+  user: ProfileUser;
+  communityPosts?: PostView[];
+  communityListings?: ListingView[];
+}) {
   const { t } = useLanguage();
   const router = useRouter();
   const [profile, setProfile] = useState<ProfileUser>(user);
@@ -44,11 +43,10 @@ export function ProfileClient({ user, sellerListings }: { user: ProfileUser; sel
   const [saveInfo, setSaveInfo] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(user.avatarUrl ?? null);
   const [avatarLoading, setAvatarLoading] = useState(false);
-  const [myListings, setMyListings] = useState<SellerListingItem[]>(sellerListings ?? []);
-  const [deleteListingId, setDeleteListingId] = useState<string | null>(null);
 
   const roleLabel =
     profile.role === "SELLER" && profile.isCompanyAccount ? t("developer") : profile.role === "SELLER" ? t("seller") : profile.role;
+  const hasCompanyPostsAccess = profile.role === "SELLER" && Boolean(profile.companyOwnerId || profile.isCompanyAccount);
   const title =
     profile.role === "SELLER" && profile.isCompanyAccount
       ? t("developerProfile")
@@ -123,22 +121,6 @@ export function ProfileClient({ user, sellerListings }: { user: ProfileUser; sel
     }
   }
 
-  async function deleteListing(listingId: string) {
-    if (!confirm(t("deleteListingConfirm"))) return;
-    setDeleteListingId(listingId);
-    try {
-      const res = await fetch(`/api/seller/listings/${listingId}`, { method: "DELETE" });
-      const data = await res.json().catch(() => null);
-      if (!res.ok) {
-        alert(String(data?.error ?? t("failedToDeleteListing")));
-        return;
-      }
-      setMyListings((prev) => prev.filter((x) => x.listingId !== listingId));
-    } finally {
-      setDeleteListingId(null);
-    }
-  }
-
   async function saveProfile(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setSaveError("");
@@ -194,6 +176,14 @@ export function ProfileClient({ user, sellerListings }: { user: ProfileUser; sel
             <Button type="button" variant="outline" onClick={() => setIsEditing((v) => !v)}>
               {isEditing ? t("cancelEdit") : t("editProfile")}
             </Button>
+            {hasCompanyPostsAccess ? (
+              <Link
+                href="/profile/company-posts"
+                className="inline-flex items-center justify-center rounded-xl border theme-divider bg-[var(--surface)] px-4 py-2 text-sm font-semibold text-[var(--ink)] shadow-sm transition hover:bg-[var(--surface-soft)]"
+              >
+                {t("companyPosts")}
+              </Link>
+            ) : null}
           </div>
         </div>
 
@@ -258,52 +248,22 @@ export function ProfileClient({ user, sellerListings }: { user: ProfileUser; sel
       </Card>
 
       {profile.role === "SELLER" ? (
-        <Card className="space-y-3">
-          <div className="flex items-center justify-between gap-2">
-            <h2 className="text-xl font-bold text-[var(--ink)]">{t("yourPropertyPosts")}</h2>
-            <Link href="/seller/new" className="rounded-xl bg-brand-700 px-3 py-2 text-sm font-semibold text-white">
-              {t("newListing")}
-            </Link>
-          </div>
-          {myListings.length === 0 ? (
-            <p className="text-sm font-medium text-[var(--muted)]">{t("noListingsYet")}</p>
-          ) : (
-            <ul className="space-y-3">
-              {myListings.map((item) => (
-                <li key={item.listingId} className="rounded-xl border theme-divider bg-[var(--surface-elevated)] p-3">
-                  <div className="flex flex-col gap-3 sm:flex-row">
-                    {item.imageUrl ? <img src={item.imageUrl} alt={item.title} className="h-28 w-full rounded-xl border theme-divider object-cover sm:w-40" /> : null}
-                    <div className="min-w-0 flex-1 space-y-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="status-neutral rounded-full px-2 py-1 text-xs font-semibold">{item.status}</span>
-                        <span className="text-xs font-medium text-[var(--muted)]">{t("updatedAtLabel", { value: new Date(item.updatedAt).toLocaleString() })}</span>
-                      </div>
-                      <p className="truncate text-lg font-semibold text-[var(--ink)]">{item.title}</p>
-                      <p className="line-clamp-2 text-sm font-medium text-[var(--muted)]">{item.description}</p>
-                      <p className="text-xs font-medium text-[var(--muted)]">
-                        {t("createdByLabel", { name: item.createdByName })} {item.isCompanyUser ? t("companyUserSuffix") : ""}
-                      </p>
-                      <div className="flex flex-wrap gap-3 pt-1">
-                        <Link href={`/seller/listings/${item.listingId}/edit`} className="text-sm font-semibold link-accent">
-                          {t("editListing")}
-                        </Link>
-                        <button
-                          type="button"
-                          onClick={() => void deleteListing(item.listingId)}
-                          disabled={deleteListingId === item.listingId}
-                          className="text-sm font-semibold text-red-600 disabled:opacity-60"
-                        >
-                          {deleteListingId === item.listingId ? t("deleting") : t("deleteListing")}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Card>
+        <section className="space-y-3">
+          <h2 className="text-xl font-bold text-[var(--ink)]">{t("myPosts")}</h2>
+          <CommunityFeed
+            initialPosts={communityPosts ?? []}
+            listings={communityListings ?? []}
+            viewer={{ id: profile.id, role: profile.role, canCreatePost: true }}
+            showListings
+            showCreatePost={false}
+            listingSectionTitle={t("propertyPosts")}
+            emptyListingsMessage={null}
+            emptyPostsMessage={t("noCommunityPostsYet")}
+            postsRefreshUrl={`/api/community/users/${encodeURIComponent(profile.id)}/posts`}
+          />
+        </section>
       ) : null}
+
     </div>
   );
 }

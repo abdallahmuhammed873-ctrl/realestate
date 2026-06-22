@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { searchProperties } from "@/lib/repository";
+import { getCurrentUserId } from "@/lib/auth";
+import { searchProperties, trackAnalyticsEvent } from "@/lib/repository";
 import { safeParsePublicSearchFilters } from "@/lib/search-contract";
 
 export const dynamic = "force-dynamic";
@@ -19,7 +20,18 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  return NextResponse.json(await searchProperties(parsed.data), {
+  const result = await searchProperties(parsed.data);
+  const userId = await getCurrentUserId();
+  await trackAnalyticsEvent({
+    userId,
+    eventType: "SEARCH",
+    metadata: {
+      filters: parsed.data,
+      resultCount: result.total
+    }
+  });
+
+  return NextResponse.json(result, {
     headers: {
       "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
       Expires: "0",

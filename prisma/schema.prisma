@@ -108,6 +108,9 @@ model User {
   communityListingComments     CommunityListingComment[]
   communityListingCommentLikes CommunityListingCommentLike[]
   passwordResetTokens          PasswordResetToken[]
+  priceEstimates               PriceEstimate[]
+  propertyViews                PropertyView[]
+  analyticsEvents              AnalyticsEvent[]
   createdAt                    DateTime                      @default(now())
   updatedAt                    DateTime                      @updatedAt
 
@@ -123,6 +126,9 @@ model Listing {
   adminNotes                  String?
   reviewedBy                  String?
   reviewedAt                  DateTime?
+  soldAt                      DateTime?
+  soldById                    String?
+  soldSnapshot                Json?
   user                        User                          @relation("ListingOwner", fields: [userId], references: [id], onDelete: Cascade)
   reviewer                    User?                         @relation("ListingReviewer", fields: [reviewedBy], references: [id], onDelete: SetNull)
   property              Property?
@@ -133,7 +139,10 @@ model Listing {
   updatedAt             DateTime                      @updatedAt
 
   @@index([userId, status])
+  @@index([userId, soldAt])
   @@index([status, updatedAt])
+  @@index([status, soldAt, updatedAt])
+  @@index([soldAt])
 }
 
 model Property {
@@ -184,6 +193,9 @@ model Property {
   favorites              Favorite[]
   appointments           Appointment[]
   sellerMessages         SellerMessage[]
+  priceEstimates         PriceEstimate[]
+  views                  PropertyView[]
+  analyticsEvents        AnalyticsEvent[]
   createdAt              DateTime           @default(now())
   updatedAt              DateTime           @updatedAt
 
@@ -384,4 +396,60 @@ model PasswordResetToken {
 
   @@index([email, type, expiresAt])
   @@index([userId, type, expiresAt])
+}
+
+model PriceEstimate {
+  id               String    @id @default(cuid())
+  userId           String?
+  propertyId       String?
+  propertyType     String
+  city             String
+  area             String?
+  district         String?
+  areaSqm          Float
+  bedrooms         Int?
+  bathrooms        Int?
+  furnishing       String?
+  completionStatus String?
+  paymentType      String?
+  estimatedPrice   Float
+  minPrice         Float
+  maxPrice         Float
+  confidenceScore  Float
+  explanation      String?
+  user             User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  property         Property? @relation(fields: [propertyId], references: [id], onDelete: SetNull)
+  createdAt        DateTime  @default(now())
+
+  @@index([userId, createdAt])
+  @@index([city, propertyType])
+}
+
+model PropertyView {
+  id         String   @id @default(cuid())
+  propertyId String
+  userId     String?
+  ipAddress  String?
+  userAgent  String?
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt  DateTime @default(now())
+
+  @@index([propertyId, createdAt])
+  @@index([userId, createdAt])
+}
+
+model AnalyticsEvent {
+  id         String    @id @default(cuid())
+  userId     String?
+  propertyId String?
+  eventType  String
+  metadata   Json?
+  user       User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  property   Property? @relation(fields: [propertyId], references: [id], onDelete: SetNull)
+  createdAt  DateTime  @default(now())
+
+  @@index([eventType, createdAt])
+  @@index([userId, createdAt])
+  @@index([propertyId, createdAt])
 }

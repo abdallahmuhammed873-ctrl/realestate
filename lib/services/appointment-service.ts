@@ -7,6 +7,7 @@ import {
   mapUser
 } from "../server/repository-helpers.ts";
 import { prisma } from "../server/prisma.ts";
+import { trackAnalyticsEvent } from "./analytics-service.ts";
 
 export async function createAppointment(input: Omit<Appointment, "id" | "status" | "createdAt" | "updatedAt">) {
   const appointment = await prisma.appointment.create({
@@ -20,6 +21,12 @@ export async function createAppointment(input: Omit<Appointment, "id" | "status"
       notes: input.notes ?? null,
       suggestedSlots: []
     }
+  });
+  await trackAnalyticsEvent({
+    userId: input.userId,
+    propertyId: input.propertyId,
+    eventType: "APPOINTMENT_REQUEST",
+    metadata: { appointmentId: appointment.id }
   });
   return mapAppointment(appointment);
 }

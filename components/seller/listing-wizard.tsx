@@ -325,16 +325,15 @@ export function ListingWizard({ listingId, initial }: { listingId?: string; init
     const res = await fetch("/api/seller/listings", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
+      body: JSON.stringify({ ...payload, feesPaid: true })
     });
-    if (res.ok) router.push("/seller/dashboard");
-  }
+    if (res.ok) {
+      router.push("/seller/new/thank-you");
+      return;
+    }
 
-  function goToPayment() {
-    const payload = buildPayload();
-    if (!payload) return;
-    sessionStorage.setItem("seller_listing_draft", JSON.stringify(payload));
-    router.push("/seller/new/payment");
+    const data = await res.json().catch(() => null);
+    setError(String(data?.error ?? t("paymentAcceptedListingFailed")));
   }
 
   function renderMediaSection(kind: ListingMediaDraft["kind"], title: string, helperText: string, items: ListingMediaDraft[]) {
@@ -562,13 +561,9 @@ export function ListingWizard({ listingId, initial }: { listingId?: string; init
         {uploading ? <p className="text-xs text-[var(--brand)]">{t("uploadingMedia")}</p> : null}
       </div>
       <div className="mt-4 space-y-2">
-        {listingId ? (
-          <Button type="submit" disabled={uploading}>{t("submitForApproval")}</Button>
-        ) : (
-          <Button type="button" onClick={goToPayment} disabled={uploading}>
-            {t("proceedToPay")}
-          </Button>
-        )}
+        <Button type="submit" disabled={uploading}>
+          {t("submitForApproval")}
+        </Button>
         {error ? <p className="text-sm text-red-600">{error}</p> : null}
       </div>
     </form>

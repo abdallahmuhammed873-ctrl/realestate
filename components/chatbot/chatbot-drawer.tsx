@@ -397,7 +397,7 @@ export function ChatbotDrawer() {
     <>
       {!open ? (
         <Button
-          className={`fixed bottom-20 z-50 gap-2 rounded-full px-5 py-3 md:bottom-6 ${edgeClass}`}
+          className={`fixed bottom-20 z-[1200] gap-2 rounded-full px-5 py-3 md:bottom-6 ${edgeClass}`}
           onClick={() => setOpen(true)}
           aria-label={t("openAssistant")}
         >
@@ -407,7 +407,7 @@ export function ChatbotDrawer() {
       ) : null}
       {open ? (
         <aside
-          className={`surface-panel fixed ${edgeClass} top-4 bottom-4 z-50 flex w-[min(96vw,420px)] flex-col overflow-hidden rounded-[28px]`}
+          className={`surface-panel fixed ${edgeClass} top-4 bottom-4 z-[1200] flex w-[min(96vw,420px)] flex-col overflow-hidden rounded-[28px] bg-[var(--surface)]`}
         >
           <div className="border-b theme-divider bg-[linear-gradient(135deg,rgba(46,111,127,0.18),rgba(212,176,106,0.12))] px-4 py-3">
             <div className="flex items-start justify-between gap-3">

@@ -1,23 +1,54 @@
 import { Prisma } from "@prisma/client";
 import type { SearchFilters } from "./types.ts";
 
+function buildKeywordTermWhere(term: string): Prisma.PropertyWhereInput {
+  return {
+    OR: [
+      { title: { contains: term, mode: "insensitive" } },
+      { titleEn: { contains: term, mode: "insensitive" } },
+      { titleAr: { contains: term, mode: "insensitive" } },
+      { description: { contains: term, mode: "insensitive" } },
+      { descriptionEn: { contains: term, mode: "insensitive" } },
+      { descriptionAr: { contains: term, mode: "insensitive" } },
+      { projectName: { contains: term, mode: "insensitive" } },
+      { unitCode: { contains: term, mode: "insensitive" } },
+      { inventoryStatus: { contains: term, mode: "insensitive" } },
+      { address: { contains: term, mode: "insensitive" } },
+      { city: { contains: term, mode: "insensitive" } },
+      { area: { contains: term, mode: "insensitive" } },
+      { district: { contains: term, mode: "insensitive" } },
+      {
+        listing: {
+          user: {
+            name: { contains: term, mode: "insensitive" }
+          }
+        }
+      },
+      {
+        listing: {
+          user: {
+            companyOwner: {
+              name: { contains: term, mode: "insensitive" }
+            }
+          }
+        }
+      }
+    ]
+  };
+}
+
+function parseKeywordTerms(query?: string) {
+  if (!query) return [];
+  return Array.from(new Set(query.split(/\s+/).map((term) => term.trim()).filter(Boolean))).slice(0, 8);
+}
+
 export function buildPrismaPropertyWhere(filters: SearchFilters): Prisma.PropertyWhereInput {
   const where: Prisma.PropertyWhereInput = {
     listing: { status: "APPROVED" }
   };
-  if (filters.q) {
-    where.OR = [
-      { title: { contains: filters.q, mode: "insensitive" } },
-      { description: { contains: filters.q, mode: "insensitive" } },
-      { projectName: { contains: filters.q, mode: "insensitive" } },
-      { unitCode: { contains: filters.q, mode: "insensitive" } },
-      { inventoryStatus: { contains: filters.q, mode: "insensitive" } },
-      { address: { contains: filters.q, mode: "insensitive" } },
-      { city: { contains: filters.q, mode: "insensitive" } },
-      { area: { contains: filters.q, mode: "insensitive" } },
-      { district: { contains: filters.q, mode: "insensitive" } }
-    ];
-  }
+  const andClauses: Prisma.PropertyWhereInput[] = [];
+  const keywordTerms = parseKeywordTerms(filters.q);
+  if (keywordTerms.length > 0) andClauses.push(...keywordTerms.map(buildKeywordTermWhere));
   if (filters.transaction) where.transaction = filters.transaction;
   if (filters.type?.length) where.type = { in: filters.type };
   if (filters.city) where.city = { contains: filters.city, mode: "insensitive" };
@@ -53,5 +84,6 @@ export function buildPrismaPropertyWhere(filters: SearchFilters): Prisma.Propert
   } else if (filters.minPrice !== undefined || filters.maxPrice !== undefined) {
     where.price = { gte: filters.minPrice, lte: filters.maxPrice };
   }
+  if (andClauses.length > 0) where.AND = andClauses;
   return where;
 }

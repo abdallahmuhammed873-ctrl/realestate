@@ -21,6 +21,7 @@ export function MobileNav() {
   const baseTabs = [
     { href: "/", label: t("home") },
     { href: "/search", label: t("search") },
+    { href: "/price-estimator", label: t("aiPrice") },
     { href: "/notifications", label: t("notify") },
     { href: "/appointments", label: t("appointments") },
     { href: "/favorites", label: t("favorites") },
@@ -110,7 +111,7 @@ export function MobileNav() {
       await fetch("/api/auth/logout", { method: "POST" });
       setRole(null);
       setIsLoggedIn(false);
-      router.push(role === "ADMIN" ? "/admin/login" : "/auth");
+      router.push("/auth");
       router.refresh();
     } finally {
       setLoggingOut(false);
@@ -121,7 +122,7 @@ export function MobileNav() {
     role === "SELLER"
       ? [...baseTabs, { href: "/seller/dashboard", label: t("seller") }]
       : role === "ADMIN"
-        ? [...baseTabs, { href: "/admin", label: t("admin") }]
+        ? [...baseTabs, { href: "/admin/analytics", label: t("admin") }]
         : baseTabs;
 
   return (
